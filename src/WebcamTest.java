@@ -1,9 +1,15 @@
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.util.Date;
+
+import javax.imageio.ImageIO;
+
 import me.prettyprint.cassandra.serializers.BytesArraySerializer;
+import me.prettyprint.cassandra.serializers.LongSerializer;
 import me.prettyprint.cassandra.serializers.StringSerializer;
 import me.prettyprint.cassandra.serializers.TimeUUIDSerializer;
 import me.prettyprint.hector.api.Cluster;
 import me.prettyprint.hector.api.Keyspace;
-import me.prettyprint.hector.api.ddl.KeyspaceDefinition;
 import me.prettyprint.hector.api.factory.HFactory;
 import me.prettyprint.hector.api.mutation.Mutator;
 
@@ -22,18 +28,25 @@ public class WebcamTest {
         grabber.setBitsPerPixel(16);
         grabber.start();
 
+        int numFrames = 0;
         IplImage grabbedImage = grabber.grab();   
         while (frame.isVisible() && (grabbedImage = grabber.grab()) != null) {
         	grabbedImage = grabber.grab();
             frame.showImage(grabbedImage);
-            Mutator<com.eaio.uuid.UUID> mutator = HFactory.createMutator(keyspace, TimeUUIDSerializer.get());
-            byte[] rawImg = new byte[grabbedImage.getByteBuffer().capacity()];
-            grabbedImage.getByteBuffer().get(rawImg);
-    		mutator.insert(new com.eaio.uuid.UUID(), "WebcamFrames", HFactory.createColumn("Frame", rawImg, StringSerializer.get(), BytesArraySerializer.get()));
+            Mutator<Long> mutator = HFactory.createMutator(keyspace, LongSerializer.get());
+            BufferedImage bufferedImage = grabbedImage.getBufferedImage();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(bufferedImage, "jpg", baos);
+            byte[] rawImg = baos.toByteArray();
+            long timestamp = new Date().getTime(); 
+    		mutator.insert(timestamp, "WebcamFrames", HFactory.createColumn("Frame", rawImg, StringSerializer.get(), BytesArraySerializer.get()));
     		mutator.execute();
+    		numFrames = numFrames + 1;
+    		System.out.println("Timestamp: " + timestamp);
         }
         
         grabber.stop();
         frame.dispose();
+        System.out.println("Frames saved to db: " + numFrames);
     }
 }
