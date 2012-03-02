@@ -11,7 +11,6 @@ import me.prettyprint.cassandra.model.CqlRows;
 import me.prettyprint.cassandra.serializers.BytesArraySerializer;
 import me.prettyprint.cassandra.serializers.LongSerializer;
 import me.prettyprint.cassandra.serializers.StringSerializer;
-import me.prettyprint.cassandra.serializers.TimeUUIDSerializer;
 import me.prettyprint.hector.api.Cluster;
 import me.prettyprint.hector.api.Keyspace;
 import me.prettyprint.hector.api.beans.Row;
@@ -49,7 +48,8 @@ public class WebcamTestFromDb {
         List<Row<Long, String, byte[]>> list = result.get().getList();
         for (Row<Long, String, byte[]> row: list) {
         	System.out.println("Showing image");
-        	byte[] webcamFrame = row.getColumnSlice().getColumnByName("Frame").getValue();
+        	//byte[] webcamFrame = row.getColumnSlice().getColumnByName("Frame").getValue();
+        	byte[] webcamFrame = row.getColumnSlice().getColumns().get(1).getValue();
         	BufferedImage webcamImage = imgFromByteBuffer(webcamFrame);
         	IplImage image = IplImage.createFrom(webcamImage);
         	frame.showImage(image);

@@ -39,8 +39,9 @@ public class WebcamTest {
             ImageIO.write(bufferedImage, "jpg", baos);
             byte[] rawImg = baos.toByteArray();
             long timestamp = new Date().getTime(); 
-    		mutator.insert(timestamp, "WebcamFrames", HFactory.createColumn("Frame", rawImg, StringSerializer.get(), BytesArraySerializer.get()));
-    		mutator.execute();
+    		//mutator.insert(timestamp, "WebcamFrames", HFactory.createColumn("Frame", rawImg, StringSerializer.get(), BytesArraySerializer.get()));
+            mutator.insert(timestamp, "WebcamFrames", HFactory.createColumn(timestamp, rawImg, LongSerializer.get(), BytesArraySerializer.get()));
+    		//mutator.execute();
     		numFrames = numFrames + 1;
     		System.out.println("Timestamp: " + timestamp);
         }
