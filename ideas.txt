@@ -1,0 +1,121 @@
+Jena 2 Reasoner System
+
+Nivel de incredere
+Filtre intre db si knowledge extractors
+Modul de activity recognition
+
+Date obtinute de la senzori si knowledge extraction agents
+==========================================================
+[patient_db, t = 0] <Andrei Ismail> age <70>
+[patient_db, t = 0] <Andrei Ismail> left_hand <weak>
+[patient_db, t = 0] <Mihai Trascau> is_caregiver <Andrei Ismail>
+[dbpedia, t = 0] <knife> is <dangerous>
+
+[kinect_s, t = 10] <kinect> saw <frame_id>
+[kinect_s, t = 10] <frame_id> time <timestamp>
+[kinect_s, t = 10] <frame_id> frame_data < ... pixels ... >
+[kinect_s, t = 10] <kinect> looking_at <gps_coord>
+
+[kinect_ke, t = 20] <person1> head_at <xh,yh>
+[kinect_ke, t = 20] <person1> left_hand_at <xl, yl>
+[kinect_ke, t = 20] <person1> right_hand_at <xr, yr>
+[face_detector_ke, t = 20] <unknown_person_123> face_at <xf1, yf1, xf2, yf2>
+[object_detector_ke, t = 20] <knife> at <xl, yl>
+
+[sys_ke, t = 30] <unknown_person_123> equals <person1> // de la regula de face matching
+
+[face_com_ke, t = 40] <person1> equals <Andrei Ismail>
+
+[sys_ke, t = 50] <Andrei Ismail> holding_left <knife>
+
+[sys_ke, t = 60] <Andrei Ismail> is <danger>
+
+[sys_ke, t = 70] <ami_system> alert <Mihai Trascau>
+
+
+R0: (identificare body posture - knowledge extractor Kinect + OpenNI + Nite)
+============================================================================
+<frame_id> frame_data < .... pixels .... >
++
+not (<frame_id> processed_by <kinect_ke>)
+
+=>
+
+<p1> head_at <xh1, yh1>
+<p1> left_hand_at <xl1, yl1>
+<p1> right_hand_at <xr1, yr1>
+<p2> head_at <xf2, yf2>
+<p2> left_hand_at <xl2, yl2>
+<p2> right_hand_at <xr2, yr2>
+<frame_id> processed_by <kinect_ke>
+
+
+R1: (detectie fete, fara identificare - OpenCV + Haar features)
+===============================================================
+<frame_id> frame_data < .... pixels .... >
++
+not (<frame_id> processed_by <face_detector_ke>)
+
+=>
+
+<p1> face_at <x1,y1,x2,y2>
+<p2> face_at <x1',y1',x2',y2'>
+<frame_id> processed_by <face_detector_ke>
+
+
+R2: (matching fete + capete - facuta de un programator)
+=======================================================
+<p1> head_at <xh1, yh1> 
++
+<p1'> face_at <x1,y1,x2,y2>
++
+cond(xh1, yh1, x1, y1, x2, y2) // cum exprimam asta in RDF? - am o idee, rotunjirea la un grid
+
+=> 
+
+replace(p1', p1) in toate tripletele
+
+
+R3: (identificare fete din poza - face.com API)
+===============================================
+<frame_id> frame_data < ... pixels ... >
++
+<p1> face_at <x1,y1,x2,y2>
+
+=> 
+
+replace(p1, nume_persoana_from_face_api)
+
+
+R4: (asociere mana persoana cu obiect - teoretic luata din dbpedia)
+===================================================================
+<O> at <x,y>
++
+<person> left_hand_at <x,y>
+
+=>
+
+<person> holding_left <O>
+
+
+R5: (identificarea pericolului pentru o afectiune specifica - provided de un medic specialist)
+==============================================================================================
+<person> holding_left <O>
++
+<O> is <dangerous>
++
+<person> left_hand <weak>
+
+=> 
+
+<person> is <danger>
+
+
+R6: (alertare caregiver - facuta de un programator)
+===================================================
+<person> is <danger>
+<X> is_caregiver <person>
+
+=>
+
+<ami_system> alert <X>
