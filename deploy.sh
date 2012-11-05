@@ -12,8 +12,7 @@ git pull origin $branch
 git reset --hard HEAD
 
 # Read the list of services, and copy the new upstart & monit files + restart
-while read service_name
-do
+while read -r service_name; do
 	echo "===================================================="
 	echo "      Redeploying service $service_name             "
 	echo "===================================================="
