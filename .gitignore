@@ -4,3 +4,8 @@
 .settings
 bin
 *.pyc
+
+# Ignore kinect C++ acquisition program binaries
+acquisition/kinect/Bin
+acquisition/kinect/x86-Release
+acquisition/kinect/x64-Release
