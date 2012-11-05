@@ -13,8 +13,8 @@ git reset --hard HEAD
 
 # Read the list of services, and copy the new upstart & monit files + restart
 while read service_name
+do
 	sudo cp ./scripts/upstart/$service_name.conf /etc/init
 	sudo cp ./scripts/monit/$service_name /etc/monit/conf.d
 	sudo service $service_name restart
-do
 done < services.txt
