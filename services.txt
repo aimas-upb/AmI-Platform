@@ -1,4 +1,3 @@
 ami-router
 ami-mongo-writer
 ami-sensor-kinect
-
