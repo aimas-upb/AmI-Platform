@@ -34,6 +34,7 @@ while True:
 		# Step 3 - try to save to mongo
 		try:
 			collection.save(doc)
+			print "Successfully saved message to mongo"
 		except:
 			print "Could not save document to mongo"
 			print "doc = %r" % doc
