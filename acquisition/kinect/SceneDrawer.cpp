@@ -54,6 +54,7 @@ extern XnBool g_bMarkJoints;
 #if USE_MEMCACHE
 extern memcached_st* g_MemCache;
 #endif 
+extern char* g_SkeletonContext;
 
 #include <map>
 std::map<XnUInt32, std::pair<XnCalibrationStatus, XnPoseDetectionStatus> > m_Errors;
@@ -304,7 +305,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
 	char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
 	
-	snprintf(buf, 10000, "{\"sensor_type\": \"kinect\", \"player\": \"%s\", \"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
+	snprintf(buf, 10000, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", \"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}", g_SkeletonContext,
 		 player_name, head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
 		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
 		 left_foot, right_foot);

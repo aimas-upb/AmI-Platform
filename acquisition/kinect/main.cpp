@@ -42,6 +42,7 @@ xn::Player g_Player;
 #if USE_MEMCACHE
 memcached_st* g_MemCache;
 #endif
+char* g_SkeletonContext = "default";
 
 XnBool g_bNeedPose = FALSE;
 XnChar g_strPose[20] = "";
@@ -334,33 +335,23 @@ int main(int argc, char **argv)
 {
 	XnStatus nRetVal = XN_STATUS_OK;
 
-	if (argc > 1)
-	{
-		nRetVal = g_Context.Init();
-		CHECK_RC(nRetVal, "Init");
-		nRetVal = g_Context.OpenFileRecording(argv[1], g_Player);
-		if (nRetVal != XN_STATUS_OK)
-		{
-			printf("Can't open recording %s: %s\n", argv[1], xnGetStatusString(nRetVal));
-			return 1;
-		}
+	if (argc == 2) {
+		g_SkeletonContext = strdup(argv[1]);
 	}
-	else
+
+	xn::EnumerationErrors errors;
+	nRetVal = g_Context.InitFromXmlFile(SAMPLE_XML_PATH, g_scriptNode, &errors);
+	if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
 	{
-		xn::EnumerationErrors errors;
-		nRetVal = g_Context.InitFromXmlFile(SAMPLE_XML_PATH, g_scriptNode, &errors);
-		if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
-		{
-			XnChar strError[1024];
-			errors.ToString(strError, 1024);
-			printf("%s\n", strError);
-			return (nRetVal);
-		}
-		else if (nRetVal != XN_STATUS_OK)
-		{
-			printf("Open failed: %s\n", xnGetStatusString(nRetVal));
-			return (nRetVal);
-		}
+		XnChar strError[1024];
+		errors.ToString(strError, 1024);
+		printf("%s\n", strError);
+		return (nRetVal);
+	}
+	else if (nRetVal != XN_STATUS_OK)
+	{
+		printf("Open failed: %s\n", xnGetStatusString(nRetVal));
+		return (nRetVal);
 	}
 
 	nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_DEPTH, g_DepthGenerator);
