@@ -444,7 +444,8 @@ int main(int argc, char **argv)
 	g_MemCache = memcached_create(NULL);
 	memcached_server_st* servers = NULL;
 	memcached_return rc;
-	servers = memcached_server_list_append(servers, "172.16.124.128", 22133, &rc);
+	// servers = memcached_server_list_append(servers, "172.16.124.128", 22133, &rc);
+	servers = memcached_server_list_append(servers, "127.0.0.1", 22133, &rc);
 	memcached_server_push(g_MemCache, servers);
 	// TODO(andrei): check that rc == MEMCACHED_SUCCESS or fail gracefully
 	// ------- END MEMCACHED INIT --------------
