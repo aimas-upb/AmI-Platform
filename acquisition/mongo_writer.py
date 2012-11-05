@@ -1,4 +1,5 @@
 import time
+import pymongo
 
 from core import PDU
 from core import constants
@@ -9,7 +10,7 @@ class MongoWriter(PDU):
 	QUEUE = 'mongo-writer'
 	DATABASE = 'measurements'
 	COLLECTION = 'docs'
-	TTL_FOR_EXISTING_MEASUREMENTS = constants.SECONDS_IN_DAY
+	TTL = constants.SECONDS_IN_DAY
 
 	def __init__(self):
 		""" After performing base class initializations, make sure that
@@ -19,7 +20,7 @@ class MongoWriter(PDU):
 		super(MongoWriter, self).__init__()
 		self.collection.ensure_index([('created_at', pymongo.DESCENDING)],
 									 background = True,
-									 expireAfterSeconds = DAYS * SECONDS_IN_DAY)
+									 expireAfterSeconds = self.TTL)
 
 	def process_message(self, message):
 		""" This PDU processes messages by writing them to MongoDB.
@@ -37,8 +38,14 @@ class MongoWriter(PDU):
 	def collection(self):
 		""" Shortcut for getting the Mongo collection. """
 		try:
-			db = getattr(self, self.DATABASE, None)
+			db = getattr(self.mongo_connection, self.DATABASE, None)
 			collection = getattr(db, self.COLLECTION, None)
 			return collection
 		except:
+			import traceback
+			traceback.print_exc()
 			return None
+
+if __name__ == "__main__":
+	module = MongoWriter()
+	module.run()
