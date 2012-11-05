@@ -9,3 +9,4 @@ bin
 acquisition/kinect/Bin
 acquisition/kinect/x86-Release
 acquisition/kinect/x64-Release
+acquisition/export-*.csv
