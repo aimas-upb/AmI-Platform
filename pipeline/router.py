@@ -14,5 +14,5 @@ class Router(PDU):
         self.send_to('mongo-writer', message)
 
 if __name__ == "__main__":
-    module = MongoWriter()
+    module = Router()
     module.run()
