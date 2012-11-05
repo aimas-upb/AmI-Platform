@@ -304,7 +304,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
 	char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
 	
-	snprintf(buf, 10000, "{\"player\": \"%s\", \"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
+	snprintf(buf, 10000, "{\"sensor_type\": \"kinect\", \"player\": \"%s\", \"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 		 player_name, head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
 		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
 		 left_foot, right_foot);
