@@ -1,0 +1,4 @@
+check process Sample-NiUserTracker
+	with pidfile /var/run/ami-sensor-kinect.pid
+	start = "/usr/sbin/service ami-sensor-kinect start"
+	stop = "/usr/sbin/service ami-sensor-kinect stop"
