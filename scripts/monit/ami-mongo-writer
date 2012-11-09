@@ -1,0 +1,4 @@
+check process python
+	with pidfile /var/run/ami-mongo-writer.pid
+	start = "/usr/sbin/service ami-mongo-writer start"
+	stop = "/usr/sbin/service ami-mongo-writer stop"
