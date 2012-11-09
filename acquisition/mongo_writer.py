@@ -15,7 +15,7 @@ mongo_connection = pymongo.Connection()
 db = getattr(mongo_connection, DB_NAME)
 collection = getattr(db, COLLECTION_NAME)
 
-collection.ensure_index([('created_at', pymongo.DESCENDING), 
+collection.ensure_index([('created_at', pymongo.DESCENDING)], 
 			background = True,
 			expireAfterSeconds = DAYS * SECONDS_IN_DAY) 
 
