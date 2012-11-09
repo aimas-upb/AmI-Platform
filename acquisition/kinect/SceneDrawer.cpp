@@ -276,8 +276,13 @@ char* JointToJSON(XnUserID player, XnSkeletonJoint eJoint, char *name)
 	g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, eJoint, joint);
 	XnPoint3D pt = joint.position;
 	char* buf = (char*) malloc(100 * sizeof(char));
+#ifdef _WIN32
+	_snprintf(buf, 100, "\"%s\": {\"X\": %.2f, \"Y\": %.2f, \"Z\": %.2f}",
+		 name, pt.X, pt.Y, pt.Z);
+#else
 	snprintf(buf, 100, "\"%s\": {\"X\": %.2f, \"Y\": %.2f, \"Z\": %.2f}",
 		 name, pt.X, pt.Y, pt.Z);
+#endif
 	return buf;
 }
 
@@ -305,10 +310,17 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
 	char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
 	
+#ifdef _WIN32
+	_snprintf(buf, 10000, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", \"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}", g_SkeletonContext,
+		 player_name, head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
+		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
+		 left_foot, right_foot);
+#else
 	snprintf(buf, 10000, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", \"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}", g_SkeletonContext,
 		 player_name, head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
 		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
 		 left_foot, right_foot);
+#endif
 
 	printf("%s\n", buf);
 
