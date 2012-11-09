@@ -39,6 +39,11 @@
 	#include <libmemcached/memcached.h>
 #endif
 
+static const std::string base64_chars = 
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+             "abcdefghijklmnopqrstuvwxyz"
+             "0123456789+/";
+
 extern xn::UserGenerator g_UserGenerator;
 extern xn::DepthGenerator g_DepthGenerator;
 
@@ -305,7 +310,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
 	char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
 	
-	snprintf(buf, 10000, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", \"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}", g_SkeletonContext,
+	snprintf((char*)buf, 10000, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", \"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}", g_SkeletonContext,
 		 player_name, head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
 		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
 		 left_foot, right_foot);
@@ -344,6 +349,120 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	free(left_foot);
 	free(right_foot);
 }
+
+std::string base64_encode(unsigned char* bytes_to_encode, int in_len) {
+  std::string ret;
+  int i = 0;
+  int j = 0;
+  unsigned char char_array_3[3];
+  unsigned char char_array_4[4];
+
+  while (in_len--) {
+    char_array_3[i++] = *(bytes_to_encode++);
+    if (i == 3) {
+      char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+      char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+      char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+      char_array_4[3] = char_array_3[2] & 0x3f;
+
+      for(i = 0; (i <4) ; i++)
+        ret += base64_chars[char_array_4[i]];
+      i = 0;
+    }
+  }
+
+  if (i)
+  {
+    for(j = i; j < 3; j++)
+      char_array_3[j] = '\0';
+
+    char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+    char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+    char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+    char_array_4[3] = char_array_3[2] & 0x3f;
+
+    for (j = 0; (j < i + 1); j++)
+      ret += base64_chars[char_array_4[j]];
+
+    while((i++ < 3))
+      ret += '=';
+
+  }
+  return ret;
+}
+
+
+void SaveImageToFile(unsigned char *img, int width, int height) {
+	unsigned char bmpfileheader[14] = {'B','M', 0,0,0,0, 0,0, 0,0, 54,0,0,0};
+	unsigned char bmpinfoheader[40] = {40,0,0,0, 0,0,0,0, 0,0,0,0, 1,0, 24,0};
+	unsigned char bmppad[3] = {0,0,0};
+	unsigned int filesize = 3 * width * height;
+	unsigned int i;
+
+	// double word. file size
+	bmpfileheader[ 2] = (unsigned char)(filesize    );
+	bmpfileheader[ 3] = (unsigned char)(filesize>> 8);
+	bmpfileheader[ 4] = (unsigned char)(filesize>>16);
+	bmpfileheader[ 5] = (unsigned char)(filesize>>24);
+
+	bmpinfoheader[ 4] = (unsigned char)(   width	);
+	bmpinfoheader[ 5] = (unsigned char)(   width>> 8);
+	bmpinfoheader[ 6] = (unsigned char)(   width>>16);
+	bmpinfoheader[ 7] = (unsigned char)(   width>>24);
+	bmpinfoheader[ 8] = (unsigned char)(  height     );
+	bmpinfoheader[ 9] = (unsigned char)(  height>> 8);
+	bmpinfoheader[10] = (unsigned char)(  height>>16);
+	bmpinfoheader[11] = (unsigned char)(  height>>24);
+
+	FILE *f = fopen("img.bmp","wb");
+	fwrite(bmpfileheader,1,14,f);
+	fwrite(bmpinfoheader,1,40,f);
+	for(i=0; i<height; i++)
+	{
+	    fwrite(img + (3 * width * (height-1-i)), 3, width, f);
+	}
+	fclose(f);
+}
+
+/*
+ * Saves the RBG image data by deriving a JSON message and enqueueing it to
+ * Kestrel, a message-queue system used to communicate with the rest of the
+ * system.
+ */
+void SaveRGB(unsigned char *img, int width, int height, char *player_name) {
+	char* buf = (char*) malloc ((width*height) * sizeof(char));
+	buf = base64_encode(img, width*height).c_str();
+
+	snprintf(buf, width * height, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", \
+		\"width\": \"%d\", \"height\": \"%d\", \"image\": \"%s\" }", 
+		g_SkeletonContext, player_name, width, height, buf);
+	
+#if USE_MEMCACHE
+	memcached_return rc;
+	printf("g_MemCache = %p\n", g_MemCache);
+	rc = memcached_set(g_MemCache, 
+		     "measurements", strlen("measurements"),
+		     buf, strlen(buf),
+		     (time_t)0, (uint32_t)0);
+	if (rc != MEMCACHED_SUCCESS) {
+		printf("Could NOT send to memcache. I'm very very sad :-( :-( :-(\n");
+	} else {
+		printf("I can send to memcache. HURRAY!! :-) :-) :-)\n");
+	}
+#endif
+
+	free(buf);
+} 
+
+/*
+
+	sensor_type: 'kinect_rgb',
+	width: 640,
+	height: 480,
+	base64_img: ''
+	
+
+*/
 
 void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 {
@@ -411,7 +530,6 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 				pDepthHist[nValue]++;
 				nNumberOfPoints++;
 			}
-
 			pDepth++;
 		}
 	}
@@ -428,6 +546,10 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 		}
 	}
 
+	unsigned char *img = NULL;
+	img = (unsigned char *) malloc (3 * g_nXRes * g_nYRes);
+	memset(img, 0, sizeof(img));
+	
 	pDepth = dmd.Data();
 	if (g_bDrawPixels)
 	{
@@ -461,6 +583,10 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 					}
 				}
 
+				img[(nY*g_nXRes +nX)*3+0] = (unsigned char) pDestImage[0];
+				img[(nY*g_nXRes +nX)*3+1] = (unsigned char) pDestImage[1];
+				img[(nY*g_nXRes +nX)*3+2] = (unsigned char) pDestImage[2];
+				
 				pDepth++;
 				pLabels++;
 				pDestImage+=3;
@@ -468,6 +594,9 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 
 			pDestImage += (texWidth - g_nXRes) *3;
 		}
+
+		//SaveImageToFile(img, g_nXRes, g_nYRes);
+		SaveRGB(img, g_nXRes, g_nYRes, "player1");
 	}
 	else
 	{

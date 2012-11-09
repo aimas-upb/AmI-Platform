@@ -8,6 +8,8 @@ SRC_FILES = ./*.cpp
 
 EXE_NAME = Sample-NiUserTracker
 
+CFLAGS += -g
+
 ifeq "$(GLUT_SUPPORTED)" "1"
 	ifeq ("$(OSTYPE)","Darwin")
 		LDFLAGS += -framework OpenGL -framework GLUT
