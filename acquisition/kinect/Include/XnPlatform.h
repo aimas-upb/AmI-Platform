@@ -71,7 +71,7 @@
 #elif (__APPLE__)
 	#include "MacOSX/XnPlatformMacOSX.h"
 #else
-	#error OpenNI Platform Abstraction Layer - Unsupported Platform!
+	#include "Win32/XnPlatformWin32.h"
 #endif
 
 //---------------------------------------------------------------------------
