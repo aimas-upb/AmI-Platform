@@ -32,7 +32,7 @@ class MongoWriter(PDU):
 		"""
 		# Add a created_at field so that
 		message['created_at'] = int(time.time())
-		self.collection.save(doc)
+		self.collection.save(message)
 
 	@property
 	def collection(self):
