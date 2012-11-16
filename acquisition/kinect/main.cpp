@@ -322,7 +322,11 @@ void glInit (int * pargc, char ** argv)
 }
 #endif // USE_GLES
 
+#ifdef _WIN32
+#define SAMPLE_XML_PATH "C:\\Users\\Diana\\Documents\\GitHub\\AmI-Platform\\acquisition\\kinect\\SamplesConfig.xml"
+#else
 #define SAMPLE_XML_PATH "/home/ami/AmI-Platform/acquisition/kinect/SamplesConfig.xml"
+#endif
 
 #define CHECK_RC(nRetVal, what)										\
 	if (nRetVal != XN_STATUS_OK)									\
