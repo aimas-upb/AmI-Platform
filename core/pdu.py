@@ -61,8 +61,8 @@ class PDU(object):
                 # Step 3 - actually process the message. Usually, this means
                 # that a PDU enqueues it further down the pipeline to other
                 # modules.
-                copy_of_message = copy.deepcopy(message)
-                self.process_message(copy_of_message)
+                copy_of_doc = copy.deepcopy(doc)
+                self.process_message(copy_of_doc)
 
             except:
                 print "Error while getting message from queue %s" % self.QUEUE
