@@ -1,10 +1,12 @@
 # Redeploy everything script
 
+branch=$(git rev-parse --abbrev-ref HEAD)
+
 # Get rid of non-committed changes
 git reset --hard HEAD
 
 # Get latest changes from repo
-git pull origin master
+git pull origin $branch
 
 # Make sure that filesystem is in sync with git index
 git reset --hard HEAD
