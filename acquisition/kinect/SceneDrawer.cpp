@@ -23,7 +23,9 @@
 // Includes
 //---------------------------------------------------------------------------
 #include <math.h>
+#include<stdlib.h>
 #include "SceneDrawer.h"
+
 
 #ifndef USE_GLES
 #if (XN_PLATFORM == XN_PLATFORM_MACOSX)
@@ -145,6 +147,101 @@ void glPrintString(void *font, char *str)
 	}
 }
 #endif
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+                                'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+                                'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+                                'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+                                'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+                                'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+                                'w', 'x', 'y', 'z', '0', '1', '2', '3',
+                                '4', '5', '6', '7', '8', '9', '+', '/'};
+static char *decoding_table = NULL;
+static int mod_table[] = {0, 2, 1};
+
+void build_decoding_table() {
+
+    decoding_table = (char*)malloc(256*sizeof(char));
+
+    for (int i = 0; i < 0x40; i++)
+        decoding_table[encoding_table[i]] = i;
+}
+
+
+void base64_cleanup() {
+    free(decoding_table);
+}
+
+char *base64_encode(const char *data,
+                    size_t input_length,
+                    size_t *output_length) {
+
+    *output_length = (size_t) (4.0 * ceil((double) input_length / 3.0));
+
+    char *encoded_data = (char*)malloc(*output_length * sizeof(char));
+    if (encoded_data == NULL) return NULL;
+
+    for (int i = 0, j = 0; i < input_length;) {
+
+        uint32_t octet_a = i < input_length ? data[i++] : 0;
+        uint32_t octet_b = i < input_length ? data[i++] : 0;
+        uint32_t octet_c = i < input_length ? data[i++] : 0;
+
+        uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
+
+        encoded_data[j++] = encoding_table[(triple >> 3 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 2 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 1 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 0 * 6) & 0x3F];
+    }
+
+    for (int i = 0; i < mod_table[input_length % 3]; i++)
+        encoded_data[*output_length - 1 - i] = '=';
+
+    return encoded_data;
+}
+
+char *base64_decode(const char *data,
+                    size_t input_length,
+                    size_t *output_length) {
+
+    if (decoding_table == NULL) build_decoding_table();
+
+    if (input_length % 4 != 0) return NULL;
+
+    *output_length = input_length / 4 * 3;
+    if (data[input_length - 1] == '=') (*output_length)--;
+    if (data[input_length - 2] == '=') (*output_length)--;
+
+    char *decoded_data = (char*)malloc(*output_length * sizeof(char));
+    if (decoded_data == NULL) return NULL;
+
+    for (int i = 0, j = 0; i < input_length;) {
+
+        uint32_t sextet_a = data[i] == '=' ? 0 & i++ : decoding_table[data[i++]];
+        uint32_t sextet_b = data[i] == '=' ? 0 & i++ : decoding_table[data[i++]];
+        uint32_t sextet_c = data[i] == '=' ? 0 & i++ : decoding_table[data[i++]];
+        uint32_t sextet_d = data[i] == '=' ? 0 & i++ : decoding_table[data[i++]];
+
+        uint32_t triple = (sextet_a << 3 * 6)
+                        + (sextet_b << 2 * 6)
+                        + (sextet_c << 1 * 6)
+                        + (sextet_d << 0 * 6);
+
+        if (j < *output_length) decoded_data[j++] = (triple >> 2 * 8) & 0xFF;
+        if (j < *output_length) decoded_data[j++] = (triple >> 1 * 8) & 0xFF;
+        if (j < *output_length) decoded_data[j++] = (triple >> 0 * 8) & 0xFF;
+    }
+
+    return decoded_data;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 bool DrawLimb(XnUserID player, XnSkeletonJoint eJoint1, XnSkeletonJoint eJoint2)
 {
 	if (!g_UserGenerator.GetSkeletonCap().IsTracking(player))
@@ -350,48 +447,6 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	free(right_foot);
 }
 
-std::string base64_encode(unsigned char* bytes_to_encode, int in_len) {
-  std::string ret;
-  int i = 0;
-  int j = 0;
-  unsigned char char_array_3[3];
-  unsigned char char_array_4[4];
-
-  while (in_len--) {
-    char_array_3[i++] = *(bytes_to_encode++);
-    if (i == 3) {
-      char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-      char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-      char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-      char_array_4[3] = char_array_3[2] & 0x3f;
-
-      for(i = 0; (i <4) ; i++)
-        ret += base64_chars[char_array_4[i]];
-      i = 0;
-    }
-  }
-
-  if (i)
-  {
-    for(j = i; j < 3; j++)
-      char_array_3[j] = '\0';
-
-    char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-    char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-    char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-    char_array_4[3] = char_array_3[2] & 0x3f;
-
-    for (j = 0; (j < i + 1); j++)
-      ret += base64_chars[char_array_4[j]];
-
-    while((i++ < 3))
-      ret += '=';
-
-  }
-  return ret;
-}
-
-
 void SaveImageToFile(unsigned char *img, int width, int height) {
 	unsigned char bmpfileheader[14] = {'B','M', 0,0,0,0, 0,0, 0,0, 54,0,0,0};
 	unsigned char bmpinfoheader[40] = {40,0,0,0, 0,0,0,0, 0,0,0,0, 1,0, 24,0};
@@ -414,7 +469,7 @@ void SaveImageToFile(unsigned char *img, int width, int height) {
 	bmpinfoheader[10] = (unsigned char)(  height>>16);
 	bmpinfoheader[11] = (unsigned char)(  height>>24);
 
-	FILE *f = fopen("img.bmp","wb");
+	FILE *f = fopen("img.bmp","w");
 	fwrite(bmpfileheader,1,14,f);
 	fwrite(bmpinfoheader,1,40,f);
 	for(i=0; i<height; i++)
@@ -429,13 +484,22 @@ void SaveImageToFile(unsigned char *img, int width, int height) {
  * Kestrel, a message-queue system used to communicate with the rest of the
  * system.
  */
-void SaveRGB(unsigned char *img, int width, int height, char *player_name) {
-	char* buf = (char*) malloc ((width*height) * sizeof(char));
-	buf = base64_encode(img, width*height).c_str();
+void SaveRGB(char *img, int width, int height, char *player_name) {
+	size_t outlen, outlen2;
 
-	snprintf(buf, width * height, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", \
+	char* buf = (char*) malloc(2000000 * sizeof(char));
+	char* img64;
+
+	img64 = base64_encode(img, width*height*3, &outlen);
+	//char* img_dec64 = (char*)malloc(2000000 * sizeof(char));
+	//img_dec64 = base64_decode(img64, outlen, &outlen2);
+	//printf("\n%d\n", outlen);
+	//printf("\n%d\n", outlen2);
+	//SaveImageToFile((unsigned char*)img_dec64, width, height);
+
+	snprintf(buf, 2000000, "{\"context\": \"%s\",\"sensor_type\": \"kinect_rgb\", \"player\": \"%s\", \
 		\"width\": \"%d\", \"height\": \"%d\", \"image\": \"%s\" }", 
-		g_SkeletonContext, player_name, width, height, buf);
+		g_SkeletonContext, player_name, width, height, img64);
 	
 #if USE_MEMCACHE
 	memcached_return rc;
@@ -445,24 +509,15 @@ void SaveRGB(unsigned char *img, int width, int height, char *player_name) {
 		     buf, strlen(buf),
 		     (time_t)0, (uint32_t)0);
 	if (rc != MEMCACHED_SUCCESS) {
-		printf("Could NOT send to memcache. I'm very very sad :-( :-( :-(\n");
+		printf("RGB IMAGE: Could NOT send to memcache. I'm very very sad :-( :-( :-(\n");
 	} else {
-		printf("I can send to memcache. HURRAY!! :-) :-) :-)\n");
+		printf("RGB IMAGE: I can send to memcache. HURRAY!! :-) :-) :-)\n");
 	}
 #endif
 
 	free(buf);
+	free(img64);
 } 
-
-/*
-
-	sensor_type: 'kinect_rgb',
-	width: 640,
-	height: 480,
-	base64_img: ''
-	
-
-*/
 
 void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 {
@@ -546,8 +601,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 		}
 	}
 
-	unsigned char *img = NULL;
-	img = (unsigned char *) malloc (3 * g_nXRes * g_nYRes);
+	char *img = (char *) malloc (3 * g_nXRes * g_nYRes);
 	memset(img, 0, sizeof(img));
 	
 	pDepth = dmd.Data();
@@ -595,7 +649,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 			pDestImage += (texWidth - g_nXRes) *3;
 		}
 
-		//SaveImageToFile(img, g_nXRes, g_nYRes);
+		//SaveImageToFile((unsigned char*)img, g_nXRes, g_nYRes);
 		SaveRGB(img, g_nXRes, g_nYRes, "player1");
 	}
 	else
@@ -760,3 +814,4 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 		glPrintString(GLUT_BITMAP_HELVETICA_18, strFrameID);
 	}
 }
+
