@@ -1,4 +1,5 @@
 import copy
+import json
 import kestrel
 import pymongo
 
@@ -24,6 +25,10 @@ class PDU(object):
 
     def process_message(self, message):
         raise NotImplemented("Please implement this in your sub-class!")
+
+    def send_to(self, queue, message):
+        """ Send a message to another queue. """
+        self.kestrel_connection.add(queue, json.dumps(message))
 
     def run(self):
         """ Main loop of the PDU.
