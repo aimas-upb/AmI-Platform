@@ -17,3 +17,6 @@ acquisition/kinect/ipch
 
 # Skeleton export files
 acquisition/export-*.csv
+
+# Settings file
+core/settings.py
