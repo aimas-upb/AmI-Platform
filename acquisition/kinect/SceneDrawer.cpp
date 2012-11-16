@@ -295,7 +295,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 {
 	char* buf = (char*) malloc(10000 * sizeof(char));
 	char* head = JointToJSON(player, XN_SKEL_HEAD, "head");
-	char* neck = JointToJSON(player, XN_SKEL_HEAD, "neck");
+	char* neck = JointToJSON(player, XN_SKEL_NECK, "neck");
 	char* left_shoulder = JointToJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
 	char* right_shoulder = JointToJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
 	char* left_elbow = JointToJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
