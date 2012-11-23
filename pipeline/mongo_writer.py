@@ -33,7 +33,7 @@ class MongoWriter(PDU):
 		collection so that our database doesn't fill up.
 
 		"""
-		if not self._should_be_written(message):
+		if not self._should_be_saved(message):
 			return
 
 		# Add a created_at field so that we can expire items older than TTL
