@@ -567,9 +567,9 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 		     buf, strlen(buf),
 		     (time_t)0, (uint32_t)0);
 	if (rc != MEMCACHED_SUCCESS) {
-		printf("RGB IMAGE: Could NOT send to memcache. I'm very very sad :-( :-( :-(\n");
+		printf("%s: Could NOT send to memcache. I'm very very sad :-( :-( :-(\n", sensor_type);
 	} else {
-		printf("RGB IMAGE: I can send to memcache. HURRAY!! :-) :-) :-)\n");
+		printf("%s: I can send to memcache. HURRAY!! :-) :-) :-)\n", sensor_type);
 	}
 #endif
 
@@ -711,7 +711,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, co
 		}
 
 		SaveImage(img, g_nXRes, g_nYRes, "player1", "kinect_depth");
-		SaveImage((unsigned char*)pImage, imd.XRes(), imd.YRes(), "player1", "kinect_rgb");
+		SaveImage((char*)pImage, imd.XRes(), imd.YRes(), "player1", "kinect_rgb");
 	
 	}
 	else
