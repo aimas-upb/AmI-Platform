@@ -4,6 +4,7 @@
 .settings
 bin
 *.pyc
+*~
 
 # Ignore kinect C++ acquisition program binaries
 acquisition/kinect/Bin

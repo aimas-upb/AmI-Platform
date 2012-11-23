@@ -38,6 +38,7 @@ xn::Context g_Context;
 xn::ScriptNode g_scriptNode;
 xn::DepthGenerator g_DepthGenerator;
 xn::UserGenerator g_UserGenerator;
+xn::ImageGenerator g_ImageGenerator;
 xn::Player g_Player;
 #if USE_MEMCACHE
 memcached_st* g_MemCache;
@@ -89,7 +90,7 @@ void CleanupExit()
 	g_UserGenerator.Release();
 	g_Player.Release();
 	g_Context.Release();
-
+	g_ImageGenerator.Release();
 	exit (1);
 }
 
@@ -219,7 +220,10 @@ void glutDisplay (void)
 
 	xn::SceneMetaData sceneMD;
 	xn::DepthMetaData depthMD;
+	xn::ImageMetaData imageMD;
 	g_DepthGenerator.GetMetaData(depthMD);
+	g_ImageGenerator.GetMetaData(imageMD);
+	
 #ifndef USE_GLES
 	glOrtho(0, depthMD.XRes(), depthMD.YRes(), 0, -1.0, 1.0);
 #else
@@ -237,7 +241,9 @@ void glutDisplay (void)
 		// Process the data
 		g_DepthGenerator.GetMetaData(depthMD);
 		g_UserGenerator.GetUserPixels(0, sceneMD);
-		DrawDepthMap(depthMD, sceneMD);
+		g_ImageGenerator.GetMetaData(imageMD);
+		
+		DrawDepthMap(depthMD, sceneMD, imageMD);
 
 #ifndef USE_GLES
 	glutSwapBuffers();
@@ -384,7 +390,14 @@ int main(int argc, char **argv)
 
 		g_DepthGenerator = mockDepth;
 	}
-
+	
+	nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_IMAGE, g_ImageGenerator);
+    if (nRetVal != XN_STATUS_OK)
+    {
+        printf("No image node exists! Check your XML.");
+        return 1;
+    }
+	    
 	nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_USER, g_UserGenerator);
 	if (nRetVal != XN_STATUS_OK)
 	{
@@ -429,6 +442,8 @@ int main(int argc, char **argv)
 	nRetVal = g_Context.StartGeneratingAll();
 	CHECK_RC(nRetVal, "StartGenerating");
 
+	
+
 #if USE_MEMCACHE
 	// ------- START MEMCACHED INIT --------------
 	g_MemCache = memcached_create(NULL);
@@ -459,7 +474,7 @@ int main(int argc, char **argv)
 	while (!g_bQuit)
 	{
 		glutDisplay();
-		eglSwapBuffers(display, surface);
+		eglSwapBuffers(display, surface);	
 	}
 	opengles_shutdown(display, surface, context);
 

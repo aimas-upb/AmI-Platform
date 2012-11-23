@@ -13,7 +13,7 @@ class MongoWriter(PDU):
 	DATABASE = 'measurements'
 	COLLECTION = 'docs'
 	TTL = constants.SECONDS_IN_DAY
-	BETWEEN_WRITES = 0.1 # seconds between writes for a sensor_type
+	BETWEEN_WRITES = 1 # seconds between writes for a sensor_type
 
 	def __init__(self):
 		""" After performing base class initializations, make sure that

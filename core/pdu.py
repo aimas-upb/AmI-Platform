@@ -63,7 +63,7 @@ class PDU(object):
                 try:
                     doc = json.loads(message)
                 except:
-                    print "Did not get valid JSON from queue %s" % QUEUE
+                    print "Did not get valid JSON from queue %s" % self.QUEUE
                     print "Message = %s" % message
                     import traceback
                     traceback.print_exc()

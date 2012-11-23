@@ -1,7 +1,4 @@
-import pymongo
-
 from core import PDU
-from core import constants
 
 class Router(PDU):
     """ PDU that routes incoming measurements from sensors to the
