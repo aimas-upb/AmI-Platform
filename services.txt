@@ -3,4 +3,3 @@ ami-mongo-writer
 ami-sensor-kinect
 ami-head-crop
 ami-face-recognition
-
