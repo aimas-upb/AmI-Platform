@@ -488,7 +488,7 @@ void SaveImageToFile(unsigned char *img, int width, int height) {
  * Kestrel, a message-queue system used to communicate with the rest of the
  * system.
  */
-void SaveRGB(char *img, int width, int height, char *player_name) {
+void SaveImage(char *img, int width, int height, char *player_name, char* sensor_type) {
 	size_t outlen, outlen2;
 
 	char* buf = (char*) malloc(2000000 * sizeof(char));
@@ -502,9 +502,9 @@ void SaveRGB(char *img, int width, int height, char *player_name) {
 	//printf("\n%d\n", outlen2);
 	//SaveImageToFile((unsigned char*)img_dec64, width, height);
 
-	snprintf(buf, 2000000, "{\"context\": \"%s\",\"sensor_type\": \"kinect_rgb\", \"player\": \"%s\", \
+	snprintf(buf, 2000000, "{\"context\": \"%s\",\"sensor_type\": \"%s\", \"player\": \"%s\", \
 		\"width\": \"%d\", \"height\": \"%d\", \"image\": \"%s\" }",
-		context, player_name, width, height, img64);
+		context, sensor_type, player_name, width, height, img64);
 
 #if USE_MEMCACHE
 	memcached_return rc;
@@ -525,8 +525,9 @@ void SaveRGB(char *img, int width, int height, char *player_name) {
 	free(context);
 }
 
-void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
+void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, const xn::ImageMetaData& imd)
 {
+
 	static bool bInitialized = false;
 	static GLuint depthTexID;
 	static unsigned char* pDepthTexBuf;
@@ -574,7 +575,8 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 
 	const XnDepthPixel* pDepth = dmd.Data();
 	const XnLabel* pLabels = smd.Data();
-
+	const XnUInt8* pImage = imd.Data();
+	
 	static unsigned int nZRes = dmd.ZRes();
 	static float* pDepthHist = (float*)malloc(nZRes* sizeof(float));
 
@@ -655,8 +657,9 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 			pDestImage += (texWidth - g_nXRes) *3;
 		}
 
-		//SaveImageToFile((unsigned char*)img, g_nXRes, g_nYRes);
-		SaveRGB(img, g_nXRes, g_nYRes, "player1");
+		SaveImage(img, g_nXRes, g_nYRes, "player1", "kinect_depth");
+		SaveImage((unsigned char*)pImage, imd.XRes(), imd.YRes(), "player1", "kinect_rgb");
+	
 	}
 	else
 	{
