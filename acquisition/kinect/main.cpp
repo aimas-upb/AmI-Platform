@@ -42,7 +42,6 @@ xn::Player g_Player;
 #if USE_MEMCACHE
 memcached_st* g_MemCache;
 #endif
-char* g_SkeletonContext = "default";
 
 XnBool g_bNeedPose = FALSE;
 XnChar g_strPose[20] = "";
@@ -115,7 +114,7 @@ void XN_CALLBACK_TYPE User_LostUser(xn::UserGenerator& /*generator*/, XnUserID n
 {
 	XnUInt32 epochTime = 0;
 	xnOSGetEpochTime(&epochTime);
-	printf("%d Lost user %d\n", epochTime, nId);	
+	printf("%d Lost user %d\n", epochTime, nId);
 }
 // Callback: Detected a pose
 void XN_CALLBACK_TYPE UserPose_PoseDetected(xn::PoseDetectionCapability& /*capability*/, const XnChar* strPose, XnUserID nId, void* /*pCookie*/)
@@ -141,7 +140,7 @@ void XN_CALLBACK_TYPE UserCalibration_CalibrationComplete(xn::SkeletonCapability
 	if (eStatus == XN_CALIBRATION_STATUS_OK)
 	{
 		// Calibration succeeded
-		printf("%d Calibration complete, start tracking user %d\n", epochTime, nId);		
+		printf("%d Calibration complete, start tracking user %d\n", epochTime, nId);
 		g_UserGenerator.GetSkeletonCap().StartTracking(nId);
 	}
 	else
@@ -338,10 +337,6 @@ void glInit (int * pargc, char ** argv)
 int main(int argc, char **argv)
 {
 	XnStatus nRetVal = XN_STATUS_OK;
-
-	if (argc == 2) {
-		g_SkeletonContext = strdup(argv[1]);
-	}
 
 	xn::EnumerationErrors errors;
 	nRetVal = g_Context.InitFromXmlFile(SAMPLE_XML_PATH, g_scriptNode, &errors);
