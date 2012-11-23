@@ -385,6 +385,18 @@ char* JointToJSON(XnUserID player, XnSkeletonJoint eJoint, char *name)
 	return buf;
 }
 
+char* JointTo2DJSON(XnUserID player, XnSkeletonJoint eJoint, char *name)
+{
+	XnSkeletonJointPosition joint;
+	g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, eJoint, joint);
+	XnPoint3D pt = joint.position;
+	g_DepthGenerator.ConvertRealWorldToProjective(1, &pt, &pt);
+	char* buf = (char*) malloc(100 * sizeof(char));
+	snprintf(buf, 100, "\"%s\": {\"X\": %.2f, \"Y\": %.2f}",
+		 	name, pt.X, pt.Y);
+	return buf;
+}
+
 /*
  * Saves the skeleton data by deriving a JSON message and enqueueing it to
  * Kestrel, a message-queue system used to communicate with the rest of the
@@ -408,12 +420,36 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	char* right_knee = JointToJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
 	char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
 	char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
+
+	char* head_2d = JointTo2DJSON(player, XN_SKEL_HEAD, "head");
+	char* neck_2d = JointTo2DJSON(player, XN_SKEL_NECK, "neck");
+	char* left_shoulder_2d = JointTo2DJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
+	char* right_shoulder_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
+	char* left_elbow_2d = JointTo2DJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
+	char* right_elbow_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
+	char* left_hand_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
+	char* right_hand_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
+	char* torso_2d = JointTo2DJSON(player, XN_SKEL_TORSO, "torso");
+	char* left_hip_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
+	char* right_hip_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
+	char* left_knee_2d = JointTo2DJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
+	char* right_knee_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
+	char* left_foot_2d = JointTo2DJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
+	char* right_foot_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
+
 	char *context = get_context();
 
-	snprintf((char*)buf, 10000, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", \"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}", get_context(),
+	snprintf((char*)buf, 10000, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", "
+		 "\"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s},"
+		 "\"skeleton_2d\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
+		 get_context(),
 		 player_name, head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
 		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
-		 left_foot, right_foot);
+		 left_foot, right_foot,
+
+		 head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
+		 right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
+		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
 	printf("%s\n", buf);
 
@@ -448,6 +484,23 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	free(right_knee);
 	free(left_foot);
 	free(right_foot);
+
+	free(head_2d);
+	free(neck_2d);
+	free(left_shoulder_2d);
+	free(right_shoulder_2d);
+	free(left_elbow_2d);
+	free(right_elbow_2d);
+	free(left_hand_2d);
+	free(right_hand_2d);
+	free(torso_2d);
+	free(left_hip_2d);
+	free(right_hip_2d);
+	free(left_knee_2d);
+	free(right_knee_2d);
+	free(left_foot_2d);
+	free(right_foot_2d);
+
 	free(context);
 }
 
