@@ -13,7 +13,7 @@ class MongoWriter(PDU):
 	DATABASE = 'measurements'
 	COLLECTION = 'docs'
 	TTL = constants.SECONDS_IN_DAY
-	BETWEEN_WRITES = 0.01 # seconds between writes for a sensor_type
+	BETWEEN_WRITES = 0.1 # seconds between writes for a sensor_type
 
 	def __init__(self):
 		""" After performing base class initializations, make sure that
@@ -24,6 +24,7 @@ class MongoWriter(PDU):
 		self.collection.ensure_index([('created_at', pymongo.DESCENDING)],
 									 background = True,
 									 expireAfterSeconds = self.TTL)
+		self.collection.ensure_index('context');
 		self.last_written_for_sensor_type = defaultdict(lambda: 0)
 
 	def process_message(self, message):
