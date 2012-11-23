@@ -2,6 +2,7 @@ import copy
 import json
 import kestrel
 import pymongo
+import time
 
 import settings
 
@@ -10,10 +11,20 @@ import settings
 """
 class PDU(object):
 
+    PRINT_STATS_INTERVAL = 30 # Print flow stats every X seconds
+
     def __init__(self):
         """ Set-up connections to Mongo and Kestrel by default on each PDU. """
         self._kestrel_connection = kestrel.Client(settings.KESTREL_SERVERS)
         self._mongo_connection = pymongo.Connection(settings.MONGO_SERVER)
+        self._last_stats = time.time()
+        self._processed_messages = 0
+
+    def log(self, message):
+        """ Log a message to stdout. Includes class name & current time. """
+        msg = '[%s] - %s - %s' % (time.ctime(), self.__class__.__name__,
+                                  message)
+        print msg
 
     @property
     def kestrel_connection(self):
@@ -68,3 +79,14 @@ class PDU(object):
                 print "Error while getting message from queue %s" % self.QUEUE
                 import traceback
                 traceback.print_exc()
+            finally:
+                # Count # of processed messages in each time interval
+                # and display them to the log.
+                self._processed_messages = self._processed_messages + 1
+                time_since_last_stats = time.time() - self._last_stats
+                if time_since_last_stats >= self.PRINT_STATS_INTERVAL:
+                    flow = self._processed_messages / time_since_last_stats
+                    self.log("%.2f messages/s in last %.2f seconds" % \
+                             (flow, time_since_last_stats))
+                    self._processed_messages = 0
+                    self._last_stats = time.time()
