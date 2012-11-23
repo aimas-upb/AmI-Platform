@@ -1,0 +1,4 @@
+check process {{service_name}}
+	with pidfile /var/run/{{service_name}}.pid
+	start = "/usr/sbin/service {{service_name}} start"
+	stop = "/usr/sbin/service {{service_name}} stop"

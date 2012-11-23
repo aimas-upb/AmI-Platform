@@ -1,0 +1,2 @@
+#!/bin/bash
+python /home/ami/AmI-Platform/{{service_file}} 2>&1
