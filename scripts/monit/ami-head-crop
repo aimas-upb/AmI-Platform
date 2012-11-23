@@ -1,0 +1,4 @@
+check process ami-head-crop
+	with pidfile /var/run/ami-head-crop.pid
+	start = "/usr/sbin/service ami-head-crop start"
+	stop = "/usr/sbin/service ami-head-crop stop"
