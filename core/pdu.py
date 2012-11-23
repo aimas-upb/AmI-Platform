@@ -55,7 +55,8 @@ class PDU(object):
                 # Step 1 - get message from kestrel queue
                 message = self.kestrel_connection.get(self.QUEUE, timeout = 1)
                 if not message:
-                    print "Could not get message from queue %s Retrying ..." % self.QUEUE
+                    self.log("Could not get message from queue %s Retrying ..."
+                             % self.QUEUE)
                     continue
 
                 # Step 2 - try to decode it assuming it's in correct
@@ -63,10 +64,8 @@ class PDU(object):
                 try:
                     doc = json.loads(message)
                 except:
-                    print "Did not get valid JSON from queue %s" % self.QUEUE
-                    print "Message = %s" % message
-                    import traceback
-                    traceback.print_exc()
+                    self.log("Did not get valid JSON from queue %s" % self.QUEUE)
+                    self.log("Message = %s" % message)
                     continue
 
                 # Step 3 - actually process the message. Usually, this means
@@ -76,7 +75,7 @@ class PDU(object):
                 self.process_message(copy_of_doc)
 
             except:
-                print "Error while getting message from queue %s" % self.QUEUE
+                self.log("Error while getting message from queue %s" % self.QUEUE)
                 import traceback
                 traceback.print_exc()
             finally:
