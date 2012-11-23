@@ -1,4 +1,4 @@
-check process python
+check process ami-router
 	with pidfile /var/run/ami-router.pid
 	start = "/usr/sbin/service ami-router start"
 	stop = "/usr/sbin/service ami-router stop"
