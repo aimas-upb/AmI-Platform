@@ -25,6 +25,7 @@
 #include <math.h>
 #include<stdlib.h>
 #include "SceneDrawer.h"
+#include "context.h"
 
 
 #ifndef USE_GLES
@@ -41,7 +42,9 @@
 	#include <libmemcached/memcached.h>
 #endif
 
-static const std::string base64_chars = 
+using namespace std;
+
+static const std::string base64_chars =
              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
              "abcdefghijklmnopqrstuvwxyz"
              "0123456789+/";
@@ -60,8 +63,7 @@ extern XnBool g_bMarkJoints;
 
 #if USE_MEMCACHE
 extern memcached_st* g_MemCache;
-#endif 
-extern char* g_SkeletonContext;
+#endif
 
 #include <map>
 std::map<XnUInt32, std::pair<XnCalibrationStatus, XnPoseDetectionStatus> > m_Errors;
@@ -87,7 +89,7 @@ GLuint initTexture(void** buf, int& width, int& height)
 	glGenTextures(1,&texID);
 
 	width = getClosestPowerOfTwo(width);
-	height = getClosestPowerOfTwo(height); 
+	height = getClosestPowerOfTwo(height);
 	*buf = new unsigned char[width*height*4];
 	glBindTexture(GL_TEXTURE_2D,texID);
 
@@ -284,17 +286,17 @@ bool DrawLimb(XnUserID player, XnSkeletonJoint eJoint1, XnSkeletonJoint eJoint2)
 }
 
 static const float DEG2RAD = 3.14159/180;
- 
+
 void drawCircle(float x, float y, float radius)
 {
    glBegin(GL_TRIANGLE_FAN);
- 
+
    for (int i=0; i < 360; i++)
    {
       float degInRad = i*DEG2RAD;
       glVertex2f(x + cos(degInRad)*radius, y + sin(degInRad)*radius);
    }
- 
+
    glEnd();
 }
 void DrawJoint(XnUserID player, XnSkeletonJoint eJoint)
@@ -406,8 +408,9 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	char* right_knee = JointToJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
 	char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
 	char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
-	
-	snprintf((char*)buf, 10000, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", \"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}", g_SkeletonContext,
+	char *context = get_context();
+
+	snprintf((char*)buf, 10000, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", \"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}", get_context(),
 		 player_name, head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
 		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
 		 left_foot, right_foot);
@@ -417,7 +420,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 #if USE_MEMCACHE
 	memcached_return rc;
 	printf("g_MemCache = %p\n", g_MemCache);
-	rc = memcached_set(g_MemCache, 
+	rc = memcached_set(g_MemCache,
 		     "measurements", strlen("measurements"),
 		     buf, strlen(buf),
 		     (time_t)0, (uint32_t)0);
@@ -445,6 +448,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	free(right_knee);
 	free(left_foot);
 	free(right_foot);
+	free(context);
 }
 
 void SaveImageToFile(unsigned char *img, int width, int height) {
@@ -489,6 +493,7 @@ void SaveRGB(char *img, int width, int height, char *player_name) {
 
 	char* buf = (char*) malloc(2000000 * sizeof(char));
 	char* img64;
+	char* context = get_context();
 
 	img64 = base64_encode(img, width*height*3, &outlen);
 	//char* img_dec64 = (char*)malloc(2000000 * sizeof(char));
@@ -498,13 +503,13 @@ void SaveRGB(char *img, int width, int height, char *player_name) {
 	//SaveImageToFile((unsigned char*)img_dec64, width, height);
 
 	snprintf(buf, 2000000, "{\"context\": \"%s\",\"sensor_type\": \"kinect_rgb\", \"player\": \"%s\", \
-		\"width\": \"%d\", \"height\": \"%d\", \"image\": \"%s\" }", 
-		g_SkeletonContext, player_name, width, height, img64);
-	
+		\"width\": \"%d\", \"height\": \"%d\", \"image\": \"%s\" }",
+		context, player_name, width, height, img64);
+
 #if USE_MEMCACHE
 	memcached_return rc;
 	printf("g_MemCache = %p\n", g_MemCache);
-	rc = memcached_set(g_MemCache, 
+	rc = memcached_set(g_MemCache,
 		     "measurements", strlen("measurements"),
 		     buf, strlen(buf),
 		     (time_t)0, (uint32_t)0);
@@ -517,11 +522,12 @@ void SaveRGB(char *img, int width, int height, char *player_name) {
 
 	free(buf);
 	free(img64);
-} 
+	free(context);
+}
 
 void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 {
-	static bool bInitialized = false;	
+	static bool bInitialized = false;
 	static GLuint depthTexID;
 	static unsigned char* pDepthTexBuf;
 	static int texWidth, texHeight;
@@ -603,7 +609,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 
 	char *img = (char *) malloc (3 * g_nXRes * g_nYRes);
 	memset(img, 0, sizeof(img));
-	
+
 	pDepth = dmd.Data();
 	if (g_bDrawPixels)
 	{
@@ -631,7 +637,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 					{
 						nHistValue = pDepthHist[nValue];
 
-						pDestImage[0] = nHistValue * Colors[nColorID][0]; 
+						pDestImage[0] = nHistValue * Colors[nColorID][0];
 						pDestImage[1] = nHistValue * Colors[nColorID][1];
 						pDestImage[2] = nHistValue * Colors[nColorID][2];
 					}
@@ -640,7 +646,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 				img[(nY*g_nXRes +nX)*3+0] = (unsigned char) pDestImage[0];
 				img[(nY*g_nXRes +nX)*3+1] = (unsigned char) pDestImage[1];
 				img[(nY*g_nXRes +nX)*3+2] = (unsigned char) pDestImage[2];
-				
+
 				pDepth++;
 				pLabels++;
 				pDestImage+=3;
@@ -664,7 +670,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 	glColor4f(0.75,0.75,0.75,1);
 
 	glEnable(GL_TEXTURE_2D);
-	DrawTexture(dmd.XRes(),dmd.YRes(),0,0);	
+	DrawTexture(dmd.XRes(),dmd.YRes(),0,0);
 	glDisable(GL_TEXTURE_2D);
 
 	char strLabel[50] = "";
@@ -748,7 +754,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
 				DrawJoint(aUsers[i], XN_SKEL_RIGHT_ANKLE);
 				DrawJoint(aUsers[i], XN_SKEL_RIGHT_FOOT);
 			}
-			
+
 			SaveSkeleton(aUsers[i], "player1", "kinect1");
 #ifndef USE_GLES
 			glBegin(GL_LINES);
