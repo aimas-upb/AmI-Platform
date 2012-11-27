@@ -20,7 +20,7 @@ if __name__ == "__main__":
 	db = getattr(connection, DB_NAME)
 	collection = getattr(db, COLLECTION_NAME)
 
-	measurements = collection.find({"context": context})
+	measurements = collection.find({"context": context, "sensor_type": "kinect"})
 	if measurements.count() == 0:
 		print "No measurements found for context %s" % context
 		sys.exit()
