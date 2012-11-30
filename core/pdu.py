@@ -55,8 +55,8 @@ class PDU(object):
                 # Step 1 - get message from kestrel queue
                 message = self.kestrel_connection.get(self.QUEUE, timeout = 1)
                 if not message:
-                    self.log("Could not get message from queue %s Retrying ..."
-                             % self.QUEUE)
+                    """self.log("Could not get message from queue %s Retrying ..."
+                             % self.QUEUE)"""
                     continue
 
                 # Step 2 - try to decode it assuming it's in correct

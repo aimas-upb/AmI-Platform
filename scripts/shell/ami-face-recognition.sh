@@ -1,2 +1,2 @@
 #!/bin/bash
-python /home/ami/AmI-Platform/pipeline/face-recognition.py 2>&1
+python /home/ami/AmI-Platform/pipeline/face_recognition.py 2>&1
