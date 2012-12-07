@@ -1,15 +1,34 @@
 # Redeploy everything script
 
-# branch=$(git rev-parse --abbrev-ref HEAD)
+fresh=false
 
-# Get rid of non-committed changes
-# git reset --hard HEAD
+for ((i = 1; $#; i++)); do
+    case $1 in
+        --fresh) $fresh=true ; shift 1 ;;
+        --?*) shift 2 ;;
+    esac
+done
 
-# Get latest changes from repo
-# git pull origin $branch
+# If we need fresh code, throw everything away and
+# get it from GitHub.
+if $fresh; then
+	branch=$(git rev-parse --abbrev-ref HEAD)
 
-# Make sure that filesystem is in sync with git index
-# git reset --hard HEAD
+	# Get rid of non-committed changes
+	git reset --hard HEAD
+
+	# Get latest changes from repo
+	git pull origin $branch
+
+	# Make sure that filesystem is in sync with git index
+	git reset --hard HEAD
+fi
+
+# See if there is a host-specific service name
+service_name="services.txt"
+host_specific_service_name="services.$(hostname -s).txt"
+if [ -f $host_specific_service_name]; then
+	$service_name=$host_specific_service_name
 
 # Read the list of services, and copy the new upstart & monit files + restart
 while read -r service_name; do
@@ -23,4 +42,4 @@ while read -r service_name; do
 	sudo cp ./scripts/monit/$service_name /etc/monit/conf.d
 	echo "Restarting service $service_name"
 	sudo service $service_name restart
-done < services.txt
+done < $service_name
