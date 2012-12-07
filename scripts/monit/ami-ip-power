@@ -1,0 +1,4 @@
+check process ami-ip-power
+	with pidfile /var/run/ami-ip-power.pid
+	start = "/usr/sbin/service ami-ip-power start"
+	stop = "/usr/sbin/service ami-ip-power stop"

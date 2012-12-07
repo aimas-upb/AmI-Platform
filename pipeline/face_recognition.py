@@ -13,27 +13,29 @@ class FaceRecognition(PDU):
         if self.first_image == 0:
             self.print_image_to_file(message)
         self.first_image = 1
+        # should send message to ip_power queue
+        # params: ip, cmd, user, pwd
         
     def print_image_to_file(self, image_dict):
         # initiate header values
         d = {
-        'mn1':66,
-        'mn2':77,
-        'filesize':0,
-        'undef1':0,
-        'undef2':0,
-        'offset':54,
-        'headerlength':40,
-        'width': image_dict.get('width'),
-        'height': image_dict.get('height'),
-        'colorplanes':0,
-        'colordepth':24,
-        'compression':0,
-        'imagesize':0,
-        'res_hor':0,
-        'res_vert':0,
-        'palette':0,
-        'importantcolors':0
+            'mn1':66,
+            'mn2':77,
+            'filesize':0,
+            'undef1':0,
+            'undef2':0,
+            'offset':54,
+            'headerlength':40,
+            'width': image_dict.get('width'),
+            'height': image_dict.get('height'),
+            'colorplanes':0,
+            'colordepth':24,
+            'compression':0,
+            'imagesize':0,
+            'res_hor':0,
+            'res_vert':0,
+            'palette':0,
+            'importantcolors':0
         }
         
         crt_index=0;
