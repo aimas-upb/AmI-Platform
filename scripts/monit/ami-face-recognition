@@ -1,4 +1,4 @@
 check process ami-face-recognition
 	with pidfile /var/run/ami-face-recognition.pid
-	start = "/usr/sbin/service ami-recognition start"
-	stop = "/usr/sbin/service ami-recognition stop"
+	start = "/usr/sbin/service ami-face-recognition start"
+	stop = "/usr/sbin/service ami-face-recognition stop"
