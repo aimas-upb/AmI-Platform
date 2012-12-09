@@ -2,14 +2,11 @@ var App = App || {};
 
 App.DataSourceConfig = {
 		channel_types: {
-			'/todos': {
-				type: 'relational',
-				collection: 'todos'
+			'/latest_kinect_rgb': {
+				type: 'api',
+				url: App.general.FRONTEND_URL + '/api/latest_kinect_rgb',
+				refresh: 'periodic',
+				refresh_interval: 1000
 			},
-      '/news': {
-				type: 'relational',
-				collection: 'news'
-			}
-
 		},
 };
