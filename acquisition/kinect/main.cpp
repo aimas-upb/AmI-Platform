@@ -30,6 +30,7 @@
 #if USE_MEMCACHE
 #include <libmemcached/memcached.h>
 #endif
+#include "base64.h"
 
 //---------------------------------------------------------------------------
 // Globals
@@ -344,6 +345,8 @@ int main(int argc, char **argv)
 {
 	XnStatus nRetVal = XN_STATUS_OK;
 
+	base64_init();
+
 	xn::EnumerationErrors errors;
 	nRetVal = g_Context.InitFromXmlFile(SAMPLE_XML_PATH, g_scriptNode, &errors);
 	if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
@@ -478,6 +481,7 @@ int main(int argc, char **argv)
 	}
 	opengles_shutdown(display, surface, context);
 
+	base64_done();
 	CleanupExit();
 #endif
 }
