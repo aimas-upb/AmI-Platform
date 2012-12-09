@@ -24,11 +24,28 @@ if $fresh; then
 	git reset --hard HEAD
 fi
 
+all_services_file="services.txt"
+
+while read -r service_name; do
+        if [ -f "/etc/init/$service_name.conf" ]; then
+		echo "Removing old upstart script for service $service_name"
+		sudo rm /etc/init/$service_name.conf
+	fi
+        if [ -f "/etc/monit/conf.d/$service_name" ]; then
+		echo "Removing old monit script for service $service_name"
+		sudo rm /etc/monit/conf.d/$service_name
+	fi
+done < $all_services_file
+
+echo ""
+echo ""
+
 # See if there is a host-specific service name
-service_name="services.txt"
-host_specific_service_name="services.$(hostname -s).txt"
-if [ -f $host_specific_service_name]; then
-	$service_name=$host_specific_service_name
+services_file="services.txt"
+host_specific_services_file="services.$(hostname -s).txt"
+if [ -f "$host_specific_services_file" ]; then
+	services_file=$host_specific_services_file
+fi
 
 # Read the list of services, and copy the new upstart & monit files + restart
 while read -r service_name; do
@@ -42,4 +59,4 @@ while read -r service_name; do
 	sudo cp ./scripts/monit/$service_name /etc/monit/conf.d
 	echo "Restarting service $service_name"
 	sudo service $service_name restart
-done < $service_name
+done < $services_file
