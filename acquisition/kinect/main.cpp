@@ -28,9 +28,10 @@
 #include "SceneDrawer.h"
 #include <XnPropNames.h>
 #if USE_MEMCACHE
-#include <libmemcached/memcached.h>
+	#include <libmemcached/memcached.h>
 #endif
 #include "base64.h"
+#include "ami_environment.h"
 
 //---------------------------------------------------------------------------
 // Globals
@@ -346,7 +347,7 @@ int main(int argc, char **argv)
 	XnStatus nRetVal = XN_STATUS_OK;
 
 	base64_init();
-
+	
 	xn::EnumerationErrors errors;
 	nRetVal = g_Context.InitFromXmlFile(SAMPLE_XML_PATH, g_scriptNode, &errors);
 	if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
@@ -452,8 +453,10 @@ int main(int argc, char **argv)
 	g_MemCache = memcached_create(NULL);
 	memcached_server_st* servers = NULL;
 	memcached_return rc;
-	// servers = memcached_server_list_append(servers, "172.16.124.128", 22133, &rc);
-	servers = memcached_server_list_append(servers, "127.0.0.1", 22133, &rc);
+	servers = memcached_server_list_append(servers, 
+										   getKestrelServerIP(),
+										   getKestrelServerPort(),
+										   &rc);
 	memcached_server_push(g_MemCache, servers);
 	// TODO(andrei): check that rc == MEMCACHED_SUCCESS or fail gracefully
 	// ------- END MEMCACHED INIT --------------
