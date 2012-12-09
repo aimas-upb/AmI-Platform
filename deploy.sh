@@ -4,7 +4,7 @@ fresh=false
 
 for ((i = 1; $#; i++)); do
     case $1 in
-        --fresh) $fresh=true ; shift 1 ;;
+        --fresh) fresh=true ; shift 1 ;;
         --?*) shift 2 ;;
     esac
 done
