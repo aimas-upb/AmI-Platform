@@ -1,0 +1,4 @@
+check process ami-api
+	with pidfile /var/run/ami-api.pid
+	start = "/usr/sbin/service ami-api start"
+	stop = "/usr/sbin/service ami-api stop"

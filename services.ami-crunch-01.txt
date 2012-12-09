@@ -3,3 +3,4 @@ ami-mongo-writer
 ami-head-crop
 ami-face-recognition
 ami-ip-power
+ami-api
