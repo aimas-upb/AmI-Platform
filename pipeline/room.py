@@ -16,7 +16,7 @@ class Room(PDU):
             return False
 
         if 'event_type' == 'person_appeared':
-            if 'person_name' not in 'message':
+            if 'person_name' not in message:
                 return False
 
         return True
@@ -26,6 +26,7 @@ class Room(PDU):
             like "person X has appeared in front of kinect Y and reacts to
             that kind of events. """
 
+        print message
         event_type = message.get('event_type', '')
         if event_type == 'person_appeared':
             self.handle_person_appeared_event(message)
@@ -34,11 +35,11 @@ class Room(PDU):
         """ Handle the person appeared event. """
 
         person_name = message['person_name']
-        if person_name == 'andrei@ami-lab.ro':
+        if person_name == 'andrei@amilab.ro':
             self.play_message("Hello, Andrei. Let me switch on the air "
                               "conditioning for you.")
             self.switch_on_air_conditioning()
-        elif person_name == 'diana@ami-lab.ro':
+        elif person_name == 'liviu@amilab.ro':
             self.play_message("Hello, Diana. I know you like it quiet so "
                               "I won't bother you with air conditioning.")
             self.switch_off_air_conditioning()
