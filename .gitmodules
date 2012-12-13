@@ -1,0 +1,3 @@
+[submodule "pybetaface"]
+	path = pybetaface
+	url = git://github.com/aismail/pybetaface.git
