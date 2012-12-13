@@ -1,5 +1,6 @@
 import copy
 import json
+import sys
 import time
 import traceback
 
@@ -29,6 +30,7 @@ class PDU(object):
         msg = '[%s] - %s - %s' % (time.ctime(), self.__class__.__name__,
                                   message)
         print msg
+        sys.stdout.flush()
 
     @property
     def kestrel_connection(self):
