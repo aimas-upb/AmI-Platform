@@ -44,8 +44,8 @@ class FaceRecognition(PDU):
         person_name = matches.keys()[matches.values().index(key)]
         self.log("PERSON = %s" % person_name)
         
-        #message = {'event_type': 'person_appeared', 'person': person_name}
-        #self.send_to('room', message) 
+        message = {'event_type': 'person_appeared', 'person_name': person_name}
+        self.send_to('room', message) 
         
         #os.remove(str(path))
         
