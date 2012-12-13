@@ -12,4 +12,4 @@ def get_latest_kinect_rgb():
     del image['_id']
     return json.dumps(image)
 
-run(host='127.0.0.1', port=8000)
+run(host='0.0.0.0', port=8000)
