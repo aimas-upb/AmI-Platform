@@ -1,0 +1,4 @@
+check process ami-room
+	with pidfile /var/run/ami-room.pid
+	start = "/usr/sbin/service ami-room start"
+	stop = "/usr/sbin/service ami-room stop"
