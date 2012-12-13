@@ -1,0 +1,4 @@
+check process ami-text_to_speech
+	with pidfile /var/run/ami-text_to_speech.pid
+	start = "/usr/sbin/service ami-text_to_speech start"
+	stop = "/usr/sbin/service ami-text_to_speech stop"
