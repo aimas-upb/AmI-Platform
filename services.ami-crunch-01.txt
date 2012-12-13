@@ -4,3 +4,4 @@ ami-head-crop
 ami-face-recognition
 ami-ip-power
 ami-api
+ami-room
