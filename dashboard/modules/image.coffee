@@ -1,18 +1,24 @@
 define ['cs!widget'], (Widget) ->
     
     class ImageWidget extends Widget
+
+        template_name: 'templates/image.hjs'
         
         subscribed_channels: ['/image']
+        
+        events:
+            "click a.save-image": "saveImageToFile"
         
         initialize: =>
             ###
                 Create an HTML5 canvas which will be used
                 to render the image.
             ###
-            @canvas = document.createElement('canvas')
-            @canvas.setAttribute("width", 640)
-            @canvas.setAttribute("height", 480)
-            @view.$el.append(@canvas)
+            @renderLayout()
+
+            # Normally we would use "elements" for this, but we want the
+            # raw DOM element instead of the jQuery one.
+            @canvas = @view.$el.find('canvas').get(0)
         
         get_image: (params) =>
             ###
@@ -43,3 +49,7 @@ define ['cs!widget'], (Widget) ->
             
             # Render the actual image to HTML
             context_2d.putImageData(pixels, 0, 0)
+
+        saveImageToFile: (event) =>
+            urlData = @canvas.toDataURL('image/jpeg')
+            window.open(urlData, 'Save image to file')
