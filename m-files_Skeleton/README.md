@@ -24,3 +24,9 @@ CSV-filtrate is the destination folder (where all the .csv skeleton files that a
 
 PS: this latter folder (CSV-filtrate) is created automatically by filter_export.py if doesn't exist a-priori)
  
+Features_Compute returns the angle between 3 3D points (of the skeleton)
+
+Line_to_Plane_Angle returns the angle between a line determined by 2 3D skeleton-points and a plane, either yOz or xOy
+
+P.S. All these  scripts for feature detection are just for academic purpose and to generate HTML 
+documentation (using m2html); in the end they should be replaced with corresponding Perl (Python) implementations
