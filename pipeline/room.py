@@ -9,7 +9,7 @@ class Room(PDU):
     SAME_PERSON_THRESHOLD = 15 * 60
 
     def __init__(self, **kwargs):
-        super(PDU, self).__init__()
+        super(Room, self).__init__(**kwargs)
         self.last_person_name = None
         self.last_person_action_took_at = int(time.time())
 
@@ -63,8 +63,11 @@ class Room(PDU):
     def handle_person_appeared_event(self, message):
         """ Handle the person appeared event. """
 
-        self.last_person_action_took_at = int(time.time())
         person_name = message['person_name']
+
+        self.last_person_action_took_at = int(time.time())
+        self.last_person_name = person_name
+        
         if person_name == 'andrei@amilab.ro':
             self.play_message("Hello, Andrei. Let me switch on the air "
                               "conditioning for you.")
