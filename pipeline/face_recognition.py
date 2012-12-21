@@ -22,7 +22,7 @@ class FaceRecognition(PDU):
         self.print_image_to_file(message)
         
     def print_image_to_file(self, image_dict):
-        image_buffer = array.array('B', image_dict['cropped_image']).tostring()
+        image_buffer = array.array('B', image_dict['image']).tostring()
         image = Image.frombuffer("RGB", 
                                  (image_dict['width'], image_dict['height']), 
                                  image_buffer)
@@ -33,7 +33,6 @@ class FaceRecognition(PDU):
         
         print "File path = %s" % path
         matches = self.api.recognize_faces(path, 'amilab.ro')
-        
         print matches
         
         # get the most probable person
@@ -47,9 +46,14 @@ class FaceRecognition(PDU):
         person_name = matches.keys()[matches.values().index(max_probability)]
         self.log("PERSON = %s" % person_name)
         
-        message = {'event_type': 'person_appeared', 'person_name': person_name}
-        self.send_to('room', message) 
-        self.send_to('upgrade_face_samples', message)
+        # send event to room
+        message_to_room = {'event_type': 'person_appeared', 'person_name': person_name}
+        self.send_to('room', message_to_room)
+        
+        # send cropped image to UpgradeFaceSamples
+        upgrade_message = {'person_name': person_name}
+        upgrade_message.update(image_dict)
+        self.send_to('upgrade_face_samples', upgrade_message)
         
         #os.remove(str(path))
         
