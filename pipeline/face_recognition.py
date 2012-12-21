@@ -32,7 +32,7 @@ class FaceRecognition(PDU):
         image.save(path)
         
         print "File path = %s" % path
-        matches = self.api.recognize_faces(path, 'ami-lab.ro')
+        matches = self.api.recognize_faces(path, 'amilab.ro')
         
         print matches
         

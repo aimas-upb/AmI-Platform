@@ -12,7 +12,7 @@ def get_ami_lab_members():
     """ Get a list of the AmI lab members. For each member, there is a
         subdir in the 'members' folder.
 
-        Returns a list of strings of the form x@ami-lab.ro
+        Returns a list of strings of the form x@amilab.ro
 
     """
     members_folder = 'members'
@@ -23,7 +23,7 @@ def get_headshots_for_member(member):
     """ Given an AmI lab member, get the available examples for that member.
 
         Returns a list of relative paths to the available headshots of that
-        ami-lab member. The actual headshots are images stored in the
+        amilab member. The actual headshots are images stored in the
         members/member-name folder as files.
 
     """
