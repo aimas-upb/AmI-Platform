@@ -8,9 +8,9 @@ For "filtering-out" bad examples (for training / testing purposes) a  filtering 
 
 https://github.com/ami-lab/AmI-Platform/blob/master/filter_export.py
  
- this one uses a "master-file" which gives the indexes of good skeletons (obtained after a visual inspection) or after a "pre-filtering" based 
+ this one uses a "master-file" which gives the indexes of good skeletons (obtained after a visual inspection) or after a "pre-filtering" 
  
- on skeleton-resemblance (entropy) with the following syntax:
+based  on skeleton-resemblance (entropy) with the following syntax:
   
 python filter_export.py -f filters.txt -i CSV -o CSV-filtrate
   
