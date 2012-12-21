@@ -40,12 +40,16 @@ class FaceRecognition(PDU):
         if len(matches) == 0:
             return
         
-        key = max(matches.values())
-        person_name = matches.keys()[matches.values().index(key)]
+        max_probability = max(matches.values())
+        if max_probability < 0.75:
+            return
+        
+        person_name = matches.keys()[matches.values().index(max_probability)]
         self.log("PERSON = %s" % person_name)
         
         message = {'event_type': 'person_appeared', 'person_name': person_name}
         self.send_to('room', message) 
+        self.send_to('upgrade_face_samples', message)
         
         #os.remove(str(path))
         

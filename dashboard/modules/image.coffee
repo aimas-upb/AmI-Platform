@@ -102,11 +102,13 @@ define ['cs!widget'], (Widget) ->
             @drawImage(context_2d)
           
             # Check if image and skeleton ar at most 1s apart
-            image_created_at = parseInt(@last_image.get('created_at'))
-            skeleton_created_at = parseInt(@last_skeleton.get('created_at'))
-            if Math.abs(image_created_at - skeleton_created_at) >= 2
-                console.warn("Skeleton and image probably do not match together (difference >= 2s)")
-                return
+            ###
+              image_created_at = parseInt(@last_image.get('created_at'))
+              skeleton_created_at = parseInt(@last_skeleton.get('created_at'))
+              if Math.abs(image_created_at - skeleton_created_at) >= 2
+                  console.warn("Skeleton and image probably do not match together (difference >= 2s)")
+                  return
+            ###
             
             @drawSkeleton(context_2d)
 
