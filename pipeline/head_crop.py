@@ -117,7 +117,11 @@ class HeadCrop(PDU):
         if len(faces) > 0:
             (x,y,w,h),n = faces[0]
             decoded_image = bytearray(base64.b64decode(received_image))
-            return self.crop_image(decoded_image, x, y, x+w, y+h)
+            x1 = max(x - w/2, 0)
+            y1 = max(y - h/2, 0)
+            x2 = min(x + w * 3 / 2, width)
+            y2 = min(y + h * 3 / 2, height)
+            return self.crop_image(decoded_image, x1, y1, x2, y2)
             
         #os.remove(str(path))
         return None
