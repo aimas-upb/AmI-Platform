@@ -8,15 +8,6 @@ from pipeline.head_crop import HeadCrop
 
 class HeadCropTest(TestCase):
     
-    """
-    def setUp(self):
-        self.pdu = HeadCrop()
-
-        # mock methods
-        self.pdu.face_detect = MagicMock(return_value='x')
-        self.pdu.crop_head   = MagicMock(return_value=None)
-    """
-        
     def _image_message(self):
         return {
             'sensor_type': 'kinect_rgb',
@@ -85,23 +76,5 @@ class HeadCropTest(TestCase):
         send_to.assert_called_once_with('face-recognition', {})
         crop_head.assert_called_once_with()
         
-       
-        
-    # tests if returned cropped image is not None
-    def test_returning_cropped_image(self):
-        # test 1: image received, skeleton not received
-        
-        # test 2: image received. skeleton reveiced, but not close enough
-        # test 3: image received, skeleton received, close enough
-        pass
-    
-    def test_skeleton_head_crop(self):
-        # test 1: test skeleton2d_cropping_area
-        pass
-    
-    def test_face_detect(self):
-        # test 1:
-        pass
-    
     
     
