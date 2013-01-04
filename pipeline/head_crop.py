@@ -98,33 +98,46 @@ class HeadCrop(PDU):
         return self.crop_image(decoded_image, min_x, min_y, max_x, max_y) 
 
     def face_detect(self):
-        received_image = self.last_image['image']
-        width = self.last_image['width']
-        height = self.last_image['height']
-        
-        # temporary save image to disk
-        image_buffer = array.array('B', received_image).tostring()
-        image = Image.frombuffer("RGB", (width, height), image_buffer)
-        
-        path = "/tmp/face_detection_%s.jpg" % uuid.uuid4()
-        image.save(path)
-        
-        hc = cv.Load('/home/ami/AmI-Platform/resources/haarcascade_frontalface_default.xml')
-        img = cv.LoadImage(path, cv.CV_LOAD_IMAGE_COLOR)
-        faces = cv.HaarDetectObjects(img, hc, cv.CreateMemStorage(), 1.2, 2,cv.CV_HAAR_DO_CANNY_PRUNING, (100,100))
-
-        # if multiple faces detected, send only the first one
-        if len(faces) > 0:
-            (x,y,w,h),n = faces[0]
-            decoded_image = bytearray(base64.b64decode(received_image))
-            x1 = max(x - w/2, 0)
-            y1 = max(y - h/2, 0)
-            x2 = min(x + w * 3 / 2, width)
-            y2 = min(y + h * 3 / 2, height)
-            return self.crop_image(decoded_image, x1, y1, x2, y2)
+        try:
+            received_image = bytearray(base64.b64decode(self.last_image['image'])) 
+            width = int(self.last_image['width'])
+            height = int(self.last_image['height'])
             
-        #os.remove(str(path))
-        return None
+            # temporary save image to disk
+            r = []
+            for x in range (0, len(received_image)):
+                r.append(received_image[x])
+            received_image = r
+            
+            image_buffer = array.array('B', received_image).tostring()
+            image = Image.frombuffer("RGB", (width, height), image_buffer)
+            
+            path = "/tmp/face_detection_%s.jpg" % uuid.uuid4()
+            image = image.rotate(180)
+            image.save(path)
+            
+            hc = cv.Load('/home/ami/AmI-Platform/resources/haarcascade_frontalface_default.xml')
+            img = cv.LoadImage(path, cv.CV_LOAD_IMAGE_COLOR)
+            faces = cv.HaarDetectObjects(img, hc, cv.CreateMemStorage(), 1.2, 2,cv.CV_HAAR_DO_CANNY_PRUNING, (100,100))
+    
+            # if multiple faces detected, send only the first one
+            if len(faces) > 0:
+                (x,y,w,h),n = faces[0]
+                decoded_image = bytearray(base64.b64decode(self.last_image['image']))
+                x1 = max(x - w/2, 0)
+                y1 = max(y - h/2, 0)
+                x2 = min(x + w * 3 / 2, width)
+                y2 = min(y + h * 3 / 2, height)
+                self.log("Face detected.")
+                self.log(path)
+                return self.crop_image(decoded_image, x1, y1, x2, y2)
+
+            #os.remove(str(path))
+            return None
+        except:
+            import traceback
+            traceback.print_exc()
+            print type(received_image)
         
 if __name__ == "__main__":
     module = HeadCrop()
