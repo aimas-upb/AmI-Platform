@@ -16,9 +16,10 @@ class ParallelPDU(PDU):
         two parts:
 
         - heavy_preprocess(msg) - this is the actual part that will be
-          parallelized. This will be executed on a thread pool (assuming
-          that the heavy processing is I/O bound, so we don't have to
-          use python's complicated multiprocess)
+          parallelized. This will be executed on a multiprocess pool (so
+          we can do both CPU bound and I/O bound, but at the expense of
+          having to pass the heavy_preprocess function as a parameter
+          because it must be picklable and thus unbound).
 
         - light_postprocess(msg) - this is the actual part that will executed
           sequentially - after each heavy processing is done in parallel,
@@ -35,9 +36,7 @@ class ParallelPDU(PDU):
             POOL_SIZE = N (default 4). The size of the pool. Usually it's
                     recommended in operating system literature to set this
                     to the number of cores for CPU bound tasks and to
-                    2 x number of cores for I/O bound tasks. However, since
-                    we're not really using Python's multiprocessing, we're not
-                    really recommending using this PDU for CPU bound stuff.
+                    2 x number of cores for I/O bound tasks.
     """
 
     ORDERED_DELIVERY = False
