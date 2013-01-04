@@ -1,1 +1,5 @@
 Agent-based sensor data platform for AmI
+
+======= SERVICES ==========
+Add a new service:
+> fab new_service service_name 
