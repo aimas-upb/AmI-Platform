@@ -1,8 +1,13 @@
+import array
 import base64
 import math
 import time
+import uuid
 
 from core import PDU
+from PIL import Image
+
+import cv
 
 class HeadCrop(PDU):
     """ PDU that receives images and skeletons from Router 
@@ -24,21 +29,24 @@ class HeadCrop(PDU):
         elif message['sensor_type'] == 'kinect':
             self.last_skeleton = message
             self.last_skeleton_at = time.time()
-            
-        # Step 2 - if this is an image, and we have a "recent" skeleton,
-        # try to crop the face or vice-versa. For this, we need to have
-        # at least one skeleton and one image.
-        if self.last_image is None or self.last_skeleton is None:
-            print "Don't have both image and skeleton"
-            return
         
-        # If they aren't "close enough in time", still do nothing
-        if abs(self.last_image_at - self.last_skeleton_at) >= self.MAX_TIME:
-            return
+        cropped_head = None
+        
+        # If this is an image, and we have a "recent" skeleton, or vice-versa
+        # try to crop the face. For this, we need to have
+        # at least one skeleton and one image.
+        if (self.last_image is not None and self.last_skeleton is not None and
+            abs(self.last_image_at - self.last_skeleton_at) < self.MAX_TIME):
+            cropped_head = self.crop_head()
             
-        cropped_head = self.crop_head()
+        # If we have no "recent" skeleton or no skeleton at all,
+        # we'll detect the face from image
+        elif (self.last_image is not None):
+            cropped_head = self.face_detect()
+            
         # Route cropped images to face-recognition
-        self.send_to('face-recognition', cropped_head)
+        if cropped_head is not None:
+            self.send_to('face-recognition', cropped_head)
         return
     
     def skeleton2d(self, key, subkey):
@@ -53,13 +61,13 @@ class HeadCrop(PDU):
         return int( math.sqrt( 
                     (x1-x2)*(x1-x2) + 
                     (y1-y2)*(y1-y2) ))
-    
+
     def skeleton2d_radius(self):
         pts = [self.skeleton2d(key, subkey)\
                for key in ['head', 'neck']
                for subkey in ['X', 'Y']]
         return self.dist(*pts)
-    
+     
     def skeleton2d_cropping_area(self):
         center_x = (self.skeleton2d('head', 'X') + self.skeleton2d('neck', 'X')) / 2
         center_y = (self.skeleton2d('head', 'Y') + self.skeleton2d('neck', 'Y')) / 2
@@ -69,22 +77,50 @@ class HeadCrop(PDU):
         max_x = min(center_x + radius, self.image('width'))
         max_y = min(center_y + radius, self.image('height'))
         return [min_x, min_y, max_x, max_y]
-        
-    def crop_head(self):
-        decoded_image = bytearray(base64.b64decode(self.last_image['image']))  
+    
+    def crop_image(self, image, min_x, min_y, max_x, max_y):
         cropped_image = []
-
-        [min_x, min_y, max_x, max_y] = self.skeleton2d_cropping_area()
         width = self.image('width')
         
         for y in range(max_y, min_y, -1):
             for x in range(max_x, min_x, -1):
                 idx = (y * width + x) * 3
-                cropped_image.append (decoded_image[ idx ])
-                cropped_image.append (decoded_image[ idx + 1 ])
-                cropped_image.append (decoded_image[ idx + 2 ])
+                cropped_image.append (image[ idx ])
+                cropped_image.append (image[ idx + 1 ])
+                cropped_image.append (image[ idx + 2 ])
         
         return {'image': cropped_image, 'width': max_x-min_x, 'height': max_y-min_y}
+
+    def crop_head(self):
+        decoded_image = bytearray(base64.b64decode(self.last_image['image']))
+        [min_x, min_y, max_x, max_y] = self.skeleton2d_cropping_area()
+          
+        return self.crop_image(decoded_image, min_x, min_y, max_x, max_y) 
+
+    def face_detect(self):
+        received_image = self.last_image['image']
+        width = self.last_image['width']
+        height = self.last_image['height']
+        
+        # temporary save image to disk
+        image_buffer = array.array('B', received_image).tostring()
+        image = Image.frombuffer("RGB", (width, height), image_buffer)
+        
+        path = "/tmp/face_detection_%s.jpg" % uuid.uuid4()
+        image.save(path)
+        
+        hc = cv.Load('/home/ami/AmI-Platform/resources/haarcascade_frontalface_default.xml')
+        img = cv.LoadImage(path, cv.CV_LOAD_IMAGE_COLOR)
+        faces = cv.HaarDetectObjects(img, hc, cv.CreateMemStorage(), 1.2, 2,cv.CV_HAAR_DO_CANNY_PRUNING, (100,100))
+
+        # if multiple faces detected, send only the first one
+        if len(faces) > 0:
+            (x,y,w,h),n = faces[0]
+            decoded_image = bytearray(base64.b64decode(received_image))
+            return self.crop_image(decoded_image, x, y, x+w, y+h)
+            
+        #os.remove(str(path))
+        return None
         
 if __name__ == "__main__":
     module = HeadCrop()
