@@ -1,5 +1,5 @@
 git "ami-repo" do
-    destination "/home/#{node.user_name}/#{ami-platform.path}"
+    destination "/home/#{node.user_name}/#{node.ami_platform.path}"
     repository  "git://github.com/ami-lab/AmI-Platform.git"
     revision "master"
     user node.user_name
@@ -8,7 +8,7 @@ end
 
 script "execute" do
     interpreter "bash"
-    cwd "/home/#{node.user_name}/#{ami-platform.path}"
+    cwd "/home/#{node.user_name}/#{node.ami_platform.path}"
     code <<-EOH
  	./deploy.sh
     EOH
