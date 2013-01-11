@@ -1,27 +1,27 @@
-import array
-import uuid
-
-from PIL import Image
+import logging
 
 from pybetaface.api import BetaFaceAPI
 from core import ParallelPDU
+from lib.image import base64_to_image
+from lib.files import random_file_name
+
+logger = logging.getLogger(__name__)
 
 def betaface_recognition(image_dict):
     """ Given a message contained a cropped head, send it to BetaFace
         API for face recognition. This can take anywhere from 1 to 10 seconds.
     """
     api = BetaFaceAPI()
-    image_buffer = array.array('B', image_dict['image']).tostring()
-    image = Image.frombuffer("RGB",
-                             (image_dict['width'], image_dict['height']),
-                             image_buffer)
+    
+    # Get image from message, save it to disk and pass it on to BetaFace API
+    image = base64_to_image(image_dict['image'],
+                            int(image_dict['width']),
+                            int(image_dict['height']))
+    temp_path = random_file_name('jpg')
+    print("Sending to BetaFace: %s" % temp_path)
+    image.save(temp_path)
 
-    # create the output file
-    path = "/tmp/%s.jpg" % uuid.uuid4()
-    print("Saving cropped face to %s" % path)
-    image.save(path)
-
-    matches = api.recognize_faces(path, 'amilab.ro')
+    matches = api.recognize_faces(temp_path, 'amilab.ro')
     #os.remove(str(path))
     return matches
 

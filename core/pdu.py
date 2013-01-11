@@ -16,6 +16,7 @@ class PDU(object):
 
     PRINT_STATS_INTERVAL = 30 # Print flow stats every X seconds
     MESSAGE_SAMPLING_RATIO = 10
+    JSON_DUMPS_STRING_LIMIT = 50
 
     def __init__(self, **kwargs):
         """ Set-up connections to Mongo and Kestrel by default on each PDU. """
@@ -49,6 +50,25 @@ class PDU(object):
     def send_to(self, queue, message):
         """ Send a message to another queue. """
         self.kestrel_connection.add(queue, json.dumps(message))
+        
+    def _truncate_strs(self, dictionary):
+        result = {}
+        for k, v in dictionary.iteritems():
+            # If value is a dictionary, recursively truncate big strings
+            if type(v) == dict:
+                result[k] = self._truncate_strs(v)
+            # If it's a large string, truncate it
+            elif type(v) == str and len(v) > self.JSON_DUMPS_STRING_LIMIT:
+                result[k] = v[0:self.JSON_DUMPS_STRING_LIMIT] + '... (truncated)'
+            # Otherwise, copy any type of thing
+            else:
+                result[k] = v
+        return result
+        
+    def _json_dumps(self, dictionary):
+        """ A custom version of json.dumps which truncates string fields
+            with length too large. """
+        return json.dumps(self._truncate_strs(dictionary))
 
     def run(self):
         """ Main loop of the PDU.
@@ -84,11 +104,11 @@ class PDU(object):
                     is_valid = self.validate_message(copy_of_doc)
                     if not is_valid:
                         self.log("Invalid message from queue %s" % self.QUEUE)
-                        self.log("Message: %s" % json.dumps(copy_of_doc))
+                        self.log("Message: %s" % self._json_dumps(copy_of_doc))
                         continue
                 except:
                     self.log("Error while validating message %s from queue %s" %
-                             json.dumps(doc), self.QUEUE)
+                             self._json_dumps(doc), self.QUEUE)
                     traceback.print_exc()
                     continue
                  
@@ -100,13 +120,13 @@ class PDU(object):
                     self.process_message(copy_of_doc)
                 except:
                     self.log("Error while processing message %s from queue %s" %
-                             (json.dumps(doc), self.QUEUE))
+                             (self._json_dumps(doc), self.QUEUE))
                     traceback.print_exc()
                     continue
                     
                 ratio = self.MESSAGE_SAMPLING_RATIO
                 if self.debug_mode and self._processed_messages % ratio == 0:
-                    self.log("Sampled message: %s" % json.dumps(doc))
+                    self.log("Sampled message: %s" % self._json_dumps(doc))
                 
                 # Only increment # of processed messages if there was an actual
                 # processing. If we do this in the "finally" block, it will
