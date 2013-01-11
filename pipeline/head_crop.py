@@ -18,6 +18,8 @@ class HeadCrop(PDU):
         self.last_skeleton = None
         
     def process_message(self, message):
+        self.log("Processing a message of type %s" % message['sensor_type'])
+        
         # Step 1 - always update last_image/last_skeleton
         if message['sensor_type'] == 'kinect_rgb':
             self.last_image = message
@@ -39,9 +41,12 @@ class HeadCrop(PDU):
         # we'll detect the face from image
         elif (self.last_image is not None):
             cropped_head = self._crop_head_using_face_detection()
+            self.log("Cropping the head using face detection returned %r" 
+                     % cropped_head)
             
         # Route cropped images to face-recognition
         if cropped_head is not None:
+            self.log("Sending an image to face recognition")
             self._send_to_recognition(cropped_head)
     
     def _crop_head_using_skeleton(self):
