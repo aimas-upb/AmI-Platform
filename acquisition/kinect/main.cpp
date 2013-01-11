@@ -232,7 +232,12 @@ void glutDisplay (void)
 	glOrthof(0, depthMD.XRes(), depthMD.YRes(), 0, -1.0, 1.0);
 #endif
 
+    printf("glut main loop\n");
+
 	glDisable(GL_TEXTURE_2D);
+
+
+    printf("Before read available data\n");
 
 	if (!g_bPause)
 	{
@@ -240,12 +245,16 @@ void glutDisplay (void)
 		g_Context.WaitOneUpdateAll(g_UserGenerator);
 	}
 
+    printf("After read available data\n");
+
 		// Process the data
 		g_DepthGenerator.GetMetaData(depthMD);
 		g_UserGenerator.GetUserPixels(0, sceneMD);
 		g_ImageGenerator.GetMetaData(imageMD);
-		
+	
+        printf("Before drawing depth map\n");	
 		DrawDepthMap(depthMD, sceneMD, imageMD);
+        printf("After drawing depth map\n");
 
 #ifndef USE_GLES
 	glutSwapBuffers();
@@ -349,6 +358,7 @@ int main(int argc, char **argv)
 	base64_init();
 	
 	xn::EnumerationErrors errors;
+    printf("Before context init\n");
 	nRetVal = g_Context.InitFromXmlFile(SAMPLE_XML_PATH, g_scriptNode, &errors);
 	if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
 	{
@@ -362,6 +372,8 @@ int main(int argc, char **argv)
 		printf("Open failed: %s\n", xnGetStatusString(nRetVal));
 		return (nRetVal);
 	}
+
+    printf("Context init successful\n");
 
 	nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_DEPTH, g_DepthGenerator);
 	if (nRetVal != XN_STATUS_OK)
@@ -393,34 +405,47 @@ int main(int argc, char **argv)
 		CHECK_RC(nRetVal, "set empty depth map");
 
 		g_DepthGenerator = mockDepth;
-	}
+	} else {
+        printf("Depth generator found!\n");
+    }
 	
 	nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_IMAGE, g_ImageGenerator);
     if (nRetVal != XN_STATUS_OK)
     {
         printf("No image node exists! Check your XML.");
         return 1;
+    } else {
+        printf("Image generator found!\n");
     }
 	    
 	nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_USER, g_UserGenerator);
 	if (nRetVal != XN_STATUS_OK)
 	{
+        printf("User generator not found!\n");
 		nRetVal = g_UserGenerator.Create(g_Context);
 		CHECK_RC(nRetVal, "Find user generator");
-	}
+	} else {
+        printf("User generator found!\n");
+    }
 
 	XnCallbackHandle hUserCallbacks, hCalibrationStart, hCalibrationComplete, hPoseDetected, hCalibrationInProgress, hPoseInProgress;
 	if (!g_UserGenerator.IsCapabilitySupported(XN_CAPABILITY_SKELETON))
 	{
 		printf("Supplied user generator doesn't support skeleton\n");
 		return 1;
-	}
+	} else {
+        printf("Supplied user generator supports skeleton!\n");
+    }
+
 	nRetVal = g_UserGenerator.RegisterUserCallbacks(User_NewUser, User_LostUser, NULL, hUserCallbacks);
 	CHECK_RC(nRetVal, "Register to user callbacks");
+    printf("Successfully registered to user callbacks\n");
 	nRetVal = g_UserGenerator.GetSkeletonCap().RegisterToCalibrationStart(UserCalibration_CalibrationStart, NULL, hCalibrationStart);
 	CHECK_RC(nRetVal, "Register to calibration start");
+    printf("Successfully registered to calibration start\n");
 	nRetVal = g_UserGenerator.GetSkeletonCap().RegisterToCalibrationComplete(UserCalibration_CalibrationComplete, NULL, hCalibrationComplete);
 	CHECK_RC(nRetVal, "Register to calibration complete");
+    printf("Successfully registered to calibration complete\n");
 
 	if (g_UserGenerator.GetSkeletonCap().NeedPoseForCalibration())
 	{
@@ -429,23 +454,30 @@ int main(int argc, char **argv)
 		{
 			printf("Pose required, but not supported\n");
 			return 1;
-		}
+		} else {
+            printf("Pose required and supported!\n");
+        }
 		nRetVal = g_UserGenerator.GetPoseDetectionCap().RegisterToPoseDetected(UserPose_PoseDetected, NULL, hPoseDetected);
 		CHECK_RC(nRetVal, "Register to Pose Detected");
+        printf("Sucessfully registered to pose detected\n");
 		g_UserGenerator.GetSkeletonCap().GetCalibrationPose(g_strPose);
 
 		nRetVal = g_UserGenerator.GetPoseDetectionCap().RegisterToPoseInProgress(MyPoseInProgress, NULL, hPoseInProgress);
+        printf("Sucessfully registered to pose in progress\n");
 		CHECK_RC(nRetVal, "Register to pose in progress");
-	}
+	} {
+        printf("Need no calibration, nigga!\n");
+    }
 
 	g_UserGenerator.GetSkeletonCap().SetSkeletonProfile(XN_SKEL_PROFILE_ALL);
 
 	nRetVal = g_UserGenerator.GetSkeletonCap().RegisterToCalibrationInProgress(MyCalibrationInProgress, NULL, hCalibrationInProgress);
 	CHECK_RC(nRetVal, "Register to calibration in progress");
+    printf("Successfully registered to calibration in progress\n");
 
 	nRetVal = g_Context.StartGeneratingAll();
 	CHECK_RC(nRetVal, "StartGenerating");
-
+    printf("Started to generate\n");
 	
 
 #if USE_MEMCACHE
@@ -458,6 +490,10 @@ int main(int argc, char **argv)
 										   getKestrelServerPort(),
 										   &rc);
 	memcached_server_push(g_MemCache, servers);
+    printf("Pushed server %s:%d to list of kestrels\n", getKestrelServerIP(), getKestrelServerPort());
+    if (rc != MEMCACHED_SUCCESS) {
+        printf("Failed to register to memcache library\n");
+    }
 	// TODO(andrei): check that rc == MEMCACHED_SUCCESS or fail gracefully
 	// ------- END MEMCACHED INIT --------------
 #endif

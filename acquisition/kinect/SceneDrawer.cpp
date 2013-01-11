@@ -299,7 +299,7 @@ char* JointTo2DJSON(XnUserID player, XnSkeletonJoint eJoint, char *name)
 	g_DepthGenerator.ConvertRealWorldToProjective(1, &pt, &pt);
 	char* buf = (char*) malloc(100 * sizeof(char));
 	snprintf(buf, 100, "\"%s\": {\"X\": %.2f, \"Y\": %.2f}",
-		 	name, pt.X, pt.Y);
+		 	name, pt.X * 1280/640, pt.Y * 1024/480);
 	return buf;
 }
 
@@ -432,7 +432,8 @@ void SaveImageToFile(unsigned char *img, int width, int height) {
 	bmpinfoheader[10] = (unsigned char)(  height>>16);
 	bmpinfoheader[11] = (unsigned char)(  height>>24);
 
-	FILE *f = fopen("img.bmp","w");
+
+	FILE *f = fopen("/home/ami/AmI-Platform/image","w");
 	fwrite(bmpfileheader,1,14,f);
 	fwrite(bmpinfoheader,1,40,f);
 	for(i=0; i<height; i++)
@@ -450,7 +451,8 @@ void SaveImageToFile(unsigned char *img, int width, int height) {
 void SaveImage(char *img, int width, int height, char *player_name, char* sensor_type) {
 	size_t outlen, outlen2;
 
-	char* buf = (char*) malloc(2000000 * sizeof(char));
+    int buf_size = width * height * 3 * 2;
+	char* buf = (char*) malloc(buf_size * sizeof(char));
 	char* img64;
 	char* context = get_context();
 
@@ -460,14 +462,15 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 	//printf("\n%d\n", outlen);
 	//printf("\n%d\n", outlen2);
 	//SaveImageToFile((unsigned char*)img_dec64, width, height);
+    printf("SaveImage: width = %d, height = %d\n", width, height);
 
-	snprintf(buf, 2000000, "{\"context\": \"%s\",\"sensor_type\": \"%s\", \"player\": \"%s\", \
+	snprintf(buf, buf_size, "{\"context\": \"%s\",\"sensor_type\": \"%s\", \"player\": \"%s\", \
 		\"width\": \"%d\", \"height\": \"%d\", \"image\": \"%s\" }",
 		context, sensor_type, player_name, width, height, img64);
 
 #if USE_MEMCACHE
 	memcached_return rc;
-	printf("g_MemCache = %p\n", g_MemCache);
+    printf("Before sending to memcache..\n");
 	rc = memcached_set(g_MemCache,
 		     "measurements", strlen("measurements"),
 		     buf, strlen(buf),
@@ -571,6 +574,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, co
 	char *img = (char *) malloc (3 * g_nXRes * g_nYRes);
 	memset(img, 0, sizeof(img));
 
+    printf("xRes = %d, yRes = %d\n", g_nXRes, g_nYRes);
 	pDepth = dmd.Data();
 	if (g_bDrawPixels)
 	{
@@ -616,8 +620,10 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, co
 			pDestImage += (texWidth - g_nXRes) *3;
 		}
 
+        printf("Before SaveImage\n");
 		SaveImage(img, g_nXRes, g_nYRes, "player1", "kinect_depth");
-		SaveImage((char*)pImage, imd.XRes(), imd.YRes(), "player1", "kinect_rgb");
+		SaveImage((char*)pImage, 1280, 1024, "player1", "kinect_rgb");
+        printf("After SaveImage\n");
 	
 	}
 	else
