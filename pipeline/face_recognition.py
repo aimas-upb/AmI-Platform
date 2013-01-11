@@ -1,7 +1,11 @@
+import logging
+
 from pybetaface.api import BetaFaceAPI
 from core import ParallelPDU
 from lib.image import base64_to_image
 from lib.files import random_file_name
+
+logger = logging.getLogger(__name__)
 
 def betaface_recognition(image_dict):
     """ Given a message contained a cropped head, send it to BetaFace
@@ -14,6 +18,7 @@ def betaface_recognition(image_dict):
                             int(image_dict['width']),
                             int(image_dict['height']))
     temp_path = random_file_name('jpg')
+    print("Sending to BetaFace: %s" % temp_path)
     image.save(temp_path)
 
     matches = api.recognize_faces(temp_path, 'amilab.ro')
