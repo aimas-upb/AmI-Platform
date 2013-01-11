@@ -1,0 +1,5 @@
+bottle==0.11.4
+httplib2==0.7.2
+pymongo==2.3
+simplejson==2.3.2
+
