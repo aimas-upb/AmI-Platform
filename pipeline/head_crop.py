@@ -1,8 +1,9 @@
-import base64
-import math
 import time
 
 from core import PDU
+from lib.image import base64_to_image, image_to_base64
+from lib.kinect import crop_head_using_skeleton
+from lib.opencv import crop_face_from_image
 
 class HeadCrop(PDU):
     """ PDU that receives images and skeletons from Router 
@@ -17,6 +18,8 @@ class HeadCrop(PDU):
         self.last_skeleton = None
         
     def process_message(self, message):
+        self.log("Processing a message of type %s" % message['sensor_type'])
+        
         # Step 1 - always update last_image/last_skeleton
         if message['sensor_type'] == 'kinect_rgb':
             self.last_image = message
@@ -24,67 +27,49 @@ class HeadCrop(PDU):
         elif message['sensor_type'] == 'kinect':
             self.last_skeleton = message
             self.last_skeleton_at = time.time()
-            
-        # Step 2 - if this is an image, and we have a "recent" skeleton,
-        # try to crop the face or vice-versa. For this, we need to have
+        
+        cropped_head = None
+        
+        # If this is an image, and we have a "recent" skeleton, or vice-versa
+        # try to crop the face. For this, we need to have
         # at least one skeleton and one image.
-        if self.last_image is None or self.last_skeleton is None:
-            print "Don't have both image and skeleton"
-            return
-        
-        # If they aren't "close enough in time", still do nothing
-        if abs(self.last_image_at - self.last_skeleton_at) >= self.MAX_TIME:
-            return
+        if (self.last_image is not None and self.last_skeleton is not None and
+            abs(self.last_image_at - self.last_skeleton_at) < self.MAX_TIME):
+            cropped_head = self._crop_head_using_skeleton()
             
-        cropped_head = self.crop_head()
+        # If we have no "recent" skeleton or no skeleton at all,
+        # we'll detect the face from image
+        elif (self.last_image is not None):
+            cropped_head = self._crop_head_using_face_detection()
+            self.log("Cropping the head using face detection returned %r" 
+                     % cropped_head)
+            
         # Route cropped images to face-recognition
-        self.send_to('face-recognition', cropped_head)
-        return
+        if cropped_head is not None:
+            self.log("Sending an image to face recognition")
+            self._send_to_recognition(cropped_head)
     
-    def skeleton2d(self, key, subkey):
-        """ Integer value of skeleton[key][subkey] """
-        return int(self.last_skeleton['skeleton_2d'][key][subkey])
-    
-    def image(self, key):
-        return int(self.last_image[key])
+    def _crop_head_using_skeleton(self):
+        """ Given the last image and last skeleton which are 
+            'close enough' apart, crop off an image of the head. """
+        image = base64_to_image(self.last_image['image'],
+                                int(self.last_image['width']),
+                                int(self.last_image['height']))
+        skeleton = self.last_skeleton['skeleton_2d']
         
-    def dist(self, x1, y1, x2, y2):
-        """ Integer distance between two points. """
-        return int( math.sqrt( 
-                    (x1-x2)*(x1-x2) + 
-                    (y1-y2)*(y1-y2) ))
-    
-    def skeleton2d_radius(self):
-        pts = [self.skeleton2d(key, subkey)\
-               for key in ['head', 'neck']
-               for subkey in ['X', 'Y']]
-        return self.dist(*pts)
-    
-    def skeleton2d_cropping_area(self):
-        center_x = (self.skeleton2d('head', 'X') + self.skeleton2d('neck', 'X')) / 2
-        center_y = (self.skeleton2d('head', 'Y') + self.skeleton2d('neck', 'Y')) / 2
-        radius = self.skeleton2d_radius()
-        min_x = max(center_x - radius, 0)
-        min_y = max(center_y - radius, 0)
-        max_x = min(center_x + radius, self.image('width'))
-        max_y = min(center_y + radius, self.image('height'))
-        return [min_x, min_y, max_x, max_y]
-        
-    def crop_head(self):
-        decoded_image = bytearray(base64.b64decode(self.last_image['image']))  
-        cropped_image = []
+        return crop_head_using_skeleton(image, skeleton)
 
-        [min_x, min_y, max_x, max_y] = self.skeleton2d_cropping_area()
-        width = self.image('width')
-        
-        for y in range(max_y, min_y, -1):
-            for x in range(max_x, min_x, -1):
-                idx = (y * width + x) * 3
-                cropped_image.append (decoded_image[ idx ])
-                cropped_image.append (decoded_image[ idx + 1 ])
-                cropped_image.append (decoded_image[ idx + 2 ])
-        
-        return {'image': cropped_image, 'width': max_x-min_x, 'height': max_y-min_y}
+    def _crop_head_using_face_detection(self):
+        """ Given the last image, try to detect any faces in it
+            and crop the first one of them, if any. """
+        image = base64_to_image(self.last_image['image'],
+                                int(self.last_image['width']),
+                                int(self.last_image['height']))
+        return crop_face_from_image(image)
+    
+    def _send_to_recognition(self, image):
+        """ Send a given image to face recognition. """
+        self.send_to('face-recognition', image_to_base64(image))
         
 if __name__ == "__main__":
     module = HeadCrop()
