@@ -84,7 +84,7 @@ class HeadCrop(PDU):
                 cropped_image.append (decoded_image[ idx + 1 ])
                 cropped_image.append (decoded_image[ idx + 2 ])
         
-        return {'cropped_image': cropped_image, 'width': max_x-min_x, 'height': max_y-min_y}
+        return {'image': cropped_image, 'width': max_x-min_x, 'height': max_y-min_y}
         
 if __name__ == "__main__":
     module = HeadCrop()

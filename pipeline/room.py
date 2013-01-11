@@ -1,7 +1,17 @@
+import time
+
 from core import PDU
 
 class Room(PDU):
     QUEUE = 'room'
+
+    # 15 mins before 2 consecutive actions for the same person
+    SAME_PERSON_THRESHOLD = 15 * 60
+
+    def __init__(self, **kwargs):
+        super(Room, self).__init__(**kwargs)
+        self.last_person_name = None
+        self.last_person_action_took_at = int(time.time())
 
     def validate_message(self, message):
         """ All messages towards the room module must have
@@ -21,6 +31,23 @@ class Room(PDU):
 
         return True
 
+    def should_take_action_for_person_appeared(self, person_name):
+        """ Return True iff we should take action for a person having appeared
+            in the scenery.
+
+            We take action if:
+            - this person is different from the last person
+            - this person is the same as the last person, but the last action
+              taken for the last person was at least 15 minutes ago.
+
+        """
+        if person_name != self.last_person_name:
+            return True
+
+        if person_name == self.last_person_name:
+            return int(time.time() - self.last_person_action_took_at) >= \
+                    self.SAME_PERSON_THRESHOLD
+
     def process_message(self, message):
         """ Room module receives incoming events from the different pipelines
             like "person X has appeared in front of kinect Y and reacts to
@@ -29,17 +56,23 @@ class Room(PDU):
         print message
         event_type = message.get('event_type', '')
         if event_type == 'person_appeared':
-            self.handle_person_appeared_event(message)
+            person_name = message['person_name']
+            if self.should_take_action_for_person_appeared(person_name):
+                self.handle_person_appeared_event(message)
 
     def handle_person_appeared_event(self, message):
         """ Handle the person appeared event. """
 
         person_name = message['person_name']
+
+        self.last_person_action_took_at = int(time.time())
+        self.last_person_name = person_name
+        
         if person_name == 'andrei@amilab.ro':
             self.play_message("Hello, Andrei. Let me switch on the air "
                               "conditioning for you.")
             self.switch_on_air_conditioning()
-        elif person_name == 'liviu@amilab.ro':
+        elif person_name == 'diana@amilab.ro':
             self.play_message("Hello, Diana. I know you like it quiet so "
                               "I won't bother you with air conditioning.")
             self.switch_off_air_conditioning()

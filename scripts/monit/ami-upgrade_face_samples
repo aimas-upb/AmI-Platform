@@ -1,0 +1,4 @@
+check process ami-upgrade_face_samples
+	with pidfile /var/run/ami-upgrade_face_samples.pid
+	start = "/usr/sbin/service ami-upgrade_face_samples start"
+	stop = "/usr/sbin/service ami-upgrade_face_samples stop"
