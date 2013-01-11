@@ -3,7 +3,7 @@ remote_file "avin2" do
     path "/home/#{node.user_name}/kinect/downloads/avin2.zip" 
     mode 0755
     owner node.user_name
-    source avin2.remote_src
+    source node.avin2.remote_src
 end
 
 
