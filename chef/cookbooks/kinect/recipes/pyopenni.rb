@@ -1,3 +1,23 @@
+package "cmake" do
+    action :install
+end
+
+package "build-essential" do
+	action :install
+end
+
+package "git-core" do
+	action :install
+end
+
+package "python-dev" do
+	action :install
+end
+
+package "libboost-python-dev" do
+	action :install
+end
+
 directory "PyOpenDir" do
     action :create
     path "#{node.pyopen.path}/PyOpenNI"
