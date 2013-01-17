@@ -44,7 +44,6 @@ if type == 1,
     inter = intersectLinePlane(L, plane);
     if max(P1-inter)>(10^4)*eps,    
         disp('Error! ')
-    %else return
     end
     clear inter;
     % Now we perform a series of 2 consecutive translations of the line 'L' (from  above)
