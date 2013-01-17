@@ -13,7 +13,7 @@ function v = getParams(varargin)
 %  Second parameter is the index of the line of the record (in the csv file
 %  above), ie the measurement's index
 
-cd E:\new_CSV\CSV-filtrate\; % cd /home/JohnDoe/data/filtered_CSV/;
+cd /home/JohnDoe/data/filtered_CSV/;
 
 % The folder where the repository of filtered-CSVs is to be found
 % Name of the files in that folder are Like: filename = 'export-AD_dreapta_sus.csv'; 
