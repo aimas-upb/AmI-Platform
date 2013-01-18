@@ -24,6 +24,7 @@ if $fresh; then
 	git reset --hard HEAD
 fi
 
+# sudo pip install -r python_requirements.txt
 
 # Make clean & make
 cd ./acquisition/kinect

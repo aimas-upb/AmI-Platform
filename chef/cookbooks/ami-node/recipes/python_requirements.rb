@@ -22,3 +22,9 @@ python_pip "Jinja2" do
 	version "2.6"
 	action :install
 end
+
+python_pip "Pillow" do
+	version "1.7.8"
+	action :install
+end
+
