@@ -24,6 +24,13 @@ if $fresh; then
 	git reset --hard HEAD
 fi
 
+
+# Make clean & make
+cd ./acquisition/kinect
+make clean
+make
+cd ../..
+	
 all_services_file="services.txt"
 
 while read -r service_name; do
