@@ -10,6 +10,10 @@ script "execute" do
     interpreter "bash"
     cwd "/home/#{node.user_name}/#{node.ami_platform.path}"
     code <<-EOH
- 	./deploy.sh
+	cd ./acquisition/kinect
+ 	make clean
+	make
+	cd ../../
+	./deploy.sh
     EOH
 end

@@ -17,6 +17,7 @@ class PDU(object):
     PRINT_STATS_INTERVAL = 30 # Print flow stats every X seconds
     MESSAGE_SAMPLING_RATIO = 10
     JSON_DUMPS_STRING_LIMIT = 50
+    TIME_TO_SLEEP_ON_BUSY = 1.0
 
     def __init__(self, **kwargs):
         """ Set-up connections to Mongo and Kestrel by default on each PDU. """
@@ -50,7 +51,7 @@ class PDU(object):
     def send_to(self, queue, message):
         """ Send a message to another queue. """
         self.kestrel_connection.add(queue, json.dumps(message))
-        
+
     def _truncate_strs(self, dictionary):
         result = {}
         for k, v in dictionary.iteritems():
@@ -64,11 +65,16 @@ class PDU(object):
             else:
                 result[k] = v
         return result
-        
+
     def _json_dumps(self, dictionary):
         """ A custom version of json.dumps which truncates string fields
             with length too large. """
         return json.dumps(self._truncate_strs(dictionary))
+
+    def busy(self):
+        """ Make this return True and fetching of messages from Kestrel
+            will stall in order to avoid overflows. """
+        return False
 
     def run(self):
         """ Main loop of the PDU.
@@ -82,6 +88,14 @@ class PDU(object):
         self.log("PDU %s is alive!" % self.__class__.__name__)
         while True:
             try:
+                # While module reports that it's busy, stop feeding
+                # messages to it - especially useful for cases where
+                # a part of message processing is asynchronous w.r.t.
+                # to message fetching. In that case, messages can accumulate
+                # in the memory of the PDU, leading to a huge mem usage.
+                while self.busy():
+                    time.sleep(self.TIME_TO_SLEEP_ON_BUSY)
+
                 # Step 1 - get message from kestrel queue
                 message = self.kestrel_connection.get(self.QUEUE, timeout = 1)
                 if not message:
@@ -111,7 +125,7 @@ class PDU(object):
                              self._json_dumps(doc), self.QUEUE)
                     traceback.print_exc()
                     continue
-                 
+
                 # Step 4 - actually process the message. Usually, this means
                 # that a PDU enqueues it further down the pipeline to other
                 # modules.
@@ -123,11 +137,11 @@ class PDU(object):
                              (self._json_dumps(doc), self.QUEUE))
                     traceback.print_exc()
                     continue
-                    
+
                 ratio = self.MESSAGE_SAMPLING_RATIO
                 if self.debug_mode and self._processed_messages % ratio == 0:
                     self.log("Sampled message: %s" % self._json_dumps(doc))
-                
+
                 # Only increment # of processed messages if there was an actual
                 # processing. If we do this in the "finally" block, it will
                 # also get executed after "continue" statements as well.
@@ -138,7 +152,7 @@ class PDU(object):
             finally:
                 # Count # of processed messages in each time interval
                 # and display them to the log.
-                
+
                 time_since_last_stats = time.time() - self._last_stats
                 if time_since_last_stats >= self.PRINT_STATS_INTERVAL:
                     if self._processed_messages > 0:
