@@ -28,8 +28,8 @@ fi
 
 # Make clean & make
 cd ./acquisition/kinect
-make clean
-make
+sudo make clean
+sudo make
 cd ../..
 	
 all_services_file="services.txt"
