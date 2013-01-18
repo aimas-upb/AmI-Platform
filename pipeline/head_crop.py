@@ -92,8 +92,8 @@ class HeadCrop(ParallelPDU):
 
     def _send_to_recognition(self, image):
         """ Send a given image to face recognition. """
-        self.send_to('face-recognition', {'head_image': image_to_base64(image)})
+        self.send_to('face-recognition', {'head_image': image})
 
 if __name__ == "__main__":
-    module = HeadCrop(heavy_postprocess = crop_head)
+    module = HeadCrop(heavy_preprocess = crop_head)
     module.run()

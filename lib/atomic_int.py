@@ -27,6 +27,6 @@ class AtomicInt(object):
         self.count += 1
         return self.count
 
-    def __dec(self, x):
+    def __dec(self):
         self.count -= 1
         return self.count
