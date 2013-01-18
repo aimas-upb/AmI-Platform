@@ -9,7 +9,7 @@ class IPPower(PDU):
     """ PDU that routes incoming measurements from sensors to the
         actual processing pipelines """
 
-    QUEUE = 'ip_power'
+    QUEUE = 'ip-power'
     DEFAULT_USER = 'admin'
     DEFAULT_PASSWORD = '12345678'
 

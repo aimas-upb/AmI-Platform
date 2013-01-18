@@ -57,7 +57,7 @@ class FaceRecognition(ParallelPDU):
         # send cropped image to UpgradeFaceSamples
         upgrade_message = {'person_name': person_name}
         upgrade_message.update(image_dict)
-        self.send_to('upgrade_face_samples', upgrade_message)
+        self.send_to('upgrade-face-samples', upgrade_message)
 
 if __name__ == "__main__":
     module = FaceRecognition(heavy_preprocess = betaface_recognition)
