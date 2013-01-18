@@ -1,9 +1,9 @@
 package " libmemcached-dev" do
-	action: install
+	action :install
 end
 
 package "libusb-1.0.0-dev" do
-    action:install
+    action :install
 end
 
 package "freeglut3-dev" do
