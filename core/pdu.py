@@ -59,7 +59,7 @@ class PDU(object):
             if type(v) == dict:
                 result[k] = self._truncate_strs(v)
             # If it's a large string, truncate it
-            elif type(v) == str and len(v) > self.JSON_DUMPS_STRING_LIMIT:
+            elif (type(v) == str or type(v) == unicode) and len(v) > self.JSON_DUMPS_STRING_LIMIT:
                 result[k] = v[0:self.JSON_DUMPS_STRING_LIMIT] + '... (truncated)'
             # Otherwise, copy any type of thing
             else:

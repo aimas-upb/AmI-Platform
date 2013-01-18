@@ -48,7 +48,10 @@ def crop_head(message):
     elif (last_image is not None):
         cropped_head = _crop_head_using_face_detection(last_image)
 
-    return cropped_head
+    if cropped_head is not None:
+        return image_to_base64(cropped_head)
+    else:
+        return None
 
 class HeadCrop(ParallelPDU):
     """ PDU that receives images and skeletons from Router
@@ -57,10 +60,12 @@ class HeadCrop(ParallelPDU):
     QUEUE = 'head-crop'
     MAX_TIME = 0.1
 
-    def __init__(self):
-        super(HeadCrop, self).__init__()
+    def __init__(self, **kwargs):
+        super(HeadCrop, self).__init__(**kwargs)
         self.last_image = None
+        self.last_image_at = None
         self.last_skeleton = None
+        self.last_skeleton_at = None
 
     def process_message(self, message):
         # Step 1 - always update last_image/last_skeleton
@@ -71,6 +76,7 @@ class HeadCrop(ParallelPDU):
             self.last_skeleton = message
             self.last_skeleton_at = time.time()
 
+        message['hack'] = {}
         message['hack']['last_image'] = copy.copy(self.last_image)
         message['hack']['last_image_at'] = self.last_image_at
         message['hack']['last_skeleton'] = copy.copy(self.last_skeleton)
@@ -78,7 +84,7 @@ class HeadCrop(ParallelPDU):
 
         super(HeadCrop, self).process_message(message)
 
-    def light_postprocess(self, cropped_head, image_dict):
+    def light_postprocess(self, cropped_head, image_dict):        
         # Route cropped images to face-recognition
         if cropped_head is not None:
             self.log("Sending an image to face recognition")
@@ -86,8 +92,8 @@ class HeadCrop(ParallelPDU):
 
     def _send_to_recognition(self, image):
         """ Send a given image to face recognition. """
-        self.send_to('face-recognition', image_to_base64(image))
+        self.send_to('face-recognition', image)
 
 if __name__ == "__main__":
-    module = HeadCrop()
+    module = HeadCrop(heavy_preprocess = crop_head)
     module.run()

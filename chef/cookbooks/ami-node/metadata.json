@@ -1,0 +1,29 @@
+{
+  "recommendations": {
+  },
+  "platforms": {
+  },
+  "long_description": "Description\n===========\nInstalls git & python.\nRequirements\n============\n\nAttributes\n==========\n\nUsage\n=====\n\n",
+  "description": "Installs/Configures ami-node",
+  "attributes": {
+  },
+  "dependencies": {
+  },
+  "name": "ami-node",
+  "replacing": {
+  },
+  "maintainer": "YOUR_COMPANY_NAME",
+  "groupings": {
+  },
+  "providing": {
+  },
+  "conflicting": {
+  },
+  "maintainer_email": "YOUR_EMAIL",
+  "version": "0.1.0",
+  "suggestions": {
+  },
+  "recipes": {
+  },
+  "license": "All rights reserved"
+}

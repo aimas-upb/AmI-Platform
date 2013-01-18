@@ -1,0 +1,30 @@
+{
+  "replacing": {
+  },
+  "providing": {
+  },
+  "maintainer": "Lacea Dragos-Alin",
+  "long_description": "Description\n===========\n\nRequirements\n============\n\nAttributes\n==========\n\nUsage\n=====\n\n",
+  "suggestions": {
+  },
+  "description": "Installs/Configures kinect",
+  "groupings": {
+  },
+  "conflicting": {
+  },
+  "dependencies": {
+    "ami-node": ">= 0.0.0"
+  },
+  "license": "All rights reserved",
+  "name": "kinect",
+  "recipes": {
+  },
+  "platforms": {
+  },
+  "recommendations": {
+  },
+  "maintainer_email": "alin.lacea@aza.ro",
+  "version": "0.1.0",
+  "attributes": {
+  }
+}
