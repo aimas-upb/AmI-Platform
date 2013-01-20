@@ -20,8 +20,8 @@ end
 script "chg_hostname" do
 	interpreter "bash"
 	code <<-EOH
-	echo "#{node.user_name_}-#{node.node_type}-#{node.node_index}" | sudo tee -a /etc/hosts
-	echo "#{node.user_name_}-#{node.node_type}-#{node.node_index}" | sudo tee /etc/hostname
+	echo "127.0.0.1 #{node.user_name}-#{node.node_type}-#{node.node_index}" | sudo tee -a /etc/hosts
+	echo "#{node.user_name}-#{node.node_type}-#{node.node_index}" | sudo tee /etc/hostname
 	sudo hostname #{node.user_name}-#{node.node_type}-#{node.node_index}
 	
 	EOH

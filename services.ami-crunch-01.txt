@@ -1,6 +1,5 @@
 ami-router
 ami-mongo-writer
-ami-head-crop
 ami-ip-power
 ami-api
 ami-text_to_speech

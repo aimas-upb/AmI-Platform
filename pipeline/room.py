@@ -79,7 +79,7 @@ class Room(PDU):
 
     def play_message(self, message):
         """ Plays a text message using our text-to-speech system. """
-        self.send_to('text_to_speech', {'text': message})
+        self.send_to('text-to-speech', {'text': message})
 
     def switch_on_air_conditioning(self):
         """ Switch on the air conditioning. """
@@ -88,7 +88,7 @@ class Room(PDU):
             'ip': '192.168.0.30',
             'output': '1',
         }
-        self.send_to('ip_power', params)
+        self.send_to('ip-power', params)
 
     def switch_off_air_conditioning(self):
         """ Switch on the air conditioning. """

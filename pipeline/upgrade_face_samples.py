@@ -8,7 +8,7 @@ from pybetaface.api import BetaFaceAPI
 from core import PDU
 
 class UpgradeFaceSamples(PDU):
-    QUEUE = 'upgrade_face_samples'
+    QUEUE = 'upgrade-face-samples'
     
     def __init__(self, **kwargs):
         super(UpgradeFaceSamples, self).__init__()
@@ -23,9 +23,10 @@ class UpgradeFaceSamples(PDU):
     def process_message(self, message):
         # parse message
         person_name = message['person_name']
-        image = message['image']
-        width = int(message['width'])
-        height = int(message['height'])
+        head_image = message['head_image']
+        image = head_image['image']
+        width = int(head_image['width'])
+        height = int(head_image['height'])
         
         # save image to file
         path = "/tmp/%s.jpg" % uuid.uuid4()

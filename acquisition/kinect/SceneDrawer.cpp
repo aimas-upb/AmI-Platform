@@ -345,17 +345,26 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 
 	char *context = get_context();
 
-	snprintf((char*)buf, 10000, "{\"context\": \"%s\",\"sensor_type\": \"kinect\", \"player\": \"%s\", "
-		 "\"skeleton\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s},"
-		 "\"skeleton_2d\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
+	snprintf((char*)buf, 10000, 
+		"{\"context\": \"%s\","
+		"\"sensor_type\": \"kinect\","
+		"\"sensor_id\": \"0\","
+		"\"sensor_position\": {\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0},	"// {\"X\": %.2f, \"Y\": %.2f, \"Z\": %.2f},"
+		"\"player\": \"%s\", "
+		"\"type\": \"skeleton\", "
+		"\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
+		"\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
+		 
 		 get_context(),
-		 player_name, head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
+		 player_name,
+		 head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
 		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
 		 left_foot, right_foot,
 
 		 head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
 		 right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
 		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
+		
 
 	printf("%s\n", buf);
 
@@ -457,16 +466,20 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 	char* context = get_context();
 
 	img64 = base64_encode(img, width*height*3, &outlen);
-	//char* img_dec64 = (char*)malloc(2000000 * sizeof(char));
-	//img_dec64 = base64_decode(img64, outlen, &outlen2);
-	//printf("\n%d\n", outlen);
-	//printf("\n%d\n", outlen2);
-	//SaveImageToFile((unsigned char*)img_dec64, width, height);
     printf("SaveImage: width = %d, height = %d\n", width, height);
 
-	snprintf(buf, buf_size, "{\"context\": \"%s\",\"sensor_type\": \"%s\", \"player\": \"%s\", \
-		\"width\": \"%d\", \"height\": \"%d\", \"image\": \"%s\" }",
-		context, sensor_type, player_name, width, height, img64);
+	snprintf(buf, buf_size, 
+		"{\"context\": \"%s\","
+		"\"sensor_type\": \"kinect\"," 
+		"\"sensor_id\": 0,"
+		"\"sensor_position\": {\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0},"
+		"\"type\": \"%s\","
+		"\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
+		
+		context, 
+		sensor_type, 
+		sensor_type,
+		outlen/sizeof(char), img64, width, height);
 
 #if USE_MEMCACHE
 	memcached_return rc;
@@ -620,11 +633,9 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, co
 			pDestImage += (texWidth - g_nXRes) *3;
 		}
 
-        printf("Before SaveImage\n");
-		SaveImage(img, g_nXRes, g_nYRes, "player1", "kinect_depth");
-		SaveImage((char*)pImage, 1280, 1024, "player1", "kinect_rgb");
-        printf("After SaveImage\n");
-	
+        SaveImage(img, g_nXRes, g_nYRes, "player1", "image_depth");
+		SaveImage((char*)pImage, 1280, 1024, "player1", "image_rgb");
+        
 	}
 	else
 	{

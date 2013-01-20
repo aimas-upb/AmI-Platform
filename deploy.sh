@@ -24,6 +24,14 @@ if $fresh; then
 	git reset --hard HEAD
 fi
 
+# sudo pip install -r python_requirements.txt
+
+# Make clean & make
+cd ./acquisition/kinect
+sudo make clean
+sudo make
+cd ../..
+	
 all_services_file="services.txt"
 
 while read -r service_name; do
