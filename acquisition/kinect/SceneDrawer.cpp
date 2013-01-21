@@ -474,12 +474,12 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 		"\"sensor_id\": 0,"
 		"\"sensor_position\": {\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0},"
 		"\"type\": \"%s\","
-		"\"%s\": {\"image\": \"%s\", \"width\": \"%d\", \"height\": \"%d\" }}",
+		"\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
 		
 		context, 
 		sensor_type, 
 		sensor_type,
-		img64, width, height);
+		outlen/sizeof(char), img64, width, height);
 
 #if USE_MEMCACHE
 	memcached_return rc;
