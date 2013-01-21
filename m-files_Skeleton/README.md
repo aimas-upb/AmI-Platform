@@ -28,7 +28,9 @@ Features_Compute returns the angle between 3 3D points (of the skeleton)
 
 Line_to_Plane_Angle returns the angle between a line determined by 2 3D skeleton-points and a plane, either yOz or xOy
 
-Finally, getParams.m returns a cell-array of 22 features (mainly angles for upper-body part) to be used in classification (estimation) of subject's body pose.
+Script getParams.m returns a cell-array of 22 features (mainly angles for upper-body part) to be used in classification (estimation) of subject's body pose.
+
+Finally, getAllRecordParams.m gets at it's output a cell for all the recorded instances of a certain body-pose used for training / testing purposes.
 
 P.S. All these  scripts for feature detection are just for academic purpose and to generate HTML 
 documentation (using m2html); in the end they should be replaced asap with corresponding Python (C++) implementations
