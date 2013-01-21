@@ -13,7 +13,7 @@ function v = getParams(varargin)
 %  Second parameter is the index of the line of the record (in the csv file
 %  above), ie the measurement's index
 
-cd /home/JohnDoe/data/filtered_CSV/;
+cd E:\new_CSV\CSV-filtrate\; % cd /home/JohnDoe/data/filtered_CSV/;
 
 % The folder where the repository of filtered-CSVs is to be found
 % Name of the files in that folder are Like: filename = 'export-AD_dreapta_sus.csv'; 
@@ -37,14 +37,14 @@ end
  clear fileID;   
  fileID = fopen(a); %#ok<*NASGU>
      % Get the 1st line of coordinates:
-     C = textscan(fid, '%s','delimiter', '\n'); % Read the whole file in a cell-array
+     C = textscan(fileID, '%s','delimiter', '\n'); % Read the whole file in a cell-array
      tline = C{1}{LineNum}; clear C;
      
      sp=find(tline==','); % comma separates coordinates a coord is from idx-->sp(i)-1
       Ncoord=size(sp,2)+1; 
-      if mod((Ncoord+1),3)==0, % should be 45 (15 pts *3); checked that:
+      if mod((Ncoord),3)==0, % should be 45 (15 pts *3); checked that:
       
-      for j=1:Ncoord,
+      %for j=1:Ncoord,
            parts= tline2joints(tline);
          % parts = {'head(1-3)','neck(4-6)','left_shoulder(7-9)','right_shoulder(10-12)',...
          %  	'left_elbow(13-15)','right_elbow(16-18)','left_hand(19-21)','right_hand(22-24)', ...
@@ -116,7 +116,7 @@ end
          % d1= line_segment[left_shoulder(7-9)-left_elbow(13-15)]-line_segment[right_shoulder(10-12)-right_elbow(16-18)]
          %  using script  distBW2lines
          x0=[parts{1,7},parts{1,8},parts{1,9}];y0=[parts{1,13},parts{1,14},parts{1,15}];% [left_shoulder-left_elbow] line
-         L1 = [x0;y0];      % see lines 85-86 above for explanations
+         L1 = [x0;y0];      % 
          u=[parts{1,10},parts{1,11},parts{1,12}];v=[parts{1,16},parts{1,17},parts{1,18}];
          L2 =  [u;v];           %  [right_shoulder-right_elbow] line
          d = distBW2lines(L1,L2); clear x0 y0 u v L1 L2;  % d is the minimum distance between L1 and L2
@@ -128,10 +128,10 @@ end
           v{1,6}=angl6; v{1,7}=angl7; v{1,8}=angl8 ; v{1,9}=angl9; v{1,10}=angl10;        
           v{1,11}=angl11; v{1,12}=angl12; v{1,13}=angl13; v{1,14}=angl14; v{1,15}=angl15;
           v{1,16}=angleInDegrees1; v{1,17}=angleInDegrees2; v{1,18}=angleInDegrees3;
-          v{1,16}=angleInDegrees4; v{1,17}=angleInDegrees5; v{1,18}=angleInDegrees6;
-          v{1,19}=d;
-      end
-      elseif (mod((Ncoord+1),3)~= 0),
+          v{1,19}=angleInDegrees4; v{1,20}=angleInDegrees5; v{1,21}=angleInDegrees6;
+          v{1,22}=d;
+      %end
+      elseif (mod((Ncoord),3)~= 0),
                   disp('Wrong No. of coordinates!');
           return;
       end
