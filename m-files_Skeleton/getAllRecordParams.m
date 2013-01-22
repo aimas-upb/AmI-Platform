@@ -12,8 +12,7 @@ function OUT = getAllRecordParams(varargin)  %#ok<*STOUT>
 %  Needs one input parameters:  the name of the file (e.g.'export-AD_dreapta_sus.csv')
 % See also: getParams, which returns the cell-array of params only for one
 % instance (frame from the Kinect)
-cd /home/JohnDoe/data/filtered_CSV/; % this is the folder that contains all the recorded instances
-% for a certain body-pose used for training / testing purposes
+ cd /home/JohnDoe/data/filtered_CSV/;
 
 [~,n]=size(varargin);
 if (n~=1),
@@ -24,22 +23,24 @@ elseif (n == 1),
     disp('The  argument gives the file name,ie the CSV of the recorded body-posture')
     a=  varargin{1}; %#ok<*NASGU>
 end
-  
-C = textscan(fileID, '%s','delimiter', '\n'); % Read the whole file in a cell-array
- a=listing(1,1).name     %#ok<NOPRT> % The record's name
+ % like  a=listing(1,1).name     %#ok<NOPRT> % The record's name
   fid = fopen(a,'r');
+C = textscan(fid, '%s','delimiter', '\n'); % Read the whole file in a cell-array
+l=1;
   if fid > 0,
-      C = textscan(fid, '%s','delimiter', '\n'); % Read the whole file in a cell-array
       C1= C{1,1};
       m = size(C1,1);  % The no. of instances of the same posture in a CSV-record is given by 'm'
       OUT = cell(m,1); % Initialize the Output-cell-array with a blank one
-      l=1; v= getParams(a,l); pause(0.01); OUT{2,1}=v; clear v;
-  
-      for l=2:m, % get each instance, 'one-by-one'
+      l=1; v= getParams(a,l); pause(0.01); OUT{1,1}=v; clear v;
+    
+   while le(l,m-1),   % get each instance, 'one-by-one'
+          l=l+1;  
           v= getParams(a,l);
           % Record each results vector 'v' & save it
           pause(0.01);
           OUT{l,1}=v; clear v;
-      end
+   end
+  elseif fid == 0,
+      disp('Error in reading CSV-file, try again');
   end
   
