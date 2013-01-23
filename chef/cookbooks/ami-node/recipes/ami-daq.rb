@@ -8,5 +8,6 @@
 #
 
 include_recipe "ami-node::default"
-include_recipe "ami-daq::monit"
-include_recipe "ami-daq::deploy_source"
+include_recipe "kinect::default"
+include_recipe "ami-node::monit"
+include_recipe "ami-node::deploy_source"

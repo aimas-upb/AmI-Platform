@@ -5,3 +5,6 @@ default["password_hash"] =  "$1$xVpmeUAu$Kr0ZARKNACHxr/W6M5BQc/"
 #Node attributes
 default["node_type"] = "daq"
 default["node_index"] = "3"
+
+#Defaults for Ami-Platform installation
+default["ami_platform"]["path"] = "AmI-Platform"
