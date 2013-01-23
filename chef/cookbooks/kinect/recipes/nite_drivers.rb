@@ -1,6 +1,6 @@
 remote_file "nite" do
     action :create
-    path "/home/ami/kinect/downloads/nite.tar.zip"
+    path "/home/#{node.user_name}/kinect/downloads/nite.tar.zip"
     mode 0755
     owner  node.user_name
 	source node.nite.remote_src
