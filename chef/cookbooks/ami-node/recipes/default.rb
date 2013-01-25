@@ -12,4 +12,4 @@ include_recipe "ami-node::git"
 include_recipe "ami-node::tar"
 include_recipe "ami-node::zip"
 include_recipe "python::default"
-include_recipe "ami-node::python_requirements"
+

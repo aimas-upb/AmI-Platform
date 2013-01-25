@@ -8,3 +8,5 @@ default["node_index"] = "3"
 
 #Defaults for Ami-Platform installation
 default["ami_platform"]["path"] = "AmI-Platform"
+
+default["python"]["requirements_file"] = "python_requirements.txt"
