@@ -7,13 +7,15 @@ import unittest
 from core import kestrel_mock
 import threading
 
-class Test(unittest.TestCase):
+class KestrelMockTest(unittest.TestCase):
 
     def setUp(self):
+        super(KestrelMockTest, self).setUp()
         self._queue_system = kestrel_mock.KestrelMock() 
         pass
 
     def tearDown(self):
+        super(KestrelMockTest, self).tearDown()
         pass
     
     
