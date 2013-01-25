@@ -72,15 +72,15 @@ class PDU(object):
         return json.dumps(self._truncate_strs(dictionary))
 
     def busy(self):
-        """ Make this return True and fetching of messages from Kestrel
-            will stall in order to avoid overflows. """
+        """ Make this return True and fetching of messages from the queue 
+        system will stall in order to avoid overflows. """
         return False
 
     def run(self):
         """ Main loop of the PDU.
 
         It's basically an an infinite loop that tries to read messages
-        from Kestrel, decode them and them process them with the specific
+        from the message queue, decode them and them process them with the specific
         function.
 
         """
@@ -96,7 +96,7 @@ class PDU(object):
                 while self.busy():
                     time.sleep(self.TIME_TO_SLEEP_ON_BUSY)
 
-                # Step 1 - get message from kestrel queue
+                # Step 1 - get message from message queue
                 message = self.queue_system.get(self.QUEUE, timeout = 1)
                 if not message:
                     """self.log("Could not get message from queue %s Retrying ..."
