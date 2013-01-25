@@ -26,8 +26,8 @@ class Experiment(BaseModel):
         return Experiment.objects.filter(active = True)
 
     @staticmethod
-    def get_experiments_matching(measurement):
+    def get_active_experiments_matching(measurement):
         """ Get those experiments matching a given measurement. """
         return filter(lambda e: e.matches(measurement),
-                      Experiment.objects.all())
+                      Experiment.get_active_experiments())
 
