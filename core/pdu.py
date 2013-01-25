@@ -22,6 +22,7 @@ class PDU(object):
     def __init__(self, **kwargs):
         """ Set-up connections to Mongo and Kestrel by default on each PDU. """
         self._kestrel_connection = kestrel.Client(settings.KESTREL_SERVERS)
+        self._queue_system = kwargs.get('_queue_system', None) or kestrel.Client(settings.KESTREL_SERVERS) 
         self._mongo_connection = pymongo.Connection(settings.MONGO_SERVER)
         self._last_stats = time.time()
         self._processed_messages = 0
@@ -35,8 +36,8 @@ class PDU(object):
         sys.stdout.flush()
 
     @property
-    def kestrel_connection(self):
-        return self._kestrel_connection
+    def queue_system(self):
+        return self._queue_system
 
     @property
     def mongo_connection(self):
@@ -50,7 +51,7 @@ class PDU(object):
 
     def send_to(self, queue, message):
         """ Send a message to another queue. """
-        self.kestrel_connection.add(queue, json.dumps(message))
+        self.queue_system.add(queue, json.dumps(message))
 
     def _truncate_strs(self, dictionary):
         result = {}
@@ -97,7 +98,7 @@ class PDU(object):
                     time.sleep(self.TIME_TO_SLEEP_ON_BUSY)
 
                 # Step 1 - get message from kestrel queue
-                message = self.kestrel_connection.get(self.QUEUE, timeout = 1)
+                message = self.queue_system.get(self.QUEUE, timeout = 1)
                 if not message:
                     """self.log("Could not get message from queue %s Retrying ..."
                              % self.QUEUE)"""
@@ -109,7 +110,7 @@ class PDU(object):
                     doc = json.loads(message)
                 except:
                     self.log("Did not get valid JSON from queue %s" % self.QUEUE)
-                    self.log("Message = %s" % message)
+                    #self.log("Message = %s" % message)
                     continue
 
                 # Step 3 - validate message
