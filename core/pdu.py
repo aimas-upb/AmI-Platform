@@ -21,8 +21,7 @@ class PDU(object):
 
     def __init__(self, **kwargs):
         """ Set-up connections to Mongo and Kestrel by default on each PDU. """
-        self._kestrel_connection = kestrel.Client(settings.KESTREL_SERVERS)
-        self._queue_system = kwargs.get('_queue_system', None) or kestrel.Client(settings.KESTREL_SERVERS) 
+        self._queue_system = kwargs.get('queue_system', None) or kestrel.Client(settings.KESTREL_SERVERS) 
         self._mongo_connection = pymongo.Connection(settings.MONGO_SERVER)
         self._last_stats = time.time()
         self._processed_messages = 0
