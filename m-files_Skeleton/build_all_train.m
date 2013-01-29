@@ -3,7 +3,7 @@ function ALL_FILE = build_all_train(varargin)
 % "labels-file" named 'train_labels.csv' and builds a file for train
 % purposes from which testing instances will be selected as well:
 %
-cd 'E:\new_CSV';
+cd '/home/JohnDoe/data/filtered_CSV/';
 RESULT = csvimport('train_labels.csv');
 ALL_FILE= [];
  m=size(RESULT,1);
