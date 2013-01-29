@@ -12,7 +12,7 @@ function OUT = getAllRecordParams(varargin)  %#ok<*STOUT>
 %  Needs one input parameters:  the name of the file (e.g.'export-AD_dreapta_sus.csv')
 % See also: getParams, which returns the cell-array of params only for one
 % instance (frame from the Kinect)
- cd /home/JohnDoe/data/filtered_CSV/;
+cd E:\new_CSV\CSV-filtrate\; % cd /home/JohnDoe/data/filtered_CSV/;
 
 [~,n]=size(varargin);
 if (n~=1),
