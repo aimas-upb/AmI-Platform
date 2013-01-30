@@ -7,6 +7,9 @@ cd '/home/JohnDoe/data/filtered_CSV/';
 RESULT = csvimport('train_labels.csv');
 ALL_FILE= [];
  m=size(RESULT,1);
+% The stored variables, mainly angles (see getParameters.m) are stored in
+% ALL_FILE array like in a LIFO-stack (ie first angles from the 1st recorded 
+% instance of 1st position, ie "stand_jos" remain at the very BOTTOM of 'ALL_FILE'
  for i = 1:m,
     filename1 = RESULT{i,1}; filename= strtrim(filename1); clear filename1;
     OUT = getAllRecordParams(filename);  %clear filename;
