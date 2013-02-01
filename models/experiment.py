@@ -3,7 +3,8 @@ from mongoengine import *
 from core import BaseModel
 
 class Experiment(BaseModel):
-
+    # Name of the experiment
+    name = StringField(max_length=100)
     # File where to save the measurements
     file = StringField(max_length=500)
     # Filters which the measurements should match. This is a finddict!
