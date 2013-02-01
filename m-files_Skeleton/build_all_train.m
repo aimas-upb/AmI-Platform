@@ -16,3 +16,4 @@ ALL_FILE= [];
     ALL_FILE= cat(1,OUT,ALL_FILE);  pause(0.001); %clear OUT;
     i=i+1;     %#ok<FXSET>
  end
+
