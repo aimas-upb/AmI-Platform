@@ -2,6 +2,7 @@ import copy
 import json
 import sys
 import time
+import threading
 import traceback
 
 import kestrel
@@ -17,14 +18,17 @@ class PDU(object):
     PRINT_STATS_INTERVAL = 30 # Print flow stats every X seconds
     MESSAGE_SAMPLING_RATIO = 10
     JSON_DUMPS_STRING_LIMIT = 50
-    TIME_TO_SLEEP_ON_BUSY = 1.0
+    TIME_TO_SLEEP_ON_BUSY = 0.05
+    MAX_BUSY_SLEEPS = 10
 
     def __init__(self, **kwargs):
         """ Set-up connections to Mongo and Kestrel by default on each PDU. """
-        self._queue_system = kwargs.get('queue_system', None) or kestrel.Client(settings.KESTREL_SERVERS) 
+        self._queue_system = kwargs.get('queue_system', None) or kestrel.Client(settings.KESTREL_SERVERS)
         self._mongo_connection = pymongo.Connection(settings.MONGO_SERVER)
         self._last_stats = time.time()
         self._processed_messages = 0
+        self._running = False
+        self._running_lock = threading.Lock()
         self.debug_mode = kwargs.get('debug', False)
 
     def log(self, message):
@@ -66,13 +70,35 @@ class PDU(object):
                 result[k] = v
         return result
 
+    def _start_running(self):
+        """ Mark the current PDU as running. """
+        self._running_lock.acquire()
+        self._running = True
+        self._running_lock.release()
+
+    def _stop_running(self):
+        """ Mark the current PDU as NOT running. """
+        self._running_lock.acquire()
+        self._running = False
+        self._running_lock.release()
+
+    def _is_running(self):
+        """ Query whether the current PDU is running or not. """
+        self._running_lock.acquire()
+        result = self._running
+        self._running_lock.release()
+        return result
+
+    def stop(self):
+        self._stop_running()
+
     def _json_dumps(self, dictionary):
         """ A custom version of json.dumps which truncates string fields
             with length too large. """
         return json.dumps(self._truncate_strs(dictionary))
 
     def busy(self):
-        """ Make this return True and fetching of messages from the queue 
+        """ Make this return True and fetching of messages from the queue
         system will stall in order to avoid overflows. """
         return False
 
@@ -84,17 +110,21 @@ class PDU(object):
         function.
 
         """
-
+        self._start_running()
         self.log("PDU %s is alive!" % self.__class__.__name__)
-        while True:
+
+        while self._is_running():
             try:
                 # While module reports that it's busy, stop feeding
                 # messages to it - especially useful for cases where
                 # a part of message processing is asynchronous w.r.t.
                 # to message fetching. In that case, messages can accumulate
                 # in the memory of the PDU, leading to a huge mem usage.
-                while self.busy():
+                busy_sleeps = 0
+                while self.busy() and busy_sleeps < self.MAX_BUSY_SLEEPS:
                     time.sleep(self.TIME_TO_SLEEP_ON_BUSY)
+                if busy_sleeps == self.MAX_BUSY_SLEEPS:
+                    continue
 
                 # Step 1 - get message from message queue
                 message = self.queue_system.get(self.QUEUE, timeout = 1)
