@@ -10,6 +10,7 @@ class Router(PDU):
         # Route messages towards mongo-writer
         self.send_to('mongo-writer', message)
         self.send_to('head-crop', message)
+        self.send_to('experiments', message)
 
 if __name__ == "__main__":
     module = Router()

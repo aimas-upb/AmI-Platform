@@ -12,7 +12,8 @@ class RecordingPDU(PDU):
     no longer activated and close the open file associated with it'''
     
     FILES_PURGE_THRESHOLD = 5 * 60 
-
+    QUEUE = 'experiments'
+    
     def __init__(self, **kwargs):
         super(RecordingPDU, self).__init__(**kwargs)
         self._last_files_purge = time.time()
