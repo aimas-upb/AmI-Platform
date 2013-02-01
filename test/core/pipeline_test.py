@@ -1,31 +1,30 @@
-from core import PipelineTest, PDU
+import json
+import logging
+from nose.tools import eq_
+
+from core import PipelineTest
+from dummy_pdu import DummyPDU
+from dummy_measurements_player import DummyMeasurementsPlayer
+
+logger = logging.getLogger(__name__)
 
 class TestPipelineTest(PipelineTest):
-	def measurements_player(self, data_file, callback):
-		return DummyMeasurementsPlayer(data_file = data_file,
-									   callback = callback, 
-									   hardcoded_msgs = [{'a': 'b'}, {'c': 'd'}])
 
-	def test_results_ok(self):
-		m1 = self.QS.get('dummy')
+	DELAY_UNTIL_MESSAGES_PROPAGATE = 1.0
+	PDUs = [DummyPDU]
+
+	def _measurements_player_instance(self, data_file, callback):
+		harcoded_msgs = [{'a': 'b'}, {'c': 'd'}]
+		return DummyMeasurementsPlayer(data_file = data_file,
+									   callback = callback,
+									   hardcoded_msgs = harcoded_msgs)
+
+	def test_that_pipeline_test_works_ok(self):
+		self._test_pipeline()
+
+	def check_results(self):
+		m1 = json.loads(self._queue_system.get('dummy'))
 		eq_(m1, {'a': 'b'}, 'm1 should have correct value')
 
-		m2 = self.QS.get('dummy')
+		m2 = json.loads(self._queue_system.get('dummy'))
 		eq_(m2, {'c': 'd'}, 'm2 should have correct value')
-		
-
-class DummyMeasurementsPlayer(object):
-
-	def __init__(self, data_file = None, callback = None, hardcoded_msgs = []):
-		self.callback = callback
-		self.hardcoded_msgs= hardcoded_msgs
-
-	def play(self):
-		for msg in self.hardcoded_msgs:
-			self.callback(msg)
-
-class DummyPDU(PDU):
-	QUEUE = 'measurements'
-
-	def process_message(self, message):
-		self.send_to('dummy', message)
