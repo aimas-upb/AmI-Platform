@@ -8,7 +8,6 @@ class Router(PDU):
 
     def process_message(self, message):
         # Route messages towards mongo-writer
-        print "I got message"
         self.send_to('mongo-writer', message)
         self.send_to('head-crop', message)
 
