@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 import threading
@@ -60,6 +61,16 @@ class PipelineTest(TestCase):
 
 		"""
 		raise Exception("Please implement this in your test")
+	
+	def queue_contents(self, queue_name):
+		""" Get the full contents of a queue given its name. 
+		It's meant to be used in check_results() implementation. """
+		contents = []
+		next_element = self._queue_system.get(queue_name, 1)
+		while next_element is not None:
+			contents.append(json.loads(next_element))
+			next_element = self._queue_system.get(queue_name, 1)
+		return contents
 
 	def _enqueue_on_measurements(self, measurement):
 		""" Callback for the measurements player that actually takes
