@@ -1,14 +1,12 @@
 directory "source" do
     action :create
     mode 0775
-    owner node.user_name
     path node.openCV.destination.source
 end
 
 directory "archives" do
     action :create
     mode 0775
-    owner node.user_name
     path node.openCV.destination.archives
 end
 
@@ -16,7 +14,6 @@ remote_file "openCV" do
     action :create
     path "#{node.openCV.destination.archives}/#{node.openCV.archive}"
     mode 0755
-    owner  node.user_name
 	source node.openCV.sourceURL
 end
 
