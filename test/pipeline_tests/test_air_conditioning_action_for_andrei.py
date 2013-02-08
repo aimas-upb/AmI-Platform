@@ -1,5 +1,6 @@
 import logging
 
+from nose.plugins.attrib import attr
 from nose.tools import ok_, eq_
 
 from core import PipelineTest
@@ -21,6 +22,7 @@ class TestAirConditioningWillBeTurnedOnForAndrei(PipelineTest):
         super(TestAirConditioningWillBeTurnedOnForAndrei, self).setUp()
         logging.basicConfig(level=logging.DEBUG)
     
+    @attr('pipeline', 'slow')
     def test_that_pipeline_test_works_ok(self):
         self._test_pipeline()
     
