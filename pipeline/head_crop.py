@@ -61,6 +61,7 @@ class HeadCrop(ParallelPDU):
     MAX_TIME = 0.1
 
     def __init__(self, **kwargs):
+        kwargs['heavy_preprocess'] = crop_head
         super(HeadCrop, self).__init__(**kwargs)
         self.last_image = None
         self.last_image_at = None
@@ -95,5 +96,5 @@ class HeadCrop(ParallelPDU):
         self.send_to('face-recognition', {'head_image': image})
 
 if __name__ == "__main__":
-    module = HeadCrop(heavy_preprocess = crop_head)
+    module = HeadCrop()
     module.run()
