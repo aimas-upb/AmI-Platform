@@ -23,6 +23,7 @@ class ExperimentTestCase(TestCase):
         e.until = datetime.now()
         e.file = 'file.txt'
         e.filters = {}
+        e.name = 'test1'
         e.save()
 
         e2 = Experiment.objects.get(id = e.id)
@@ -32,7 +33,8 @@ class ExperimentTestCase(TestCase):
         connect('experiments')
 
         """ Test that get_active_experiments works correctly indeed. """
-        e = Experiment(file = 'file2.txt', since = datetime.now())
+        e = Experiment(file = 'file2.txt', since = datetime.now(),
+                       name='test2')
         e.save()
 
         active = Experiment.get_active_experiments()
@@ -44,7 +46,7 @@ class ExperimentTestCase(TestCase):
         eq_(active.count(), 0, "There should be no active experiments")
 
     def test_experiment_matches(self):
-        e = Experiment(file = 'file3.txt', filters = {'a': 'b'})
+        e = Experiment(file = 'file3.txt', filters = {'a': 'b'}, name='test3')
         ok_(e.matches({'c': 'd', 'a': 'b'}))
         ok_(not e.matches({'c': 'd'}))
         ok_(not e.matches({'a': 'c'}))
@@ -53,9 +55,9 @@ class ExperimentTestCase(TestCase):
         connect('experiments')
         Experiment.objects.all().delete()
 
-        e1 = Experiment(file = 'file3.txt', filters = {'a': 'b'})
+        e1 = Experiment(file = 'file3.txt', filters = {'a': 'b'}, name='test4')
         e1.save()
-        e2 = Experiment(file = 'file3.txt', filters = {'c': 'd'})
+        e2 = Experiment(file = 'file3.txt', filters = {'c': 'd'}, name='test5')
         e2.save()
 
         matches = Experiment.get_active_experiments_matching({'a': 'b', 'c': 'd'})
@@ -73,7 +75,8 @@ class ExperimentTestCase(TestCase):
     def test_inactive_matching_experiment_is_not_returned(self):
         connect('experiments')
         Experiment.objects.all().delete()
-        e1 = Experiment(file = 'file4.txt', filters = {'a': 'b'}, active=False)
+        e1 = Experiment(file = 'file4.txt', filters = {'a': 'b'}, active=False,
+                        name='test6')
         e1.save()
 
         matches = Experiment.get_active_experiments_matching({'a': 'b'})

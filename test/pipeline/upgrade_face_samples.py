@@ -26,9 +26,11 @@ class UpgradeFaceSamplesTest(TestCase):
         # init message
         message = {
             'person_name': 'diana@amilab.ro',
-            'image': 'ABCDEF',
-            'width': 640,
-            'height': 480
+            'head_image': {
+                'image': 'ABCDEF',
+                'width': 640,
+                'height': 480
+            }
         }
         
         # validate message
@@ -37,7 +39,10 @@ class UpgradeFaceSamplesTest(TestCase):
         # call tested methods
         pdu.process_message(message)
 
-        image_save.assert_called_once_with(message['image'], message['width'], message['height'], ANY)
+        image_save.assert_called_once_with(message['head_image']['image'], 
+                                           message['head_image']['width'], 
+                                           message['head_image']['height'], 
+                                           ANY)
         path = image_save.call_args_list[0][0][3]
         api_upload_image.assert_called_once_with(path, message['person_name'])
         
@@ -54,9 +59,11 @@ class UpgradeFaceSamplesTest(TestCase):
         
         message = {
             'person_name': 'diana@amilab.ro',
-            'image': 'ABCDEF',
-            'width': 640,
-            'height': 480
+            'head_image': {
+                'image': 'ABCDEF',
+                'width': 640,
+                'height': 480
+            }
         }
         
         pdu.process_message(message)

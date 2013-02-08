@@ -70,10 +70,10 @@ class HeadCrop(ParallelPDU):
 
     def process_message(self, message):
         # Step 1 - always update last_image/last_skeleton
-        if message['type'] == 'image_rgb':
+        if message['type'] == 'image_rgb' and message['sensor_type'] == 'kinect':
             self.last_image = message['image_rgb']
             self.last_image_at = time.time()
-        elif message['type'] == 'skeleton':
+        elif message['type'] == 'skeleton' and message['sensor_type'] == 'kinect':
             self.last_skeleton = message['skeleton_2D']
             self.last_skeleton_at = time.time()
 
