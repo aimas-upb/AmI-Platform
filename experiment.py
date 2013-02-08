@@ -89,7 +89,7 @@ elif args.operation == 'play':
         connect('experiments')
         file_name = Experiment.objects.get(name=args.name).file
         connection = kestrel.Client(settings.KESTREL_SERVERS)
-        f = lambda m: connection.add('measurements', json.dumps(m))
+        f = lambda m: connection.add('measurements', m)
         player = MeasurementsPlayer(data_file=file_name,
                                     callback=f)
         player.play()
