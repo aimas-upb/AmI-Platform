@@ -1,4 +1,5 @@
 import time
+import json
 
 from experiment_file import ExperimentFile
 
@@ -28,6 +29,6 @@ class MeasurementsPlayer(object):
 				# Skip this measurement because we're behind
 				continue
 
-			self.callback(measurement)
+			self.callback(json.dumps(measurement))
 
 		self.experiment_file.close()
