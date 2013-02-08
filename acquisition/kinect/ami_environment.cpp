@@ -4,7 +4,7 @@
 char* getKestrelServerIP() {
 	char *result = getenv("AMI_KESTREL_SERVER_IP");
 	if (result == NULL)
-		return "127.0.0.1";
+		return "ami-crunch-01.local";
 	else
 		return result;
 }
