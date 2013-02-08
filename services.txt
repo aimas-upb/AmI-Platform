@@ -8,3 +8,6 @@ ami-api
 ami-room
 ami-text_to_speech
 ami-upgrade_face_samples
+ami-measurements-player
+recorder
+ami-recorder

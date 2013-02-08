@@ -36,21 +36,21 @@ if exist('createLine3d.m','file')==2, % After I create MEX should check for ==3
     return
 end
 pause(0.001);
-% T1 	|   	head(1-3)               |  		neck(4-6)               |   left_shoulder(7-9)      | HNL_S = angl1 
-% T2 	|   	head(1-3)               |  		neck(4-6)               |   right_shoulder(10-12)   | HNR_S = angl2 aso
-% T3 	|  	neck(4-6)               |  		left_shoulder(7-9)      |   left_elbow(13-15)       | NL_SL_E  ...
-% T4 	|  	neck(4-6)               |  		right_shoulder(10-12)	|   right_elbow(16-18)      | NR_SR_E ...
-% T5	|  	left_shoulder(7-9)      | 		left_elbow(13-15) 	|   left_hand(19-21)        | L_SL_EL_H
-% T6	|  	right_shoulder(10-12)	| 		right_elbow(16-18)      |   right_hand(22-24)       | R_SR_ER_H
-% T7	|	head(1-3)               |  		neck(4-6)               |   torso(25-27)            | HNT
-% T8	|	neck(4-6)               |  		torso(25-27)            |   left_hiP(28-30)         | NTL_P
-% T9	|	neck(4-6)               |  		torso(25-27)            |   right_hiP(31-33)        | NTR_P
-% T10	| 	torso(25-27)            | 		left_hiP(28-30)         |   left_Knee(34-36)        | TL_PL_K
-% T11	| 	torso(25-27)            | 		right_hiP(31-33)        |   right_Knee(37-39)       | TR_PR_K
-% T12	| 	left_hiP(28-30)         |		left_Knee(34-36)        |   left_foot(40-42)        | L_PL_KL_F
-% T13	| 	right_hip(31-33)        |		right_knee(37-39)       |   right_foot(43-45)       | R_PR_KR_F
-% T14	|	neck(4-6)               |  		torso(25-27)            |   left_Knee(34-36)        | NTL_K
-% T15	|	neck(4-6)               |  		torso(25-27)            |   right_Knee(37-39)       | NTR_K =angl15
+% T1    |       head(1-3)               |       neck(4-6)               |   left_shoulder(7-9)      | HNL_S = angl1 
+% T2    |       head(1-3)               |       neck(4-6)               |   right_shoulder(10-12)   | HNR_S = angl2 aso
+% T3    |   neck(4-6)               |       left_shoulder(7-9)      |   left_elbow(13-15)       | NL_SL_E  ...
+% T4    |   neck(4-6)               |       right_shoulder(10-12)   |   right_elbow(16-18)      | NR_SR_E ...
+% T5    |   left_shoulder(7-9)      |       left_elbow(13-15)   |   left_hand(19-21)        | L_SL_EL_H
+% T6    |   right_shoulder(10-12)   |       right_elbow(16-18)      |   right_hand(22-24)       | R_SR_ER_H
+% T7    |   head(1-3)               |       neck(4-6)               |   torso(25-27)            | HNT
+% T8    |   neck(4-6)               |       torso(25-27)            |   left_hiP(28-30)         | NTL_P
+% T9    |   neck(4-6)               |       torso(25-27)            |   right_hiP(31-33)        | NTR_P
+% T10   |   torso(25-27)            |       left_hiP(28-30)         |   left_Knee(34-36)        | TL_PL_K
+% T11   |   torso(25-27)            |       right_hiP(31-33)        |   right_Knee(37-39)       | TR_PR_K
+% T12   |   left_hiP(28-30)         |       left_Knee(34-36)        |   left_foot(40-42)        | L_PL_KL_F
+% T13   |   right_hip(31-33)        |       right_knee(37-39)       |   right_foot(43-45)       | R_PR_KR_F
+% T14   |   neck(4-6)               |       torso(25-27)            |   left_Knee(34-36)        | NTL_K
+% T15   |   neck(4-6)               |       torso(25-27)            |   right_Knee(37-39)       | NTR_K =angl15
 % See getParameters.m for the signficance of the rest of 7 variables
 variables = {'angl1', 'angl2','angl3',... 
             'angl4','angl5','angl6',...
@@ -70,4 +70,5 @@ ub = Inf(size(variables));  % The upper-bounds for Optim. Tbox
 
 
 end
+
 

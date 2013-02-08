@@ -1,0 +1,4 @@
+check process ami-recorder
+	with pidfile /var/run/ami-recorder.pid
+	start = "/usr/sbin/service ami-recorder start"
+	stop = "/usr/sbin/service ami-recorder stop"

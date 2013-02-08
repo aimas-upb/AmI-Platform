@@ -38,9 +38,6 @@ class MongoWriter(PDU):
 		if not self._should_be_saved(message):
 			return
 
-		# Add a created_at field so that we can expire items older than TTL
-		message['created_at'] = int(time.time())
-
 		try:
 			self.collection.save(message, safe = True)
 
