@@ -13,7 +13,7 @@ class TestRecognition(PipelineTest):
     '''#1110 - Test that I am in front of the camera and it detects me'''
     
     PDUs = [Router, HeadCrop, FaceRecognition]
-    DATA_FILE = '/tmp/andrei.txt'
+    DATA_FILE = '/tmp/andrei2.txt'
     NB_MIN_EXPECTED_EVENTS = 1
     DELAY_UNTIL_MESSAGES_PROPAGATE = 60
     
