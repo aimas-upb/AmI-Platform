@@ -8,7 +8,12 @@ from core import settings
 def get_latest_kinect_rgb():
     connection = Connection(settings.MONGO_SERVER)
     db = connection.measurements.docs
-    image = db.find({'sensor_type': 'kinect_rgb'}, limit = 1).sort('created_at', -1)[0]
+    finddict = {
+        'sensor_id': 0,
+        'sensor_type': 'kinect',
+        'type': 'image_rgb'
+    }
+    image = db.find(finddict, limit = 1).sort('created_at', -1)[0]
     del image['_id']
     return json.dumps(image)
 
@@ -16,7 +21,12 @@ def get_latest_kinect_rgb():
 def get_latest_kinect_skeleton():
     connection = Connection(settings.MONGO_SERVER)
     db = connection.measurements.docs
-    skeleton = db.find({'sensor_type': 'kinect'}, limit = 1).sort('created_at', -1)[0]
+    finddict = {
+        'sensor_id': 0,
+        'sensor_type': 'kinect',
+        'type': 'skeleton'
+    }
+    skeleton = db.find(finddict, limit = 1).sort('created_at', -1)[0]
     del skeleton['_id']
     return json.dumps(skeleton)
 
