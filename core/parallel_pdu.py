@@ -9,7 +9,17 @@ logger = logging.getLogger(__name__)
 def run_and_return(f, param, k, v):
     """ Runs function f(param) and returns a dictionary containing {k:v}
         and the result of the function run. """
-    f_result = f(param)
+        
+    # Make sure that exceptions of the function to run don't disappoint us
+    # and crash our worker pool workers.
+    try:
+        f_result = f(param)
+    except:
+        import traceback
+        traceback.print_exc()
+        logger.error("Exception while executing %r" % f)
+        f_result = None
+        
     to_return = {'result': f_result}
     to_return[k] = v
     return to_return
