@@ -1,1 +1,3 @@
 ami-head-crop
+ami-face-recognition
+ami-upgrade_face_samples
