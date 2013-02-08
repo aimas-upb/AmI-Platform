@@ -8,16 +8,34 @@ from core import settings
 def get_latest_kinect_rgb():
     connection = Connection(settings.MONGO_SERVER)
     db = connection.measurements.docs
-    image = db.find({'sensor_type': 'kinect_rgb'}, limit = 1).sort('created_at', -1)[0]
-    del image['_id']
-    return json.dumps(image)
+    finddict = {
+        'sensor_id': 0,
+        'sensor_type': 'kinect',
+        'type': 'image_rgb'
+    }
+    images = list(db.find(finddict, limit = 1).sort('created_at', -1))
+    if len(images) > 0:
+        image = images[0]
+        del image['_id']
+        return json.dumps(image)
+    else:
+        return {}
 
 @route('/latest_kinect_skeleton', method='GET')
 def get_latest_kinect_skeleton():
     connection = Connection(settings.MONGO_SERVER)
     db = connection.measurements.docs
-    skeleton = db.find({'sensor_type': 'kinect'}, limit = 1).sort('created_at', -1)[0]
-    del skeleton['_id']
-    return json.dumps(skeleton)
+    finddict = {
+        'sensor_id': 0,
+        'sensor_type': 'kinect',
+        'type': 'skeleton'
+    }
+    skeletons = list(db.find(finddict, limit = 1).sort('created_at', -1))
+    if len(skeletons) > 0:
+        skeleton = skeletons[0]
+        del skeleton['_id']
+        return json.dumps(skeleton)
+    else:
+        return {}
 
 run(host='0.0.0.0', port=8000)

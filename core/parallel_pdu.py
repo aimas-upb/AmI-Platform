@@ -1,6 +1,10 @@
 from multiprocessing import Pool
+import logging
 
+from lib.atomic_int import AtomicInt
 from pdu import PDU
+
+logger = logging.getLogger(__name__)
 
 def run_and_return(f, param, k, v):
     """ Runs function f(param) and returns a dictionary containing {k:v}
@@ -41,6 +45,7 @@ class ParallelPDU(PDU):
 
     ORDERED_DELIVERY = False
     POOL_SIZE = 4
+    UNFINISHED_TASKS_THRESHOLD = 2 * POOL_SIZE
 
     def __init__(self, **kwargs):
         super(ParallelPDU, self).__init__(**kwargs)
@@ -63,6 +68,10 @@ class ParallelPDU(PDU):
         # seq no to message mapping
         self.messages = {}
 
+        self.unfinished_tasks = AtomicInt()
+        
+        self.last_busy_result = False
+
     def light_postprocess(self, preprocess_result, message):
         raise NotImplemented("Please implement this in your sub-class!")
 
@@ -70,6 +79,8 @@ class ParallelPDU(PDU):
         """ This function acts as a callback for when a task given to
             the thread pool (aka a heavy_preprocess) is finished,
             in order to decide what to do next. """
+
+        self.unfinished_tasks.dec()
 
         message_no = result['message_no']
         actual_result = result['result']
@@ -92,6 +103,19 @@ class ParallelPDU(PDU):
             message = self.messages.pop(message_no)
             self.light_postprocess(actual_result, message)
 
+    def busy(self):
+        """ By default, a parallel PDU is busy if it has at least
+            UNFINISHED_TASKS_THRESHOLD tasks which have not finished
+            yet.
+        """
+        unfinished_tasks = self.unfinished_tasks.get()
+        result = unfinished_tasks > self.UNFINISHED_TASKS_THRESHOLD
+        if result and not self.last_busy_result:            
+            self.log("Busy with %d unfinished tasks!" % unfinished_tasks)
+        
+        self.last_busy_result = result
+        return result
+
     def process_message(self, message):
         """ Message processing will be done in 2 steps:
 
@@ -103,6 +127,8 @@ class ParallelPDU(PDU):
                     them
                 - on normal delivery, process the actual job
         """
+        self.unfinished_tasks.inc()
+
         # Give the message a unique number and keep track of it.
         self.message_no = self.message_no + 1
         self.messages[self.message_no] = message

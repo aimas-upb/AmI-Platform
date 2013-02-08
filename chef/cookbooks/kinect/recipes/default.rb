@@ -7,7 +7,7 @@
 # All rights reserved - Do Not Redistribute
 #
 
-include_recipe "ami-node::default"
+
 include_recipe "kinect::supp_libs"
 include_recipe "kinect::source_directory"
 include_recipe "kinect::openni_drivers"

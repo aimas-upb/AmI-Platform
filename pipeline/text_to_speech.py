@@ -4,7 +4,7 @@ import os
 class TextToSpeech(PDU):
     """ Plays back a text message using the espeak text-to-speech system. """
 
-    QUEUE = 'text_to_speech'
+    QUEUE = 'text-to-speech'
     MAX_MESSAGE_LENGTH = 150
     VOLUME = 200
     WORDS_PER_MINUTE = 155

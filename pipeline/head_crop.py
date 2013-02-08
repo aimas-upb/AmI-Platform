@@ -16,8 +16,8 @@ def _crop_head_using_skeleton(last_image, last_skeleton):
     image = base64_to_image(last_image['image'],
                             int(last_image['width']),
                             int(last_image['height']))
-    skeleton = last_skeleton['skeleton_2d']
-
+    skeleton = last_skeleton
+    
     return crop_head_using_skeleton(image, skeleton)
 
 def _crop_head_using_face_detection(last_image):
@@ -61,6 +61,7 @@ class HeadCrop(ParallelPDU):
     MAX_TIME = 0.1
 
     def __init__(self, **kwargs):
+        kwargs['heavy_preprocess'] = crop_head
         super(HeadCrop, self).__init__(**kwargs)
         self.last_image = None
         self.last_image_at = None
@@ -69,11 +70,11 @@ class HeadCrop(ParallelPDU):
 
     def process_message(self, message):
         # Step 1 - always update last_image/last_skeleton
-        if message['sensor_type'] == 'kinect_rgb':
-            self.last_image = message
+        if message['type'] == 'image_rgb':
+            self.last_image = message['image_rgb']
             self.last_image_at = time.time()
-        elif message['sensor_type'] == 'kinect':
-            self.last_skeleton = message
+        elif message['type'] == 'skeleton':
+            self.last_skeleton = message['skeleton_2D']
             self.last_skeleton_at = time.time()
 
         message['hack'] = {}
@@ -92,8 +93,8 @@ class HeadCrop(ParallelPDU):
 
     def _send_to_recognition(self, image):
         """ Send a given image to face recognition. """
-        self.send_to('face-recognition', image)
+        self.send_to('face-recognition', {'head_image': image})
 
 if __name__ == "__main__":
-    module = HeadCrop(heavy_preprocess = crop_head)
+    module = HeadCrop()
     module.run()

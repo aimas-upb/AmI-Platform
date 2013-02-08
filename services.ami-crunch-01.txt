@@ -1,9 +1,10 @@
 ami-router
 ami-mongo-writer
-ami-head-crop
 ami-ip-power
 ami-api
 ami-text_to_speech
 ami-face-recognition
 ami-room
 ami-upgrade_face_samples
+ami-measurements-player
+ami-recorder

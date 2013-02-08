@@ -2,6 +2,7 @@ import copy
 import json
 import sys
 import time
+import threading
 import traceback
 
 import kestrel
@@ -17,13 +18,17 @@ class PDU(object):
     PRINT_STATS_INTERVAL = 30 # Print flow stats every X seconds
     MESSAGE_SAMPLING_RATIO = 10
     JSON_DUMPS_STRING_LIMIT = 50
+    TIME_TO_SLEEP_ON_BUSY = 0.05
+    MAX_BUSY_SLEEPS = 10
 
     def __init__(self, **kwargs):
         """ Set-up connections to Mongo and Kestrel by default on each PDU. """
-        self._kestrel_connection = kestrel.Client(settings.KESTREL_SERVERS)
+        self._queue_system = kwargs.get('queue_system', None) or kestrel.Client(settings.KESTREL_SERVERS)
         self._mongo_connection = pymongo.Connection(settings.MONGO_SERVER)
         self._last_stats = time.time()
         self._processed_messages = 0
+        self._running = False
+        self._running_lock = threading.Lock()
         self.debug_mode = kwargs.get('debug', False)
 
     def log(self, message):
@@ -34,8 +39,8 @@ class PDU(object):
         sys.stdout.flush()
 
     @property
-    def kestrel_connection(self):
-        return self._kestrel_connection
+    def queue_system(self):
+        return self._queue_system
 
     @property
     def mongo_connection(self):
@@ -49,9 +54,16 @@ class PDU(object):
 
     def send_to(self, queue, message):
         """ Send a message to another queue. """
-        self.kestrel_connection.add(queue, json.dumps(message))
-        
+        self.queue_system.add(queue, json.dumps(message))
+
     def _truncate_strs(self, dictionary):
+        # Edge case - dictionary is in fact not a dictionary, but a string
+        if type(dictionary) != dict:
+            result = str(dictionary)
+            if len(result) > self.JSON_DUMPS_STRING_LIMIT:
+                result = result[0:self.JSON_DUMPS_STRING_LIMIT] + '... (truncated)'
+            return result
+            
         result = {}
         for k, v in dictionary.iteritems():
             # If value is a dictionary, recursively truncate big strings
@@ -64,26 +76,65 @@ class PDU(object):
             else:
                 result[k] = v
         return result
-        
+
+    def _start_running(self):
+        """ Mark the current PDU as running. """
+        self._running_lock.acquire()
+        self._running = True
+        self._running_lock.release()
+
+    def _stop_running(self):
+        """ Mark the current PDU as NOT running. """
+        self._running_lock.acquire()
+        self._running = False
+        self._running_lock.release()
+
+    def _is_running(self):
+        """ Query whether the current PDU is running or not. """
+        self._running_lock.acquire()
+        result = self._running
+        self._running_lock.release()
+        return result
+
+    def stop(self):
+        self._stop_running()
+
     def _json_dumps(self, dictionary):
         """ A custom version of json.dumps which truncates string fields
             with length too large. """
         return json.dumps(self._truncate_strs(dictionary))
 
+    def busy(self):
+        """ Make this return True and fetching of messages from the queue
+        system will stall in order to avoid overflows. """
+        return False
+
     def run(self):
         """ Main loop of the PDU.
 
         It's basically an an infinite loop that tries to read messages
-        from Kestrel, decode them and them process them with the specific
+        from the message queue, decode them and them process them with the specific
         function.
 
         """
-
+        self._start_running()
         self.log("PDU %s is alive!" % self.__class__.__name__)
-        while True:
+
+        while self._is_running():
             try:
-                # Step 1 - get message from kestrel queue
-                message = self.kestrel_connection.get(self.QUEUE, timeout = 1)
+                # While module reports that it's busy, stop feeding
+                # messages to it - especially useful for cases where
+                # a part of message processing is asynchronous w.r.t.
+                # to message fetching. In that case, messages can accumulate
+                # in the memory of the PDU, leading to a huge mem usage.
+                busy_sleeps = 0
+                while self.busy() and busy_sleeps < self.MAX_BUSY_SLEEPS:
+                    time.sleep(self.TIME_TO_SLEEP_ON_BUSY)
+                if busy_sleeps == self.MAX_BUSY_SLEEPS:
+                    continue
+
+                # Step 1 - get message from message queue
+                message = self.queue_system.get(self.QUEUE, timeout = 1)
                 if not message:
                     """self.log("Could not get message from queue %s Retrying ..."
                              % self.QUEUE)"""
@@ -95,7 +146,7 @@ class PDU(object):
                     doc = json.loads(message)
                 except:
                     self.log("Did not get valid JSON from queue %s" % self.QUEUE)
-                    self.log("Message = %s" % message)
+                    #self.log("Message = %s" % message)
                     continue
 
                 # Step 3 - validate message
@@ -111,7 +162,7 @@ class PDU(object):
                              self._json_dumps(doc), self.QUEUE)
                     traceback.print_exc()
                     continue
-                 
+
                 # Step 4 - actually process the message. Usually, this means
                 # that a PDU enqueues it further down the pipeline to other
                 # modules.
@@ -123,11 +174,11 @@ class PDU(object):
                              (self._json_dumps(doc), self.QUEUE))
                     traceback.print_exc()
                     continue
-                    
+
                 ratio = self.MESSAGE_SAMPLING_RATIO
                 if self.debug_mode and self._processed_messages % ratio == 0:
                     self.log("Sampled message: %s" % self._json_dumps(doc))
-                
+
                 # Only increment # of processed messages if there was an actual
                 # processing. If we do this in the "finally" block, it will
                 # also get executed after "continue" statements as well.
@@ -138,7 +189,7 @@ class PDU(object):
             finally:
                 # Count # of processed messages in each time interval
                 # and display them to the log.
-                
+
                 time_since_last_stats = time.time() - self._last_stats
                 if time_since_last_stats >= self.PRINT_STATS_INTERVAL:
                     if self._processed_messages > 0:

@@ -1,0 +1,4 @@
+check process ami-measurements-player
+	with pidfile /var/run/ami-measurements-player.pid
+	start = "/usr/sbin/service ami-measurements-player start"
+	stop = "/usr/sbin/service ami-measurements-player stop"
