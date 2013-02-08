@@ -1,8 +1,8 @@
-import time
 from unittest import TestCase
 
 from mock import patch, ANY
-from nose.tools import ok_, eq_
+from nose.plugins.attrib import attr
+from nose.tools import ok_
 
 from pipeline.upgrade_face_samples import UpgradeFaceSamples
 from pipeline.upgrade_face_samples import BetaFaceAPI
@@ -15,9 +15,9 @@ def set_field(self, field, val):
 def raise_(e):
     raise e
     
-
 class UpgradeFaceSamplesTest(TestCase):
 
+    @attr('integration')
     @patch.object(UpgradeFaceSamples, 'save_image_to_file')
     @patch.object(BetaFaceAPI, 'upload_face')
     def test_pdu_calls_betaface_api_with_correct_params(self, api_upload_image, image_save):
@@ -47,6 +47,7 @@ class UpgradeFaceSamplesTest(TestCase):
         api_upload_image.assert_called_once_with(path, message['person_name'])
         
     
+    @attr('integration')
     @patch.object(UpgradeFaceSamples, 'save_image_to_file')
     @patch.object(BetaFaceAPI, 'upload_face', )
     def test_save_image_before_upload(self, api_upload_image, image_save):
