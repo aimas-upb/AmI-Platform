@@ -102,7 +102,7 @@ class PipelineTest(TestCase):
 			logger.info("Starting PDU with class %r" % pdu)
 			pdu_instance = pdu(queue_system = self._queue_system)
 			# Run each PDU on a thread
-			pdu_thread = threading.Thread(target = pdu_instance.run)
+			pdu_thread = threading.Thread(target = pdu_instance.run, name = ('%r' % pdu))
 			self._thread_pool.append(pdu_thread)
 			self._pdu_instances.append(pdu_instance)
 
@@ -122,3 +122,7 @@ class PipelineTest(TestCase):
 			pdu_thread.join(0.1)
 
 		logger.info("Finished joining PDU threads")
+	
+	def alive_pdus(self):
+		return filter(lambda t: t.isAlive(), self._thread_pool)	
+			
