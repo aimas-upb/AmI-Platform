@@ -1,5 +1,7 @@
 import json
 import logging
+
+from nose.plugins.attrib import attr
 from nose.tools import eq_
 
 from core import PipelineTest
@@ -19,6 +21,7 @@ class TestPipelineTest(PipelineTest):
 									   callback = callback,
 									   hardcoded_msgs = harcoded_msgs)
 
+	@attr('unit', 'pipeline')
 	def test_that_pipeline_test_works_ok(self):
 		self._test_pipeline()
 

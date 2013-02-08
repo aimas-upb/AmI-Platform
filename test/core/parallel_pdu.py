@@ -1,6 +1,7 @@
 import time
 from unittest import TestCase
 
+from nose.plugins.attrib import attr
 from nose.tools import eq_
 
 from core import ParallelPDU
@@ -28,6 +29,7 @@ class MyParallelPDU(ParallelPDU):
 
 class ParallelPDUTest(TestCase):
 
+    @attr('unit')
     def test_pdu_processes_all_messages(self):
         """ Tests that the parallel PDU successfully processes all messages. """
 
@@ -39,6 +41,7 @@ class ParallelPDUTest(TestCase):
         ids = set([x.get('id', None) for x in pdu.processed])
         eq_(ids, set([1, 2]), "PDU processed messages should have correct IDs")
 
+    @attr('unit')
     def test_pdu_processes_heavier_message_last(self):
         """ If processing 2 messages and the 1st one takes longer to process,
             the 2nd one should finish processing first.
@@ -55,6 +58,7 @@ class ParallelPDUTest(TestCase):
         ids = [x.get('id', None) for x in pdu.processed]
         eq_(ids, [2, 1], "PDU processed messages should have correct order")
 
+    @attr('unit')
     def test_pdu_ordered_delivery_message_heaviness_doesnt_matter(self):
         """ If processing 2 messages, although the first one takes
             longer to process, it should get processed first because of

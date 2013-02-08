@@ -2,6 +2,7 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
+from nose.plugins.attrib import attr
 from nose.tools import ok_
 
 from core import PipelineTest
@@ -18,6 +19,7 @@ class TestCrop(PipelineTest):
     NB_MIN_EXPECTED_FACES = 10
     DELAY_UNTIL_MESSAGES_PROPAGATE = 30
     
+    @attr('pipeline', 'slow')
     def test_that_pipeline_test_works_ok(self):
         self._test_pipeline()
     

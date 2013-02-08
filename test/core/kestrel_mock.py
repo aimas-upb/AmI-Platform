@@ -3,9 +3,12 @@ Created on Jan 25, 2013
 
 @author: cosmin
 '''
-import unittest
-from core import kestrel_mock
 import threading
+import unittest
+
+from nose.plugins.attrib import attr
+
+from core import kestrel_mock
 
 class KestrelMockTest(unittest.TestCase):
 
@@ -18,7 +21,7 @@ class KestrelMockTest(unittest.TestCase):
         super(KestrelMockTest, self).tearDown()
         pass
     
-    
+    @attr('unit')
     def testOneQueue(self):
         queue1 = "test1"
         
@@ -29,6 +32,7 @@ class KestrelMockTest(unittest.TestCase):
             j = int(self._queue_system.get(queue1, None))
             self.assertEqual(i, j, "it needs to be a fifo")    
     
+    @attr('unit')
     def testTwoQueues(self):
         queue1 = "test1"
         queue2 = "test2"
@@ -46,6 +50,7 @@ class KestrelMockTest(unittest.TestCase):
             j = int(self._queue_system.get(queue2, None))
             self.assertEqual(count - i, j, "it needs to be a fifo")
     
+    @attr('unit')
     def testGetTimeout(self):
         timeout = 1 
         queue1 = "test1"
@@ -60,7 +65,3 @@ class KestrelMockTest(unittest.TestCase):
         worker.start()
         worker.join(1.5 * timeout)
         self.assertFalse(worker.is_alive(), "Should have timedout")
-
-if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()

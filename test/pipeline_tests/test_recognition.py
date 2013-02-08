@@ -1,5 +1,6 @@
 import logging
 
+from nose.plugins.attrib import attr
 from nose.tools import ok_
 
 from core import PipelineTest
@@ -17,6 +18,7 @@ class TestRecognition(PipelineTest):
     NB_MIN_EXPECTED_EVENTS = 1
     DELAY_UNTIL_MESSAGES_PROPAGATE = 60
     
+    @attr('pipeline', 'slow')
     def test_that_pipeline_test_works_ok(self):
         self._test_pipeline()
     
@@ -27,9 +29,5 @@ class TestRecognition(PipelineTest):
         while (event is not None):
             events.append(event)
             event = self._queue_system.get('room', 1)
-            print event
 
-                        
         ok_(len(events) >= self.NB_MIN_EXPECTED_EVENTS)
-        
-
