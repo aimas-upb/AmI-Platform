@@ -30,6 +30,13 @@ Line_to_Plane_Angle returns the angle between a line determined by 2 3D skeleton
 
 Script getParams.m returns a cell-array of 22 features (mainly angles for upper-body part) to be used in classification (estimation) of subject's body pose.
 
+For getting the transpose of large chunks of text (csv) files I use transpose.py as:
+python ../transpose.py --delimiter="," FileToBeTransposed.csv >> TransposedFile.py
+
+and for shuffling the rows of training data (also a csv file) I use ShuffleTrain.py as:
+python ShuffleTrain.py  >> ShuffledTrainData
+where the name of the training file to be shuffled (row-wise) is given inside (as train1.dat) 
+
 Finally, getAllRecordParams.m gets at it's output a cell for all the recorded instances of a certain body-pose used for training / testing purposes.
 
 P.S. All these  scripts for feature detection are just for academic purpose and to generate HTML 
