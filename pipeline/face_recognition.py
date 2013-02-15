@@ -4,8 +4,10 @@ from pybetaface.api import BetaFaceAPI
 from core import ParallelPDU
 from lib.image import base64_to_image
 from lib.files import random_file_name
+from lib.logging import setup_logging
 
 logger = logging.getLogger(__name__)
+
 
 def betaface_recognition(image_dict):
     """ Given a message contained a cropped head, send it to BetaFace
@@ -13,8 +15,9 @@ def betaface_recognition(image_dict):
     """
     try:
         api = BetaFaceAPI()
-        
-        # Get image from message, save it to disk and pass it on to BetaFace API
+
+        # Get image from message, save it to disk and
+        # pass it on to BetaFace API
         image = base64_to_image(image_dict['head_image']['image'],
                                 int(image_dict['head_image']['width']),
                                 int(image_dict['head_image']['height']))
@@ -22,7 +25,7 @@ def betaface_recognition(image_dict):
         logger.info("Sending to BetaFace: %s" % temp_path)
         image.save(temp_path)
         logger.info(temp_path)
-    
+
         matches = api.recognize_faces(temp_path, 'amilab.ro')
         #os.remove(str(path))
         return matches
@@ -30,6 +33,7 @@ def betaface_recognition(image_dict):
         import traceback
         traceback.print_exc()
         return {}
+
 
 class FaceRecognition(ParallelPDU):
     """ PDU that receives cropped images (head only)
@@ -42,8 +46,7 @@ class FaceRecognition(ParallelPDU):
     def __init__(self, **kwargs):
         kwargs['heavy_preprocess'] = betaface_recognition
         super(FaceRecognition, self).__init__(**kwargs)
-         
-    
+
     def light_postprocess(self, matches, image_dict):
         self.log("Received matches from BetaFace: %r" % matches)
 
@@ -71,5 +74,6 @@ class FaceRecognition(ParallelPDU):
         self.send_to('upgrade-face-samples', upgrade_message)
 
 if __name__ == "__main__":
+    setup_logging()
     module = FaceRecognition()
     module.run()

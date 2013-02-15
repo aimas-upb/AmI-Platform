@@ -5,10 +5,12 @@ import time
 from core import ParallelPDU
 from lib.image import base64_to_image, image_to_base64
 from lib.kinect import crop_head_using_skeleton
+from lib.logging import setup_logging
 from lib.opencv import crop_face_from_image
 
 logger = logging.getLogger(__name__)
 MAX_TIME = 0.1
+
 
 def _crop_head_using_skeleton(last_image, last_skeleton):
     """ Given the last image and last skeleton which are
@@ -17,8 +19,9 @@ def _crop_head_using_skeleton(last_image, last_skeleton):
                             int(last_image['width']),
                             int(last_image['height']))
     skeleton = last_skeleton
-    
+
     return crop_head_using_skeleton(image, skeleton)
+
 
 def _crop_head_using_face_detection(last_image):
     """ Given the last image, try to detect any faces in it
@@ -27,6 +30,7 @@ def _crop_head_using_face_detection(last_image):
                             int(last_image['width']),
                             int(last_image['height']))
     return crop_face_from_image(image)
+
 
 def crop_head(message):
     last_image = message['hack']['last_image']
@@ -53,6 +57,7 @@ def crop_head(message):
     else:
         return None
 
+
 class HeadCrop(ParallelPDU):
     """ PDU that receives images and skeletons from Router
         and crops images (head only) """
@@ -70,10 +75,12 @@ class HeadCrop(ParallelPDU):
 
     def process_message(self, message):
         # Step 1 - always update last_image/last_skeleton
-        if message['type'] == 'image_rgb' and message['sensor_type'] == 'kinect':
+        if message['type'] == 'image_rgb' and\
+            message['sensor_type'] == 'kinect':
             self.last_image = message['image_rgb']
             self.last_image_at = time.time()
-        elif message['type'] == 'skeleton' and message['sensor_type'] == 'kinect':
+        elif message['type'] == 'skeleton' and\
+            message['sensor_type'] == 'kinect':
             self.last_skeleton = message['skeleton_2D']
             self.last_skeleton_at = time.time()
 
@@ -85,7 +92,7 @@ class HeadCrop(ParallelPDU):
 
         super(HeadCrop, self).process_message(message)
 
-    def light_postprocess(self, cropped_head, image_dict):        
+    def light_postprocess(self, cropped_head, image_dict):
         # Route cropped images to face-recognition
         if cropped_head is not None:
             self.log("Sending an image to face recognition")
@@ -96,5 +103,6 @@ class HeadCrop(ParallelPDU):
         self.send_to('face-recognition', {'head_image': image})
 
 if __name__ == "__main__":
+    setup_logging()
     module = HeadCrop()
     module.run()

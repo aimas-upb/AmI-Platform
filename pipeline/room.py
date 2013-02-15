@@ -1,6 +1,7 @@
 import time
 
 from core import PDU
+from lib.logging import setup_logging
 
 class Room(PDU):
     QUEUE = 'room'
@@ -67,7 +68,7 @@ class Room(PDU):
 
         self.last_person_action_took_at = int(time.time())
         self.last_person_name = person_name
-        
+
         if person_name == 'andrei@amilab.ro':
             self.play_message("Hello, Andrei. Let me switch on the air "
                               "conditioning for you.")
@@ -100,5 +101,6 @@ class Room(PDU):
         self.send_to('ip_power', params)
 
 if __name__ == "__main__":
+    setup_logging()
     module = Room()
     module.run()
