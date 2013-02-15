@@ -30,7 +30,7 @@ char* getSensorID() {
 	// set in ~/.pam_environment
 	char *sensor_id = getenv("AMI_SENSOR_ID");
 	if (sensor_id == NULL)
-		return "senzor_anonim";
+		return "anonymous";
 	return sensor_id;
 }
 

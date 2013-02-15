@@ -367,7 +367,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		 head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
 		 right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
 		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
-	
+
 #if USE_MEMCACHE
 	memcached_return rc;
 	printf("g_MemCache = %p\n", g_MemCache);
