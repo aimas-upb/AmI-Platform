@@ -57,6 +57,13 @@ class PDU(object):
         self.queue_system.add(queue, json.dumps(message))
 
     def _truncate_strs(self, dictionary):
+        # Edge case - dictionary is in fact not a dictionary, but a string
+        if type(dictionary) != dict:
+            result = str(dictionary)
+            if len(result) > self.JSON_DUMPS_STRING_LIMIT:
+                result = result[0:self.JSON_DUMPS_STRING_LIMIT] + '... (truncated)'
+            return result
+            
         result = {}
         for k, v in dictionary.iteritems():
             # If value is a dictionary, recursively truncate big strings

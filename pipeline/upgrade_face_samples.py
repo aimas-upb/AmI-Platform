@@ -36,7 +36,10 @@ class UpgradeFaceSamples(PDU):
         # upload image to BetaFace API
         self.api.upload_face(path, person_name)
 
-        os.remove(str(path))
+        try:
+            os.remove(str(path))
+        except:
+            self.log("Error while removing %r" % path)
         
 if __name__ == "__main__":
     module = UpgradeFaceSamples()

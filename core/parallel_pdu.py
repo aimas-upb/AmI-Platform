@@ -1,12 +1,25 @@
 from multiprocessing import Pool
+import logging
 
 from lib.atomic_int import AtomicInt
 from pdu import PDU
 
+logger = logging.getLogger(__name__)
+
 def run_and_return(f, param, k, v):
     """ Runs function f(param) and returns a dictionary containing {k:v}
         and the result of the function run. """
-    f_result = f(param)
+        
+    # Make sure that exceptions of the function to run don't disappoint us
+    # and crash our worker pool workers.
+    try:
+        f_result = f(param)
+    except:
+        import traceback
+        traceback.print_exc()
+        logger.error("Exception while executing %r" % f)
+        f_result = None
+        
     to_return = {'result': f_result}
     to_return[k] = v
     return to_return
@@ -66,6 +79,8 @@ class ParallelPDU(PDU):
         self.messages = {}
 
         self.unfinished_tasks = AtomicInt()
+        
+        self.last_busy_result = False
 
     def light_postprocess(self, preprocess_result, message):
         raise NotImplemented("Please implement this in your sub-class!")
@@ -105,8 +120,10 @@ class ParallelPDU(PDU):
         """
         unfinished_tasks = self.unfinished_tasks.get()
         result = unfinished_tasks > self.UNFINISHED_TASKS_THRESHOLD
-        if result:
+        if result and not self.last_busy_result:            
             self.log("Busy with %d unfinished tasks!" % unfinished_tasks)
+        
+        self.last_busy_result = result
         return result
 
     def process_message(self, message):

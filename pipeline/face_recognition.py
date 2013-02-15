@@ -11,19 +11,25 @@ def betaface_recognition(image_dict):
     """ Given a message contained a cropped head, send it to BetaFace
         API for face recognition. This can take anywhere from 1 to 10 seconds.
     """
-    api = BetaFaceAPI()
+    try:
+        api = BetaFaceAPI()
+        
+        # Get image from message, save it to disk and pass it on to BetaFace API
+        image = base64_to_image(image_dict['head_image']['image'],
+                                int(image_dict['head_image']['width']),
+                                int(image_dict['head_image']['height']))
+        temp_path = random_file_name('jpg')
+        logger.info("Sending to BetaFace: %s" % temp_path)
+        image.save(temp_path)
+        logger.info(temp_path)
     
-    # Get image from message, save it to disk and pass it on to BetaFace API
-    image = base64_to_image(image_dict['image'],
-                            int(image_dict['width']),
-                            int(image_dict['height']))
-    temp_path = random_file_name('jpg')
-    print("Sending to BetaFace: %s" % temp_path)
-    image.save(temp_path)
-
-    matches = api.recognize_faces(temp_path, 'amilab.ro')
-    #os.remove(str(path))
-    return matches
+        matches = api.recognize_faces(temp_path, 'amilab.ro')
+        #os.remove(str(path))
+        return matches
+    except:
+        import traceback
+        traceback.print_exc()
+        return {}
 
 class FaceRecognition(ParallelPDU):
     """ PDU that receives cropped images (head only)
@@ -33,6 +39,11 @@ class FaceRecognition(ParallelPDU):
     ORDERED_DELIVERY = True
     POOL_SIZE = 8
 
+    def __init__(self, **kwargs):
+        kwargs['heavy_preprocess'] = betaface_recognition
+        super(FaceRecognition, self).__init__(**kwargs)
+         
+    
     def light_postprocess(self, matches, image_dict):
         self.log("Received matches from BetaFace: %r" % matches)
 
@@ -60,5 +71,5 @@ class FaceRecognition(ParallelPDU):
         self.send_to('upgrade-face-samples', upgrade_message)
 
 if __name__ == "__main__":
-    module = FaceRecognition(heavy_preprocess = betaface_recognition)
+    module = FaceRecognition()
     module.run()

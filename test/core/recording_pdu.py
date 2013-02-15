@@ -1,17 +1,19 @@
-from core.recording_pdu import ExperimentFile, RecordingPDU
 from datetime import datetime
-from mock import patch
-from models.experiment import Experiment
-from mongoengine import connect
-from nose.tools import eq_
+import time
 from unittest.case import TestCase
 from testutils.matcher import Matcher
 
-import time
+from mock import patch
+from mongoengine import connect
+from nose.plugins.attrib import attr
+from nose.tools import eq_
+
+from core.recording_pdu import ExperimentFile, RecordingPDU
+from models.experiment import Experiment
 
 
 @patch.object(ExperimentFile, 'put', autospec=True)
-@patch.object(ExperimentFile, 'open', autospec=True)
+@patch.object(ExperimentFile, 'open_for_writing', autospec=True)
 @patch.object(ExperimentFile, 'close', autospec=True)
 class RecordingPDUTestCase(TestCase):
     
@@ -20,6 +22,7 @@ class RecordingPDUTestCase(TestCase):
         connect('recording_pdu_test_experiments')
         Experiment.objects.all().delete()
 
+    @attr('unit')
     def test_no_active(self, close_mock, open_mock, put_mock):
         e = Experiment(name = 'e1', file = 'file2.txt', since = datetime.now())
         e.active = False        
@@ -32,6 +35,7 @@ class RecordingPDUTestCase(TestCase):
         eq_(0, open_mock.call_count, "no calls expected!")
         eq_(0, put_mock.call_count, "no calls expected!")
 
+    @attr('unit')
     def test_two_in_parallel(self, close_mock, open_mock, put_mock):
         Experiment(name = 'e1', 
                    file = 'file1.txt', 
@@ -61,6 +65,7 @@ class RecordingPDUTestCase(TestCase):
         put_mock.assert_any_call(Matcher("file2.txt", lambda o: o.fname), 
                                  Matcher('2', lambda o: o['type']))
         
+    @attr('unit')
     def test_closes_not_active(self, close_mock, open_mock, put_mock):
         Experiment(name = 'e1', 
                    file = 'file1.txt', 

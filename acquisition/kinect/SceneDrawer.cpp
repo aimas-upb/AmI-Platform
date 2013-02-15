@@ -27,6 +27,7 @@
 #include "SceneDrawer.h"
 #include "context.h"
 #include "base64.h"
+#include "ami_environment.h"
 
 #ifndef USE_GLES
 #if (XN_PLATFORM == XN_PLATFORM_MACOSX)
@@ -348,7 +349,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	snprintf((char*)buf, 10000, 
 		"{\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\","
-		"\"sensor_id\": \"0\","
+		"\"sensor_id\": \"%s\","
 		"\"sensor_position\": {\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0},	"// {\"X\": %.2f, \"Y\": %.2f, \"Z\": %.2f},"
 		"\"player\": \"%s\", "
 		"\"type\": \"skeleton\", "
@@ -356,6 +357,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		"\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 		 
 		 get_context(),
+		 getSensorID(),
 		 player_name,
 		 head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
 		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
@@ -366,7 +368,8 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 		
 
-	printf("%s\n", buf);
+	//printf("%s\n", buf);
+	printf("==> sensor_id = %s\n", getSensorID());
 
 #if USE_MEMCACHE
 	memcached_return rc;
@@ -471,15 +474,18 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 	snprintf(buf, buf_size, 
 		"{\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\"," 
-		"\"sensor_id\": 0,"
+		"\"sensor_id\": \"%s\","
 		"\"sensor_position\": {\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0},"
 		"\"type\": \"%s\","
 		"\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
 		
 		context, 
+		getSensorID(),
 		sensor_type, 
 		sensor_type,
 		outlen/sizeof(char), img64, width, height);
+
+	printf("==> sensor_id = %s\n", getSensorID());
 
 #if USE_MEMCACHE
 	memcached_return rc;
