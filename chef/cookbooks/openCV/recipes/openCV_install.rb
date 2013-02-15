@@ -24,7 +24,8 @@ script "extract" do
     tar xvjf #{node.openCV.archive}
     mv #{node.openCV.directoryName} ../#{node.openCV.directoryName}
     EOH
-    
+end
+
 script "install" do
     interpreter "bash"
     cwd "#{node.openCV.destination.source}/#{node.openCV.directoryName}"
