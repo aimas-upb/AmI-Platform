@@ -1,6 +1,6 @@
 import copy
 import json
-import sys
+import logging
 import time
 import threading
 import traceback
@@ -30,13 +30,11 @@ class PDU(object):
         self._running = False
         self._running_lock = threading.Lock()
         self.debug_mode = kwargs.get('debug', False)
+        self.logger = logging.getLogger(self.__module__)
 
-    def log(self, message):
+    def log(self, message, level = logging.INFO):
         """ Log a message to stdout. Includes class name & current time. """
-        msg = '[%s] - %s - %s' % (time.ctime(), self.__class__.__name__,
-                                  message)
-        print msg
-        sys.stdout.flush()
+        self.logger.log(level, message)
 
     @property
     def queue_system(self):
@@ -63,7 +61,7 @@ class PDU(object):
             if len(result) > self.JSON_DUMPS_STRING_LIMIT:
                 result = result[0:self.JSON_DUMPS_STRING_LIMIT] + '... (truncated)'
             return result
-            
+
         result = {}
         for k, v in dictionary.iteritems():
             # If value is a dictionary, recursively truncate big strings
