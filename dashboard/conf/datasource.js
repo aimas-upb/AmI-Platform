@@ -6,13 +6,13 @@ App.DataSourceConfig = {
 				type: 'api',
 				url: App.general.FRONTEND_URL + '/api/latest_kinect_rgb',
 				refresh: 'periodic',
-				refresh_interval: 1000
+				refresh_interval: 2000
 			},
 			'/latest_kinect_skeleton': {
 				type: 'api',
 				url: App.general.FRONTEND_URL + '/api/latest_kinect_skeleton',
 				refresh: 'periodic',
-				refresh_interval: 1000
+				refresh_interval: 2000
 			},
 		},
 };

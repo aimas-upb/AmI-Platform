@@ -9,6 +9,10 @@ import sys
 
 from mongoengine import connect
 from mongoengine.queryset import MultipleObjectsReturned, DoesNotExist
+import kestrel
+
+from core.measurements_player import MeasurementsPlayer
+from core import settings
 
 def we_are_frozen():
     # All of the modules are built-in to the interpreter, e.g., by py2exe
@@ -39,7 +43,7 @@ parser.add_argument('name',
 
 args = parser.parse_args()
 
-if args.operation not in ['start', 'stop', 'delete']:
+if args.operation not in ['start', 'stop', 'delete', 'play']:
     logger.error("Invalid operation: %s" % args.operation)
 
 elif args.operation == 'start':
@@ -77,5 +81,17 @@ elif args.operation == 'delete':
         connect('experiments')
         e = Experiment.objects.get(name=args.name)
         e.delete(safe=True)
+    except DoesNotExist:
+        logger.error("There is no experiment with name %s!" % args.name)
+
+elif args.operation == 'play':
+    try:
+        connect('experiments')
+        file_name = Experiment.objects.get(name=args.name).file
+        connection = kestrel.Client(settings.KESTREL_SERVERS)
+        f = lambda m: connection.add('measurements', m)
+        player = MeasurementsPlayer(data_file=file_name,
+                                    callback=f)
+        player.play()
     except DoesNotExist:
         logger.error("There is no experiment with name %s!" % args.name)

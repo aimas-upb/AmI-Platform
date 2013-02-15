@@ -61,6 +61,7 @@ class HeadCrop(ParallelPDU):
     MAX_TIME = 0.1
 
     def __init__(self, **kwargs):
+        kwargs['heavy_preprocess'] = crop_head
         super(HeadCrop, self).__init__(**kwargs)
         self.last_image = None
         self.last_image_at = None
@@ -69,10 +70,10 @@ class HeadCrop(ParallelPDU):
 
     def process_message(self, message):
         # Step 1 - always update last_image/last_skeleton
-        if message['type'] == 'image_rgb':
+        if message['type'] == 'image_rgb' and message['sensor_type'] == 'kinect':
             self.last_image = message['image_rgb']
             self.last_image_at = time.time()
-        elif message['type'] == 'skeleton':
+        elif message['type'] == 'skeleton' and message['sensor_type'] == 'kinect':
             self.last_skeleton = message['skeleton_2D']
             self.last_skeleton_at = time.time()
 
@@ -95,5 +96,5 @@ class HeadCrop(ParallelPDU):
         self.send_to('face-recognition', {'head_image': image})
 
 if __name__ == "__main__":
-    module = HeadCrop(heavy_preprocess = crop_head)
+    module = HeadCrop()
     module.run()
