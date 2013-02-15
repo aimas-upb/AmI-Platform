@@ -19,6 +19,6 @@ end
 remote_file "conf_file" do
 	action :create
 	path "/etc/openvpn/client.conf"
-	owner root
+	owner "root"
 	source node.openvpn.config_file_url
 end
