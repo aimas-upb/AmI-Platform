@@ -16,3 +16,11 @@ int getKestrelServerPort() {
 	else
 		return atoi(result);
 }
+
+char* getSensorPosition() {
+    char *result = getenv("AMI_SENSOR_POSITION");
+    if (result == NULL)
+        return "{\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0,"
+               "\"alpha\": 0.0, \"beta\": 0.0, \"gamma\": 0.0}";
+    return result;
+}

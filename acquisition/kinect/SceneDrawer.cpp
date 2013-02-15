@@ -27,6 +27,7 @@
 #include "SceneDrawer.h"
 #include "context.h"
 #include "base64.h"
+#include "ami_environment.h"
 
 #ifndef USE_GLES
 #if (XN_PLATFORM == XN_PLATFORM_MACOSX)
@@ -349,13 +350,14 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		"{\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\","
 		"\"sensor_id\": \"0\","
-		"\"sensor_position\": {\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0},	"// {\"X\": %.2f, \"Y\": %.2f, \"Z\": %.2f},"
+		"\"sensor_position\": %s,"
 		"\"player\": \"%s\", "
 		"\"type\": \"skeleton\", "
 		"\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
 		"\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 		 
 		 get_context(),
+		 getSensorPosition(),
 		 player_name,
 		 head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
 		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
@@ -472,11 +474,12 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 		"{\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\"," 
 		"\"sensor_id\": 0,"
-		"\"sensor_position\": {\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0},"
+		"\"sensor_position\": %s,"
 		"\"type\": \"%s\","
 		"\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
 		
 		context, 
+		getSensorPosition(),
 		sensor_type, 
 		sensor_type,
 		outlen/sizeof(char), img64, width, height);
