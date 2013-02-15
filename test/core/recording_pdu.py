@@ -1,14 +1,17 @@
-from core.recording_pdu import ExperimentFile, RecordingPDU
 from datetime import datetime
-from mock import patch
-from models.experiment import Experiment
-from mongoengine import connect
-from nose.tools import eq_
-from unittest.case import TestCase
 import time
+from unittest.case import TestCase
+
+from mock import patch
+from mongoengine import connect
+from nose.plugins.attrib import attr
+from nose.tools import eq_
+
+from core.recording_pdu import ExperimentFile, RecordingPDU
+from models.experiment import Experiment
 
 @patch.object(ExperimentFile, 'put', autospec=True)
-@patch.object(ExperimentFile, 'open', autospec=True)
+@patch.object(ExperimentFile, 'open_for_writing', autospec=True)
 @patch.object(ExperimentFile, 'close', autospec=True)
 class RecordingPDUTestCase(TestCase):
     
@@ -17,8 +20,11 @@ class RecordingPDUTestCase(TestCase):
         connect('recording_pdu_test_experiments')
         Experiment.objects.all().delete()
 
+    @attr('unit')
     def test_no_active(self, close_mock, open_mock, put_mock):
-        e = Experiment(file = 'file2.txt', since = datetime.now())
+        e = Experiment(file = 'file2.txt',
+                       since = datetime.now(),
+                       name = 'test1')
         e.active = False        
         e.save()
         pdu = RecordingPDU()
@@ -29,14 +35,17 @@ class RecordingPDUTestCase(TestCase):
         eq_(0, open_mock.call_count, "no calls expected!")
         eq_(0, put_mock.call_count, "no calls expected!")
 
+    @attr('unit')
     def test_two_in_parallel(self, close_mock, open_mock, put_mock):
         Experiment(file = 'file1.txt', 
                    since = datetime.now(), 
-                   filters = {'type': '1'}).save()
+                   filters = {'type': '1'},
+                   name = 'test2').save()
                    
         Experiment(file = 'file2.txt', 
                    since = datetime.now(), 
-                   filters = {'type': '2'}).save()
+                   filters = {'type': '2'},
+                   name = 'test3').save()
         
         pdu = RecordingPDU()
         pdu.process_message({'type': '3', 'id': '0'})
@@ -56,14 +65,17 @@ class RecordingPDUTestCase(TestCase):
         put_mock.assert_any_call(_ExperimentFileMatcher("file2.txt"), 
                                  _MessageMatches('2'))
         
+    @attr('unit')
     def test_closes_not_active(self, close_mock, open_mock, put_mock):
         Experiment(file = 'file1.txt', 
                    since = datetime.now(), 
-                   filters = {'type': '1'}).save()
+                   filters = {'type': '1'},
+                   name = 'test4').save()
                    
         e2 = Experiment(file = 'file2.txt', 
                    since = datetime.now(), 
-                   filters = {'type': '2'}).save()
+                   filters = {'type': '2'},
+                   name = 'test5').save()
         
         RecordingPDU.FILES_PURGE_THRESHOLD = 0.1
         pdu = RecordingPDU()

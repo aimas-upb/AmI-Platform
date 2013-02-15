@@ -349,7 +349,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	snprintf((char*)buf, 10000, 
 		"{\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\","
-		"\"sensor_id\": \"0\","
+		"\"sensor_id\": \"%s\","
 		"\"sensor_position\": %s,"
 		"\"player\": \"%s\", "
 		"\"type\": \"skeleton\", "
@@ -357,6 +357,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		"\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 		 
 		 get_context(),
+		 getSensorID(),
 		 getSensorPosition(),
 		 player_name,
 		 head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
@@ -367,8 +368,6 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		 right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
 		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 		
-
-	printf("%s\n", buf);
 
 #if USE_MEMCACHE
 	memcached_return rc;
@@ -473,12 +472,13 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 	snprintf(buf, buf_size, 
 		"{\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\"," 
-		"\"sensor_id\": 0,"
+		"\"sensor_id\": \"%s\","
 		"\"sensor_position\": %s,"
 		"\"type\": \"%s\","
 		"\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
 		
 		context, 
+		getSensorID(),
 		getSensorPosition(),
 		sensor_type, 
 		sensor_type,
