@@ -367,10 +367,6 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		 right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
 		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 		
-
-	//printf("%s\n", buf);
-	printf("==> sensor_id = %s\n", getSensorID());
-
 #if USE_MEMCACHE
 	memcached_return rc;
 	printf("g_MemCache = %p\n", g_MemCache);
@@ -484,8 +480,6 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 		sensor_type, 
 		sensor_type,
 		outlen/sizeof(char), img64, width, height);
-
-	printf("==> sensor_id = %s\n", getSensorID());
 
 #if USE_MEMCACHE
 	memcached_return rc;
