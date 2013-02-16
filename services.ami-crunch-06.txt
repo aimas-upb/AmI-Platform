@@ -1,3 +1,4 @@
 ami-room
 ami-ip-power
 ami-text_to_speech
+ami-api
