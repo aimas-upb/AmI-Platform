@@ -18,7 +18,7 @@ template "/etc/profile.d/local.sh" do
     variables ({
         :kestrel_server => node[:kestrel_server],
         :kestrel_port => node[:kestrel_port]
-        )}
+        })
 end
 
 template "settings.py" do
