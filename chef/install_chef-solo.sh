@@ -16,7 +16,7 @@ sudo apt-get upgrade -y
 
 
 #Install chef
-sudo apt-get install chef
+sudo apt-get install chef -y
 #Install ruby & dependencies.
 sudo apt-get install ruby ruby-dev libopenssl-ruby rdoc ri irb build-essential wget ssl-cert curl -y
 
@@ -29,5 +29,8 @@ sudo ruby setup.rb --no-format-executable
 
 #Install Chef Gem
 sudo gem install chef --no-ri --no-rdoc
+
+#Stop chef-client
+sudo service chef-client stop
 
 sudo cp $AMI_PLATFORM_SITE/conf/chef/solo.rb /etc/chef/solo.rb
