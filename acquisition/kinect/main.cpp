@@ -55,7 +55,7 @@ XnBool g_bPrintID = TRUE;
 XnBool g_bPrintState = TRUE;
 
 XnBool g_bPrintFrameID = FALSE;
-XnBool g_bMarkJoints = FALSE;
+XnBool g_bMarkJoints = TRUE;
 
 #ifndef USE_GLES
 #if (XN_PLATFORM == XN_PLATFORM_MACOSX)
@@ -235,9 +235,8 @@ void glutDisplay (void)
     printf("glut main loop\n");
 
 	glDisable(GL_TEXTURE_2D);
-
-
-    printf("Before read available data\n");
+	
+	printf("Before read available data\n");
 
 	if (!g_bPause)
 	{
@@ -446,7 +445,7 @@ int main(int argc, char **argv)
 	nRetVal = g_UserGenerator.GetSkeletonCap().RegisterToCalibrationComplete(UserCalibration_CalibrationComplete, NULL, hCalibrationComplete);
 	CHECK_RC(nRetVal, "Register to calibration complete");
     printf("Successfully registered to calibration complete\n");
-
+	
 	if (g_UserGenerator.GetSkeletonCap().NeedPoseForCalibration())
 	{
 		g_bNeedPose = TRUE;
@@ -463,9 +462,9 @@ int main(int argc, char **argv)
 		g_UserGenerator.GetSkeletonCap().GetCalibrationPose(g_strPose);
 
 		nRetVal = g_UserGenerator.GetPoseDetectionCap().RegisterToPoseInProgress(MyPoseInProgress, NULL, hPoseInProgress);
-        printf("Sucessfully registered to pose in progress\n");
+		printf("Sucessfully registered to pose in progress = %s\n", MyPoseInProgress);
 		CHECK_RC(nRetVal, "Register to pose in progress");
-	} {
+	} else {
         printf("Need no calibration, nigga!\n");
     }
 
