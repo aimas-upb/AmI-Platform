@@ -1,4 +1,7 @@
 #Add Opscode repository
+
+AMI_PLATFORM_SITE="`pwd`"
+
 echo "deb http://apt.opscode.com/ `lsb_release -cs`-0.10 main" | sudo tee /etc/apt/sources.list.d/opscode.list
 
 #Add GPG Key
@@ -26,3 +29,5 @@ sudo ruby setup.rb --no-format-executable
 
 #Install Chef Gem
 sudo gem install chef --no-ri --no-rdoc
+
+sudo cp $AMI_PLATFORM_SITE/conf/chef/solo.rb /etc/chef/solo.rb
