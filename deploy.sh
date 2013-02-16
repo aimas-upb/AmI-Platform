@@ -31,7 +31,7 @@ if $fresh; then
     cd ..
 fi
 
-# sudo pip install -r python_requirements.txt
+sudo pip install -r python_requirements.txt
 
 # Make clean & make
 cd ./acquisition/kinect
