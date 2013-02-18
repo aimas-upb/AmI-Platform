@@ -37,7 +37,11 @@ and for shuffling the rows of training data (also a csv file) I use ShuffleTrain
 python ShuffleTrain.py  >> ShuffledTrainData
 where the name of the training file to be shuffled (row-wise) is given inside (as train1.dat) 
 
-Finally, getAllRecordParams.m gets at it's output a cell for all the recorded instances of a certain body-pose used for training / testing purposes.
+ getAllRecordParams.m gets at it's output a cell for all the recorded instances of a certain body-pose used for training / testing purposes.
+
+
+IMPORTANT: 	classif_skeleton uses cross-validation from Statistical Toolbox to assess the body-posture.
+		Data will be made available using a Dropbox folder upon request.
 
 P.S. All these  scripts for feature detection are just for academic purpose and to generate HTML 
 documentation (using m2html); in the end they should be replaced asap with corresponding Python (C++) implementations
