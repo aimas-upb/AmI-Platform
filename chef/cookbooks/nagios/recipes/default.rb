@@ -26,5 +26,5 @@ remote_file "cmd-cfg" do
 end
 
 service "nagios-nrpe-server" do
-	action :reload
+	action :restart
 end
