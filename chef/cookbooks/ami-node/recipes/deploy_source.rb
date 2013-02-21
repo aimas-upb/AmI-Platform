@@ -10,16 +10,26 @@ end
 include_recipe "ami-node::python_requirements"
 
 #Export server variables
-template "/etc/profile.d/local.sh" do
-    source "local.sh.erb"
-    mode 0640
-    owner "root"
-    group "root"
-    variables ({
-        :kestrel_server => node[:kestrel_server],
-        :kestrel_port => node[:kestrel_port]
-        })
+#template "/etc/profile.d/local.sh" do
+#    source "local.sh.erb"
+#    mode 0640
+#    owner "root"
+#    group "root"
+#    variables ({
+#        :kestrel_server => node[:kestrel_server],
+#        :kestrel_port => node[:kestrel_port]
+#        })
+#end
+
+script "env_vars" do
+    interpreter "bash"
+    cwd "/etc"
+    code <<-EOH
+	echo  "AMI_KESTREL_SERVER_IP=#{node.kestrel_server}" | sudo tee -a environment
+	echo  "AMI_KESTREL_SERVER_PORT=#{node.kestrel_port}" | sudo tee -a environment
+    EOH
 end
+
 
 template "settings.py" do
     source "settings.py.erb"
