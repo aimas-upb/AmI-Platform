@@ -1,2 +1,3 @@
 ami-mongo-writer
 ami-router
+ami-room-position
