@@ -1,15 +1,23 @@
 import math
 from unittest import TestCase
+import logging
+import sys
 
 from mock import patch
 from nose.tools import eq_
+from lib import log
 
 from pipeline.room_position import RoomPosition
 
 @patch.object(RoomPosition, 'send_to')
 class RoomPositionTest(TestCase):
     
-    
+    @classmethod
+    def setUpClass(cls):
+        super(RoomPositionTest, cls).setUpClass()
+
+        log.setup_logging(level=logging.DEBUG)
+            
     def test_not_interesting_message(self, send_to):
         message = { 'sensor_type': 'kinect',
                    'type': 'RGB'}
@@ -87,33 +95,55 @@ class RoomPositionTest(TestCase):
                             'beta':  beta, 
                             'gamma': 0.0},
                            {'X':0000, 'Y':0000, 'Z':1732.0508076},
-                           0, 0, 0)
+                           0, 0, 0, True)
 
     def run_test_with(self, send_to, sensor_pos, torso_pos, 
-                      expected_x, expected_y, expected_z):
+                      expected_x, expected_y, expected_z,
+                      add_player_id = False):
+        
         send_to.reset_mock()
         message = { 'sensor_type': 'kinect',
                    'type': 'skeleton',
                    'sensor_position': sensor_pos,
-                   'skeleton_3D': {'torso': torso_pos}
-                   }
+                   'skeleton_3D': {'torso': torso_pos},
+                   'sensor_id': '10',
+                   'created_at': 1}
+        
+        expected = {'sensor_id': '10', 'created_at': 1}
+        
+        if add_player_id:
+            message['player'] = 'xxx'
+            expected['player'] = 'xxx'
+        
         rp = RoomPosition()
         rp.process_message(message)
         eq_(send_to.call_count, 1)
         send_to.assert_any_call('subject-position',PositionMatcher(expected_x,
                                                                    expected_y,
-                                                                   expected_z))
+                                                                   expected_z,
+                                                                   expected))
 
 class PositionMatcher:
     
-    def __init__(self, x, y, z):
+    def __init__(self, x, y, z, kwargs):
         self.x = x
         self.y = y
         self.z = z
+        self.args = kwargs
     
     def __eq__(self, other):
         pos = other['subject_position']
-        return _feq(self.x, pos['X']) and _feq(self.y, pos['Y']) and _feq(self.z, pos['Z']) 
+        return _feq(self.x, pos['X']) \
+            and _feq(self.y, pos['Y']) \
+            and _feq(self.z, pos['Z']) \
+            and self.check_kwargs(pos) 
+            
+    
+    def check_kwargs(self, pos):
+        for k in self.args.keys():
+            if self.args[k] != pos[k]:
+                return False
+        return True;
     
 def _feq(a, b, epsilon=0.00001):
         return abs(a - b) < epsilon
