@@ -1,6 +1,7 @@
 import time
 
 from core import PDU
+from lib.logging import setup_logging
 
 class Room(PDU):
     QUEUE = 'room'
@@ -42,11 +43,22 @@ class Room(PDU):
 
         """
         if person_name != self.last_person_name:
+            self.logger.info("Appeared person has changed from %s to %s" %\
+                             (person_name, self.last_person_name))
             return True
 
-        if person_name == self.last_person_name:
-            return int(time.time() - self.last_person_action_took_at) >= \
-                    self.SAME_PERSON_THRESHOLD
+        if int(time.time() - self.last_person_action_took_at) >= \
+            self.SAME_PERSON_THRESHOLD:
+            self.logger.info("Taking action for person %s, even if it's "
+                             "the same person, because enough time has ellapsed"
+                             % person_name)
+            return True
+        else:
+            self.logger.info("Not taking action for person %s, because it's "
+                             "the same person and too little time has ellapsed"
+                             % person_name)
+            return False
+
 
     def process_message(self, message):
         """ Room module receives incoming events from the different pipelines
@@ -67,7 +79,7 @@ class Room(PDU):
 
         self.last_person_action_took_at = int(time.time())
         self.last_person_name = person_name
-        
+
         if person_name == 'andrei@amilab.ro':
             self.play_message("Hello, Andrei. Let me switch on the air "
                               "conditioning for you.")
@@ -100,5 +112,6 @@ class Room(PDU):
         self.send_to('ip_power', params)
 
 if __name__ == "__main__":
+    setup_logging()
     module = Room()
     module.run()

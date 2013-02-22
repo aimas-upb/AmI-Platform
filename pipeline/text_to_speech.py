@@ -1,5 +1,7 @@
-from core import PDU
 import os
+
+from core import PDU
+from lib.logging import setup_logging
 
 class TextToSpeech(PDU):
     """ Plays back a text message using the espeak text-to-speech system. """
@@ -23,13 +25,19 @@ class TextToSpeech(PDU):
         """ The implementation is very simple - call the (e)speak command line
             utility with the correct parameters. """
 
+        self.logger.info("Received request to synth voice for text: %s" %
+                         message['text'])
+
         params = {
             'wpm': self.WORDS_PER_MINUTE,
             'volume': self.VOLUME,
             'text': message['text']
         }
-        os.system("espeak -s %(wpm)s -a %(volume)s \"%(text)s\"" % params)
+        cmd_line = "espeak -s %(wpm)s -a %(volume)s \"%(text)s\"" % params
+        os.system(cmd_line)
+        self.logger.info("Executed command %s" % cmd_line)
 
 if __name__ == "__main__":
+    setup_logging()
     module = TextToSpeech()
     module.run()

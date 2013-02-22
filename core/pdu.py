@@ -1,6 +1,6 @@
 import copy
 import json
-import sys
+import logging
 import time
 import threading
 import traceback
@@ -30,13 +30,11 @@ class PDU(object):
         self._running = False
         self._running_lock = threading.Lock()
         self.debug_mode = kwargs.get('debug', False)
+        self.logger = logging.getLogger(self.__module__)
 
-    def log(self, message):
+    def log(self, message, level = logging.INFO):
         """ Log a message to stdout. Includes class name & current time. """
-        msg = '[%s] - %s - %s' % (time.ctime(), self.__class__.__name__,
-                                  message)
-        print msg
-        sys.stdout.flush()
+        self.logger.log(level, message)
 
     @property
     def queue_system(self):
@@ -54,6 +52,7 @@ class PDU(object):
 
     def send_to(self, queue, message):
         """ Send a message to another queue. """
+        self.log("Enqueueing message to %s" % queue, level = logging.INFO)
         self.queue_system.add(queue, json.dumps(message))
 
     def _truncate_strs(self, dictionary):
