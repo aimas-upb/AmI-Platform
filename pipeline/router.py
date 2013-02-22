@@ -1,5 +1,8 @@
 import time
+
 from core import PDU
+
+from lib.logging import setup_logging
 
 class Router(PDU):
     """ PDU that routes incoming measurements from sensors to the
@@ -19,5 +22,6 @@ class Router(PDU):
         self.send_to('room-position', message)
 
 if __name__ == "__main__":
+    setup_logging()
     module = Router()
     module.run()
