@@ -11,7 +11,6 @@ from nose.tools import eq_
 from core.recording_pdu import ExperimentFile, RecordingPDU
 from models.experiment import Experiment
 
-
 @patch.object(ExperimentFile, 'put', autospec=True)
 @patch.object(ExperimentFile, 'open_for_writing', autospec=True)
 @patch.object(ExperimentFile, 'close', autospec=True)

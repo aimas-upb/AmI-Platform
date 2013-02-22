@@ -14,8 +14,8 @@ class RecordingPDU(PDU):
     QUEUE = 'recorder'
 
     ''' Every FILES_PURGE_THRESHOLD seconds, check to see which experiments are
-    no longer activated and close the open file associated with it'''
-    
+        no longer activated and close the open file associated with it
+    '''    
     FILES_PURGE_THRESHOLD = 5 * 60     
     
     def __init__(self, **kwargs):
