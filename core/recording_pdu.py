@@ -3,6 +3,7 @@ import time
 from mongoengine import connect
 
 from core.experiment_file import ExperimentFile
+from core import settings
 from models.experiment import Experiment
 from pdu import PDU
 
@@ -21,7 +22,7 @@ class RecordingPDU(PDU):
         self._last_files_purge = time.time()
         # dict of open files by experiment id
         self._open_files = {}
-        connect('experiments')
+        connect('experiments', host=settings.MONGO_SERVER)
 
     def process_message(self, message):
         # Purge open files once in a while
