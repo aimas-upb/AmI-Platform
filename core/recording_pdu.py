@@ -59,7 +59,7 @@ class RecordingPDU(PDU):
 
     def purge_files(self):
         ''' Compare the list of active exercises with the list of open files to
-        determint which are to be closed'''
+        determine which are to be closed'''
 
         self.logger.info("Starting to purge files ...")
 
