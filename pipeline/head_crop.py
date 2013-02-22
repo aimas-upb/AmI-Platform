@@ -43,13 +43,24 @@ def crop_head(message):
     # If this is an image, and we have a "recent" skeleton, or vice-versa
     # try to crop the face. For this, we need to have
     # at least one skeleton and one image.
-    if (last_image is not None and last_skeleton is not None and
-        abs(last_image_at - last_skeleton_at) < MAX_TIME):
-        cropped_head = _crop_head_using_skeleton(last_image, last_skeleton)
+    if last_image is not None and last_skeleton is not None:
+        if abs(last_image_at - last_skeleton_at) < MAX_TIME:
+            logger.info("Trying to crop head using correlation between "
+                        "skeleton and RGB image (skeleton_ts = %d, "
+                        "image_ts = %d)" % (last_skeleton_at, last_image_at))
+            cropped_head = _crop_head_using_skeleton(last_image, last_skeleton)
+        else:
+            logger.info("Cannot crop head using correlation between skeleton "
+                        "and image because they are too far apart. "
+                        "(skeleton_ts = %d, image_ts = %d)" % \
+                        (last_skeleton_at, last_image_at))
+            cropped_head = _crop_head_using_face_detection(last_image)
 
     # If we have no "recent" skeleton or no skeleton at all,
     # we'll detect the face from image
     elif (last_image is not None):
+        logger.info("We have no skeleton so far, so we're using face "
+                    "detection in order to crop the head")
         cropped_head = _crop_head_using_face_detection(last_image)
 
     if cropped_head is not None:
