@@ -32,8 +32,9 @@ class RecordingPDU(PDU):
         # Get active experiments matching this message
         experiments = Experiment.get_active_experiments_matching(message)
         experiment_ids = [str(e.id) for e in experiments]
-        self.logger.info("Measurement %r matches experiments %r" %\
-                         (self._json_dumps(message), experiment_ids))
+        if len(experiment_ids) > 0:
+            self.logger.info("Measurement %r matches experiments %r" %\
+                             (self._json_dumps(message), experiment_ids))
 
         # Write the measurement to each experiment file
         for e in experiments:
