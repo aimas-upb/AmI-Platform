@@ -4,6 +4,7 @@ from mongoengine import connect
 
 from core.experiment_file import ExperimentFile
 from core import settings
+from lib.log import setup_logging
 from models.experiment import Experiment
 from pdu import PDU
 
@@ -80,5 +81,6 @@ class RecordingPDU(PDU):
         self._open_files = open_files
 
 if __name__ == '__main__':
+    setup_logging()
     module = RecordingPDU()
     module.run()
