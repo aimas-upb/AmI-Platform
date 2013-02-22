@@ -52,7 +52,7 @@ def crop_head(message):
         else:
             logger.info("Cannot crop head using correlation between skeleton "
                         "and image because they are too far apart. "
-                        "(skeleton_ts = %d, image_ts = %d)" % \
+                        "(skeleton_ts = %d, image_ts = %d)" %
                         (last_skeleton_at, last_image_at))
             cropped_head = _crop_head_using_face_detection(last_image)
 
