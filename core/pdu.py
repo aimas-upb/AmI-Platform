@@ -52,6 +52,7 @@ class PDU(object):
 
     def send_to(self, queue, message):
         """ Send a message to another queue. """
+        self.log("Enqueueing message to %s" % queue, level = logging.INFO)
         self.queue_system.add(queue, json.dumps(message))
 
     def _truncate_strs(self, dictionary):
