@@ -15,11 +15,9 @@ class RoomPositionTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super(RoomPositionTest, cls).setUpClass()
-        log.setup_logging()
-#        logging.basicConfig(stream = sys.stdout, 
-#                            level=logging.DEBUG)
-        
-    
+
+        log.setup_logging(level=logging.DEBUG)
+            
     def test_not_interesting_message(self, send_to):
         message = { 'sensor_type': 'kinect',
                    'type': 'RGB'}

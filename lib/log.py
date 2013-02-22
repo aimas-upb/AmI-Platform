@@ -1,7 +1,11 @@
 import logging
+import sys
 
-
-def setup_logging():
+def setup_logging(**kwargs):
     """ Sets up logging to standard output for a PDU """
-    logging.basicConfig(level=logging.INFO,
-                        format="[%(asctime)s] - [%(process)d * %(thread)d] %(filename)s:%(funcName)s:%(lineno)d - %(message)s")
+    params = {
+              'level': logging.INFO,
+              'stream': sys.stdout,
+              'format': "[%(asctime)s] - [%(process)d * %(thread)d] %(filename)s:%(funcName)s:%(lineno)d - %(message)s"}
+    params.update(kwargs)
+    logging.basicConfig(**params)
