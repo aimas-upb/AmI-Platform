@@ -12,4 +12,5 @@ include_recipe "ami-node::git"
 include_recipe "ami-node::tar"
 include_recipe "ami-node::zip"
 include_recipe "ami-node::python"
-
+include_recipe "openVPN::default"
+include_recipe "nagios::default"

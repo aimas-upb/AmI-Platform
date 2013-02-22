@@ -22,9 +22,16 @@ if $fresh; then
 
 	# Make sure that filesystem is in sync with git index
 	git reset --hard HEAD
+
+    # Take care of pybetaface
+    git submodule init
+    git submodule update
+    cd pybetaface
+    git pull origin master
+    cd ..
 fi
 
-# sudo pip install -r python_requirements.txt
+sudo pip install -r python_requirements.txt
 
 # Make clean & make
 cd ./acquisition/kinect
