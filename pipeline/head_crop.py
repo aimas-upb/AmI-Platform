@@ -75,6 +75,7 @@ class HeadCrop(ParallelPDU):
 
     QUEUE = 'head-crop'
     MAX_TIME = 0.1
+    POOL_SIZE = 20
 
     def __init__(self, **kwargs):
         kwargs['heavy_preprocess'] = crop_head
