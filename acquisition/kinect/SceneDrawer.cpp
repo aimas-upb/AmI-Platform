@@ -311,61 +311,62 @@ char* JointTo2DJSON(XnUserID player, XnSkeletonJoint eJoint, char *name)
  */
 void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 {
-    char* buf = (char*) malloc(10000 * sizeof(char));
-    char* head = JointToJSON(player, XN_SKEL_HEAD, "head");
-    char* neck = JointToJSON(player, XN_SKEL_NECK, "neck");
-    char* left_shoulder = JointToJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
-    char* right_shoulder = JointToJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
-    char* left_elbow = JointToJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
-    char* right_elbow = JointToJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
-    char* left_hand = JointToJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
-    char* right_hand = JointToJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
-    char* torso = JointToJSON(player, XN_SKEL_TORSO, "torso");
-    char* left_hip = JointToJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
-    char* right_hip = JointToJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
-    char* left_knee = JointToJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
-    char* right_knee = JointToJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
-    char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
-    char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
+	char* buf = (char*) malloc(10000 * sizeof(char));
+	char* head = JointToJSON(player, XN_SKEL_HEAD, "head");
+	char* neck = JointToJSON(player, XN_SKEL_NECK, "neck");
+	char* left_shoulder = JointToJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
+	char* right_shoulder = JointToJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
+	char* left_elbow = JointToJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
+	char* right_elbow = JointToJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
+	char* left_hand = JointToJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
+	char* right_hand = JointToJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
+	char* torso = JointToJSON(player, XN_SKEL_TORSO, "torso");
+	char* left_hip = JointToJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
+	char* right_hip = JointToJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
+	char* left_knee = JointToJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
+	char* right_knee = JointToJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
+	char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
+	char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
 
-    char* head_2d = JointTo2DJSON(player, XN_SKEL_HEAD, "head");
-    char* neck_2d = JointTo2DJSON(player, XN_SKEL_NECK, "neck");
-    char* left_shoulder_2d = JointTo2DJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
-    char* right_shoulder_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
-    char* left_elbow_2d = JointTo2DJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
-    char* right_elbow_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
-    char* left_hand_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
-    char* right_hand_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
-    char* torso_2d = JointTo2DJSON(player, XN_SKEL_TORSO, "torso");
-    char* left_hip_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
-    char* right_hip_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
-    char* left_knee_2d = JointTo2DJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
-    char* right_knee_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
-    char* left_foot_2d = JointTo2DJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
-    char* right_foot_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
+	char* head_2d = JointTo2DJSON(player, XN_SKEL_HEAD, "head");
+	char* neck_2d = JointTo2DJSON(player, XN_SKEL_NECK, "neck");
+	char* left_shoulder_2d = JointTo2DJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
+	char* right_shoulder_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
+	char* left_elbow_2d = JointTo2DJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
+	char* right_elbow_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
+	char* left_hand_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
+	char* right_hand_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
+	char* torso_2d = JointTo2DJSON(player, XN_SKEL_TORSO, "torso");
+	char* left_hip_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
+	char* right_hip_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
+	char* left_knee_2d = JointTo2DJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
+	char* right_knee_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
+	char* left_foot_2d = JointTo2DJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
+	char* right_foot_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
 
-    char *context = get_context();
+	char *context = get_context();
 
-    snprintf((char*)buf, 10000,
-        "{\"context\": \"%s\","
-        "\"sensor_type\": \"kinect\","
-        "\"sensor_id\": \"%s\","
-        "\"sensor_position\": {\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0},"// {\"X\": %.2f, \"Y\": %.2f, \"Z\": %.2f},"
-        "\"player\": \"%s\", "
-        "\"type\": \"skeleton\", "
-        "\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
-        "\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
+	snprintf((char*)buf, 10000, 
+		"{\"context\": \"%s\","
+		"\"sensor_type\": \"kinect\","
+		"\"sensor_id\": %s,"
+		"\"sensor_position\": %s,"
+		"\"player\": \"%s\", "
+		"\"type\": \"skeleton\", "
+		"\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
+		"\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
+		 
+		 get_context(),
+		 getSensorID(),
+		 getSensorPosition(),
+		 player_name,
+		 head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
+		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
+		 left_foot, right_foot,
 
-         get_context(),
-         getSensorID(),
-         player_name,
-         head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
-         left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
-         left_foot, right_foot,
-
-         head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
-         right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
-         right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
+		 head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
+		 right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
+		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
 #if USE_MEMCACHE
     memcached_return rc;
@@ -467,19 +468,20 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
     img64 = base64_encode(img, width*height*3, &outlen);
     printf("SaveImage: width = %d, height = %d\n", width, height);
 
-    snprintf(buf, buf_size,
-        "{\"context\": \"%s\","
-        "\"sensor_type\": \"kinect\","
-        "\"sensor_id\": \"%s\","
-        "\"sensor_position\": {\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0},"
-        "\"type\": \"%s\","
-        "\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
-
-        context,
-        getSensorID(),
-        sensor_type,
-        sensor_type,
-        outlen/sizeof(char), img64, width, height);
+	snprintf(buf, buf_size, 
+		"{\"context\": \"%s\","
+		"\"sensor_type\": \"kinect\"," 
+		"\"sensor_id\": %s,"
+		"\"sensor_position\": %s,"
+		"\"type\": \"%s\","
+		"\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
+		
+		context, 
+		getSensorID(),
+		getSensorPosition(),
+		sensor_type, 
+		sensor_type,
+		outlen/sizeof(char), img64, width, height);
 
 #if USE_MEMCACHE
     memcached_return rc;
