@@ -14,6 +14,6 @@ class RouterTest(unittest.TestCase):
             router.process_message(m)
         
         for m in messages:
-            send_to_mock.assert_any_call(Matcher('experiments', lambda o: o),
+            send_to_mock.assert_any_call(Matcher('recorder', lambda o: o),
                                          Matcher(m['id'], lambda o: o['id']))
         
