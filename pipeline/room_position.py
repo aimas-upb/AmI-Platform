@@ -3,6 +3,7 @@ import math
 import cv
 
 from core import PDU
+from lib import log
 
 class RoomPosition(PDU):
     ''' PDU that reads skeleton messages from kinect and translates the position 
@@ -112,5 +113,6 @@ def rot_z(phi):
     return mat
 
 if __name__ == "__main__":
+    log.setup_logging()
     module = RoomPosition()
     module.run()
