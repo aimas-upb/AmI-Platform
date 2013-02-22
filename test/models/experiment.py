@@ -20,7 +20,7 @@ class ExperimentTestCase(TestCase):
 
         connect('experiments')
 
-        e = Experiment()
+        e = Experiment(name='e1')
         e.since = datetime.now()
         e.until = datetime.now()
         e.file = 'file.txt'
@@ -36,8 +36,7 @@ class ExperimentTestCase(TestCase):
         connect('experiments')
 
         """ Test that get_active_experiments works correctly indeed. """
-        e = Experiment(file = 'file2.txt', since = datetime.now(),
-                       name='test2')
+        e = Experiment(name = "e1", file = 'file2.txt', since = datetime.now())
         e.save()
 
         active = Experiment.get_active_experiments()
@@ -60,9 +59,9 @@ class ExperimentTestCase(TestCase):
         connect('experiments')
         Experiment.objects.all().delete()
 
-        e1 = Experiment(file = 'file3.txt', filters = {'a': 'b'}, name='test4')
+        e1 = Experiment(name = 'e1', file = 'file3.txt', filters = {'a': 'b'})
         e1.save()
-        e2 = Experiment(file = 'file3.txt', filters = {'c': 'd'}, name='test5')
+        e2 = Experiment(name = 'e2', file = 'file3.txt', filters = {'c': 'd'})
         e2.save()
 
         matches = Experiment.get_active_experiments_matching({'a': 'b', 'c': 'd'})
@@ -81,8 +80,7 @@ class ExperimentTestCase(TestCase):
     def test_inactive_matching_experiment_is_not_returned(self):
         connect('experiments')
         Experiment.objects.all().delete()
-        e1 = Experiment(file = 'file4.txt', filters = {'a': 'b'}, active=False,
-                        name='test6')
+        e1 = Experiment(name = 'e1', file = 'file4.txt', filters = {'a': 'b'}, active=False)
         e1.save()
 
         matches = Experiment.get_active_experiments_matching({'a': 'b'})

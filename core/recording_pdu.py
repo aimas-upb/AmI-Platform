@@ -15,9 +15,10 @@ class RecordingPDU(PDU):
     QUEUE = 'recorder'
 
     ''' Every FILES_PURGE_THRESHOLD seconds, check to see which experiments are
-    no longer activated and close the open file associated with it'''
-    FILES_PURGE_THRESHOLD = 5 * 60
-
+        no longer activated and close the open file associated with it
+    '''    
+    FILES_PURGE_THRESHOLD = 5 * 60     
+    
     def __init__(self, **kwargs):
         super(RecordingPDU, self).__init__(**kwargs)
         self._last_files_purge = time.time()
@@ -53,7 +54,7 @@ class RecordingPDU(PDU):
             efile.open_for_writing()
             self._open_files[e.id] = efile
             self.logger.info("Lazily opened file %s for writing for "
-                             "experiment %r" % e.id)
+                             "experiment %r" % (e.file, e.id))
         else:
             self.logger.info("File for experiment %r was already open" % e.id)
 
