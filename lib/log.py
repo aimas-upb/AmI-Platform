@@ -6,6 +6,6 @@ def setup_logging(**kwargs):
     params = {
               'level': logging.INFO,
               'stream': sys.stdout,
-              'format': "[%(asctime)s] - [%(process)d * %(thread)d] %(module)s.%(filename)s:%(funcName)s:%(lineno)d - %(message)s"}
+              'format': "[%(asctime)s] - [%(process)d * %(thread)d] %(filename)s:%(funcName)s:%(lineno)d - %(message)s"}
     params.update(kwargs)
     logging.basicConfig(**params)
