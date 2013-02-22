@@ -350,7 +350,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
         "{\"context\": \"%s\","
         "\"sensor_type\": \"kinect\","
         "\"sensor_id\": \"%s\","
-        "\"sensor_position\": {\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0}, "// {\"X\": %.2f, \"Y\": %.2f, \"Z\": %.2f},"
+        "\"sensor_position\": {\"X\": 0.0, \"Y\": 0.0, \"Z\": 0.0},"// {\"X\": %.2f, \"Y\": %.2f, \"Z\": %.2f},"
         "\"player\": \"%s\", "
         "\"type\": \"skeleton\", "
         "\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
