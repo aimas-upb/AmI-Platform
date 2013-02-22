@@ -69,7 +69,13 @@ class RoomPosition(PDU):
             position_message['Y'] = pos[1,0]
             position_message['Z'] = pos[2,0]
             
-            print 'Found position %s' % position_message
+            position_message['sensor_id'] = message['sensor_id']
+            position_message['created_at'] = message['created_at']
+            
+            if 'player' in message:
+                position_message['player'] = message['player']
+            
+            self.log('Found position %s' % position_message)
             self.send_to('subject-position', {'subject_position': position_message})
             
         return None
