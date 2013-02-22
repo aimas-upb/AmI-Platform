@@ -349,9 +349,9 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 	snprintf((char*)buf, 10000, 
 		"{\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\","
-		"\"sensor_id\": %s,"
+		"\"sensor_id\": \"%s\","
 		"\"sensor_position\": %s,"
-		"\"player\": \"%s\", "
+		"\"player\": \"%d\", "
 		"\"type\": \"skeleton\", "
 		"\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
 		"\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
@@ -359,7 +359,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		 get_context(),
 		 getSensorID(),
 		 getSensorPosition(),
-		 player_name,
+		 player, //player_name,
 		 head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
 		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
 		 left_foot, right_foot,
@@ -471,7 +471,7 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 	snprintf(buf, buf_size, 
 		"{\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\"," 
-		"\"sensor_id\": %s,"
+		"\"sensor_id\": \"%s\","
 		"\"sensor_position\": %s,"
 		"\"type\": \"%s\","
 		"\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
