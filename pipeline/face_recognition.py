@@ -31,8 +31,8 @@ def betaface_recognition(image_dict):
         matches = api.recognize_faces(temp_path, 'amilab.ro')
         logger.info("Received recognized faces from BetaFace API %r" % matches)
 
-        os.remove(str(temp_path))
-        logger.info("Removed image from disk (%s)" % str(temp_path))
+        #os.remove(str(temp_path))
+        #logger.info("Removed image from disk (%s)" % str(temp_path))
 
         return matches
     except:
