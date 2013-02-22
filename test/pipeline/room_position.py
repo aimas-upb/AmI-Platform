@@ -89,24 +89,20 @@ class RoomPositionTest(TestCase):
                            {'X':0000, 'Y':0000, 'Z':1732.0508076},
                            0, 0, 0)
 
-    def run_test_with(self, send_to, sensor_pos, torso_pos, expected_x, expected_y, expected_z):
+    def run_test_with(self, send_to, sensor_pos, torso_pos, 
+                      expected_x, expected_y, expected_z):
         send_to.reset_mock()
-        
         message = { 'sensor_type': 'kinect',
                    'type': 'skeleton',
                    'sensor_position': sensor_pos,
                    'skeleton_3D': {'torso': torso_pos}
                    }
-        
         rp = RoomPosition()
         rp.process_message(message)
         eq_(send_to.call_count, 1)
-        send_to.assert_any_call('subject-position', 
-                                PositionMatcher(
-                                                expected_x,
-                                                expected_y,
-                                                expected_z))
-        
+        send_to.assert_any_call('subject-position',PositionMatcher(expected_x,
+                                                                   expected_y,
+                                                                   expected_z))
 
 class PositionMatcher:
     

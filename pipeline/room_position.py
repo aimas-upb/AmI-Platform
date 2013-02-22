@@ -29,8 +29,9 @@ class RoomPosition(PDU):
     def process_message(self, message):
         if message['sensor_type'] == 'kinect' and message['type'] =='skeleton':
             sensor_position = message['sensor_position']
-            ''' We are doing rotation using the euler angles
-            see http://en.wikipedia.org/wiki/Rotation_matrix'''
+            """ We are doing rotation using the euler angles
+                see http://en.wikipedia.org/wiki/Rotation_matrix
+            """
             
             alpha = sensor_position['alpha']
             beta = sensor_position['beta']
@@ -40,8 +41,8 @@ class RoomPosition(PDU):
             ry = rot_y(alpha)
             rz = rot_z(gamma)
             
-            '''some temp variables manipulation follows as the cv library uses
-            output parameters on multilications'''
+            # some temp variables manipulation follows as the cv library uses
+            # output parameters on multilications'''
             
             temp_mat = cv.CreateMat(3,3, cv.CV_64F)
             rot_mat = cv.CreateMat(3,3, cv.CV_64F)
@@ -71,9 +72,7 @@ class RoomPosition(PDU):
             print 'Found position %s' % position_message
             self.send_to('subject-position', {'subject_position': position_message})
             
-            
-        return None            
-            
+        return None
 
 def rot_x(phi):
     mat = cv.CreateMat(3,3, cv.CV_64F)
