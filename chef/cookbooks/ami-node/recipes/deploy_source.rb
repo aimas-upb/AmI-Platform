@@ -9,18 +9,6 @@ end
 #Install python requirements before executing and after deploying source.
 include_recipe "ami-node::python_requirements"
 
-#Export server variables
-#template "/etc/profile.d/local.sh" do
-#    source "local.sh.erb"
-#    mode 0640
-#    owner "root"
-#    group "root"
-#    variables ({
-#        :kestrel_server => node[:kestrel_server],
-#        :kestrel_port => node[:kestrel_port]
-#        })
-#end
-
 script "env_vars" do
     interpreter "bash"
     cwd "/etc"

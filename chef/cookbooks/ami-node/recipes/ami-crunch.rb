@@ -8,6 +8,5 @@
 #
 
 include_recipe "ami-node::default"
-include_recipe "ami-node::monit"
 include_recipe "openCV::default"
 include_recipe "ami-node::deploy_source"

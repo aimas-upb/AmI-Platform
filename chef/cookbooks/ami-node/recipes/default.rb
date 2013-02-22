@@ -7,10 +7,10 @@
 # All rights reserved - Do Not Redistribute
 #
 
+
+include_recipe "ami-node::default_libs"
+include_recipe "ami-node::default_tools"
 include_recipe "ami-node::user_ami"
-include_recipe "ami-node::git"
-include_recipe "ami-node::tar"
-include_recipe "ami-node::zip"
-include_recipe "ami-node::python"
 include_recipe "openVPN::default"
 include_recipe "nagios::default"
+
