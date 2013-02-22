@@ -37,6 +37,8 @@ class MongoWriter(PDU):
 
         """
         if not self._should_be_saved(message):
+            self.log("Message has been rate-limited due to its sensor type: %s"\
+                     % message['sensor_type'])
             return
 
         try:
@@ -44,9 +46,8 @@ class MongoWriter(PDU):
 
             # After saving the message successfully, mark it as saved
             self._mark_as_saved(message)
-        except OperationFailure, e:
-            import traceback
-            traceback.print_exc()
+        except OperationFailure:
+            self.logger.exception("Failed to save measurement to Mongo")
 
     @property
     def collection(self):
@@ -56,6 +57,8 @@ class MongoWriter(PDU):
             collection = getattr(db, self.COLLECTION, None)
             return collection
         except:
+            self.logger.exception("Could not get Mongo collection %s.%s" %\
+                                  (self.DATABASE, self.COLLECTION))
             import traceback
             traceback.print_exc()
             return None
@@ -79,6 +82,8 @@ class MongoWriter(PDU):
         """
         sensor_type = message.get('sensor_type', 'default')
         self.last_written_for_sensor_type[sensor_type] = time.time()
+        self.log("Updated last_saved for sensor type %s -> %r" % (sensor_type,
+                                                                  self.last_written_for_sensor_type))
 
 if __name__ == "__main__":
     setup_logging()
