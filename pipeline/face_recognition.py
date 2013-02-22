@@ -5,7 +5,7 @@ from pybetaface.api import BetaFaceAPI
 from core import ParallelPDU
 from lib.image import base64_to_image
 from lib.files import random_file_name
-from lib.logging import setup_logging
+from lib.log import setup_logging
 
 logger = logging.getLogger(__name__)
 

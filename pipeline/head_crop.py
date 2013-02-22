@@ -5,7 +5,7 @@ import time
 from core import ParallelPDU
 from lib.image import base64_to_image, image_to_base64
 from lib.kinect import crop_head_using_skeleton
-from lib.logging import setup_logging
+from lib.log import setup_logging
 from lib.opencv import crop_face_from_image
 
 logger = logging.getLogger(__name__)

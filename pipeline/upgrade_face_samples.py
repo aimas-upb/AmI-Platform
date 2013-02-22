@@ -6,7 +6,7 @@ from PIL import Image
 from pybetaface.api import BetaFaceAPI
 
 from core import PDU
-from lib.logging import setup_logging
+from lib.log import setup_logging
 
 class UpgradeFaceSamples(PDU):
     QUEUE = 'upgrade-face-samples'

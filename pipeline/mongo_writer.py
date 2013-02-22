@@ -5,7 +5,7 @@ from pymongo.errors import OperationFailure
 
 from core import PDU
 from core import constants
-from lib.logging import setup_logging
+from lib.log import setup_logging
 
 class MongoWriter(PDU):
     """ PDU for writing all measurements to MongoDB. """

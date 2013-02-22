@@ -2,7 +2,7 @@ import time
 
 from core import PDU
 
-from lib.logging import setup_logging
+from lib.log import setup_logging
 
 class Router(PDU):
     """ PDU that routes incoming measurements from sensors to the

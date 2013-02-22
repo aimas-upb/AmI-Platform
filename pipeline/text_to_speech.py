@@ -1,7 +1,7 @@
 import os
 
 from core import PDU
-from lib.logging import setup_logging
+from lib.log import setup_logging
 
 class TextToSpeech(PDU):
     """ Plays back a text message using the espeak text-to-speech system. """

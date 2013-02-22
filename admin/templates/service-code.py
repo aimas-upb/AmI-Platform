@@ -1,5 +1,5 @@
 from core import PDU
-from lib.logging import setup_logging
+from lib.log import setup_logging
 
 class {{service_class_name}}(PDU):
     QUEUE = '{{service_queue}}'
