@@ -144,7 +144,7 @@ class PDU(object):
                     doc = json.loads(message)
                 except:
                     self.log("Did not get valid JSON from queue %s" % self.QUEUE)
-                    #self.log("Message = %s" % message)
+                    self.log("Invalid message: %s" % message[0:self.JSON_DUMPS_STRING_LIMIT])
                     continue
 
                 # Step 3 - validate message

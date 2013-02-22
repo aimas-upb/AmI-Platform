@@ -1,7 +1,1 @@
-ami-router
 ami-mongo-writer
-ami-ip-power
-ami-api
-ami-text_to_speech
-ami-room
-ami-recorder
