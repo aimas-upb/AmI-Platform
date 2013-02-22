@@ -1,7 +1,3 @@
-package "libshadow-ruby1.8" do
-    action :install
-end
-
 group "group" do
 	group_name node.user_group
 	action :create

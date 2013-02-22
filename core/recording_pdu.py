@@ -3,6 +3,7 @@ import time
 from mongoengine import connect
 
 from core.experiment_file import ExperimentFile
+from core import settings
 from models.experiment import Experiment
 from pdu import PDU
 
@@ -21,42 +22,60 @@ class RecordingPDU(PDU):
     def __init__(self, **kwargs):
         super(RecordingPDU, self).__init__(**kwargs)
         self._last_files_purge = time.time()
-        '''dict of open files by experiment id'''
+        # dict of open files by experiment id
         self._open_files = {}
-        connect('experiments')
-
+        connect('experiments', host=settings.MONGO_SERVER)
 
     def process_message(self, message):
+        # Purge open files once in a while
         current_time = time.time()
         if current_time - self._last_files_purge >= self.FILES_PURGE_THRESHOLD:
             self.purge_files()
 
-        for e in Experiment.get_active_experiments_matching(message):
-            if e.active:
-                efile = self.get_file_for_experiment(e)
-                efile.put(message)
+        # Get active experiments matching this message
+        experiments = Experiment.get_active_experiments_matching(message)
+        experiment_ids = [str(e.id) for e in experiments]
+        if len(experiment_ids) > 0:
+            self.logger.info("Measurement %r matches experiments %r" %\
+                             (self._json_dumps(message), experiment_ids))
+
+        # Write the measurement to each experiment file
+        for e in experiments:
+            efile = self.get_file_for_experiment(e)
+            efile.put(message)
+            self.logger.info("Written measurement to file %s" % e.file)
 
     def get_file_for_experiment(self, e):
         ''' Lazily create and open a file for experiment'''
         efile = self._open_files.get(e.id)
+
         if efile is None:
             efile = ExperimentFile(e.file)
             efile.open_for_writing()
             self._open_files[e.id] = efile
+            self.logger.info("Lazily opened file %s for writing for "
+                             "experiment %r" % e.id)
+        else:
+            self.logger.info("File for experiment %r was already open" % e.id)
 
         return efile
 
     def purge_files(self):
         ''' Compare the list of active exercises with the list of open files to
-        determint which are to be closed'''
-        active_ids = set()
-        for e in Experiment.get_active_experiments():
-            active_ids.add(e.id)
+        determine which are to be closed'''
+
+        self.logger.info("Starting to purge files ...")
+
+        active_ids = set([e.id for e in Experiment.get_active_experiments()])
+        self.logger.info("Active experiment IDs: %r" % active_ids)
 
         open_files = {}
         for (ident, efile) in self._open_files.iteritems():
             if ident not in active_ids:
                 efile.close()
+                self.logger.info("Closing down file for experiment %s,"
+                                 "because its experiment is no longer active" %\
+                                 str(ident))
             else:
                 open_files[ident] = efile
 

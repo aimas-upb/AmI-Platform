@@ -1,4 +1,5 @@
 from core import PDU
+from lib.log import setup_logging
 
 class {{service_class_name}}(PDU):
     QUEUE = '{{service_queue}}'
@@ -7,5 +8,6 @@ class {{service_class_name}}(PDU):
         pass
 
 if __name__ == "__main__":
+    setup_logging()
     module = {{service_class_name}}()
     module.run()

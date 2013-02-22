@@ -5,10 +5,12 @@ import time
 from core import ParallelPDU
 from lib.image import base64_to_image, image_to_base64
 from lib.kinect import crop_head_using_skeleton
+from lib.log import setup_logging
 from lib.opencv import crop_face_from_image
 
 logger = logging.getLogger(__name__)
 MAX_TIME = 0.1
+
 
 def _crop_head_using_skeleton(last_image, last_skeleton):
     """ Given the last image and last skeleton which are
@@ -17,8 +19,9 @@ def _crop_head_using_skeleton(last_image, last_skeleton):
                             int(last_image['width']),
                             int(last_image['height']))
     skeleton = last_skeleton
-    
+
     return crop_head_using_skeleton(image, skeleton)
+
 
 def _crop_head_using_face_detection(last_image):
     """ Given the last image, try to detect any faces in it
@@ -27,6 +30,7 @@ def _crop_head_using_face_detection(last_image):
                             int(last_image['width']),
                             int(last_image['height']))
     return crop_face_from_image(image)
+
 
 def crop_head(message):
     last_image = message['hack']['last_image']
@@ -39,19 +43,31 @@ def crop_head(message):
     # If this is an image, and we have a "recent" skeleton, or vice-versa
     # try to crop the face. For this, we need to have
     # at least one skeleton and one image.
-    if (last_image is not None and last_skeleton is not None and
-        abs(last_image_at - last_skeleton_at) < MAX_TIME):
-        cropped_head = _crop_head_using_skeleton(last_image, last_skeleton)
+    if last_image is not None and last_skeleton is not None:
+        if abs(last_image_at - last_skeleton_at) < MAX_TIME:
+            logger.info("Trying to crop head using correlation between "
+                        "skeleton and RGB image (skeleton_ts = %d, "
+                        "image_ts = %d)" % (last_skeleton_at, last_image_at))
+            cropped_head = _crop_head_using_skeleton(last_image, last_skeleton)
+        else:
+            logger.info("Cannot crop head using correlation between skeleton "
+                        "and image because they are too far apart. "
+                        "(skeleton_ts = %d, image_ts = %d)" %
+                        (last_skeleton_at, last_image_at))
+            cropped_head = _crop_head_using_face_detection(last_image)
 
     # If we have no "recent" skeleton or no skeleton at all,
     # we'll detect the face from image
     elif (last_image is not None):
+        logger.info("We have no skeleton so far, so we're using face "
+                    "detection in order to crop the head")
         cropped_head = _crop_head_using_face_detection(last_image)
 
     if cropped_head is not None:
         return image_to_base64(cropped_head)
     else:
         return None
+
 
 class HeadCrop(ParallelPDU):
     """ PDU that receives images and skeletons from Router
@@ -70,10 +86,12 @@ class HeadCrop(ParallelPDU):
 
     def process_message(self, message):
         # Step 1 - always update last_image/last_skeleton
-        if message['type'] == 'image_rgb' and message['sensor_type'] == 'kinect':
+        if message['type'] == 'image_rgb' and\
+            message['sensor_type'] == 'kinect':
             self.last_image = message['image_rgb']
             self.last_image_at = time.time()
-        elif message['type'] == 'skeleton' and message['sensor_type'] == 'kinect':
+        elif message['type'] == 'skeleton' and\
+            message['sensor_type'] == 'kinect':
             self.last_skeleton = message['skeleton_2D']
             self.last_skeleton_at = time.time()
 
@@ -85,7 +103,7 @@ class HeadCrop(ParallelPDU):
 
         super(HeadCrop, self).process_message(message)
 
-    def light_postprocess(self, cropped_head, image_dict):        
+    def light_postprocess(self, cropped_head, image_dict):
         # Route cropped images to face-recognition
         if cropped_head is not None:
             self.log("Sending an image to face recognition")
@@ -96,5 +114,6 @@ class HeadCrop(ParallelPDU):
         self.send_to('face-recognition', {'head_image': image})
 
 if __name__ == "__main__":
+    setup_logging()
     module = HeadCrop()
     module.run()
