@@ -1,9 +1,5 @@
-'''
-Created on Jan 25, 2013
-
-@author: cosmin
-'''
 import threading
+
 import unittest
 
 from nose.plugins.attrib import attr
