@@ -53,7 +53,7 @@ class RecordingPDU(PDU):
             efile.open_for_writing()
             self._open_files[e.id] = efile
             self.logger.info("Lazily opened file %s for writing for "
-                             "experiment %r" % e.id)
+                             "experiment %r" % (e.file, e.id))
         else:
             self.logger.info("File for experiment %r was already open" % e.id)
 
