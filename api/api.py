@@ -12,12 +12,12 @@ measurements.ensure_index([('sensor_id', pymongo.ASCENDING),
                            ('type', pymongo.ASCENDING),
                            ('created_at', pymongo.DESCENDING)])
 
-@route('/latest_kinect_rgb', method='GET')
-def get_latest_kinect_rgb():
+@route('/latest_kinect_rgb/:sensor_id', method='GET')
+def get_latest_kinect_rgb(sensor_id = 'daq-01'):
     connection = Connection(settings.MONGO_SERVER)
     db = connection.measurements.docs
     finddict = {
-        'sensor_id': 0,
+        'sensor_id': sensor_id,
         'sensor_type': 'kinect',
         'type': 'image_rgb'
     }
@@ -29,12 +29,12 @@ def get_latest_kinect_rgb():
     else:
         return {}
 
-@route('/latest_kinect_skeleton', method='GET')
-def get_latest_kinect_skeleton():
+@route('/latest_kinect_skeleton/:sensor_id', method='GET')
+def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
     connection = Connection(settings.MONGO_SERVER)
     db = connection.measurements.docs
     finddict = {
-        'sensor_id': 0,
+        'sensor_id': sensor_id,
         'sensor_type': 'kinect',
         'type': 'skeleton'
     }
