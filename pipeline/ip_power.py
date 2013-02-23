@@ -16,6 +16,7 @@ class IPPower(PDU):
     DEFAULT_PASSWORD = '12345678'
 
     def process_message(self, message):
+        self.logger.info("Received message: %r" % message)
 
         """ Prepare parameters for HTTP request """
         params = copy.deepcopy(message)
