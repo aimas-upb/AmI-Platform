@@ -1,3 +1,4 @@
 ami-room
 ami-ip-power
 ami-api
+ami-dashboard
