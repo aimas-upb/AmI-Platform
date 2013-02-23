@@ -11,7 +11,7 @@ def base64_to_image(data, width, height):
 def image_to_base64(image):
     """ Convert an image from PIL format to base64 for
         further processing down the pipeline. """
-    image.rotate(180)
+    image = image.rotate(180)
     return {
         'image': base64.b64encode(image.tostring()),
         'width': image.size[0],
