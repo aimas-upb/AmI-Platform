@@ -31,5 +31,6 @@ def crop_face_from_image(image):
     cropping_rect = rectangle_intersection(face_rect, image_rect)
     logger.info("Final cropping rect has dimensions %d x %d" % (cropping_rect[2] - cropping_rect[0],
                                                                 cropping_rect[3] - cropping_rect[1]))
+    logger.info("Cropping rect actual coordinates: %r" % cropping_rect)
 
     return image.crop(cropping_rect)
