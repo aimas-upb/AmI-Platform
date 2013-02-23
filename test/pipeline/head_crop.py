@@ -1,4 +1,5 @@
 import base64
+import logging
 import time
 from unittest import TestCase
 
@@ -6,9 +7,15 @@ from mock import patch
 from nose.tools import eq_
 from PIL import Image
 
+from lib import log
 from pipeline.head_crop import HeadCrop
 
 class HeadCropTest(TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        super(HeadCropTest, cls).setUpClass()
+        log.setup_logging(level=logging.DEBUG)
     
     def _image_message(self):
         return {
@@ -27,7 +34,7 @@ class HeadCropTest(TestCase):
             'type': 'skeleton',
             'skeleton_2D': {'head': {1.0, 2.0}, 'neck': {3.0, 4.0}} 
         }
-
+    
     @patch.object(HeadCrop, 'send_to')
     # Because we don't have image + skeleton, face detection should
     # be called, and make sure it doesn't return anything useful
@@ -101,3 +108,21 @@ class HeadCropTest(TestCase):
         send_to.assert_called_once_with('face-recognition', 
                                         face_recognition_message)
         skeleton.assert_called_once_with()
+    
+    def head_crop(self, file_in):
+        '''returns NONE or a rectangle'''
+        
+
+    def test_face_cropped_ok(self):
+        from lib.opencv import crop_face_from_image
+        from os import listdir
+        image_folder = "/home/ami/AmI-Platform/headcrop_dataset"
+        images = [ image for image in listdir(image_folder) if not image.endswith('_result.jpg')]
+        
+        for image_file in images:
+            image = Image.open("%s/%s" % (image_folder,image_file))
+            logging.debug("processing image %s" % image_file)
+            cropped_head = crop_face_from_image(image)
+            if cropped_head is not None:
+                cropped_head.save("%s/%s_result.jpg" % (image_folder, image_file))
+                print '.'
