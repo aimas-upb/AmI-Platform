@@ -109,7 +109,7 @@ class Room(PDU):
             'ip': '172.16.4.99',
             'output': '1',
         }
-        self.send_to('ip_power', params)
+        self.send_to('ip-power', params)
 
 if __name__ == "__main__":
     setup_logging()
