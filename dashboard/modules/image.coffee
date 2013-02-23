@@ -114,7 +114,7 @@ define ['cs!widget'], (Widget) ->
                   return
             ###
             
-            @drawSkeleton(temp_context_2d)
+            # @drawSkeleton(temp_context_2d)
 
             # Scale down to lower res
             context_2d.drawImage(@temp_canvas,
