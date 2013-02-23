@@ -18,6 +18,9 @@ define ['cs!widget'], (Widget) ->
             # Normally we would use "elements" for this, but we want the
             # raw DOM element instead of the jQuery one.
             @canvas = @view.$el.find('canvas').get(0)
+            @temp_canvas = document.createElement("canvas")
+            @temp_canvas.width = 1280
+            @temp_canvas.height = 1024
         
         get_image: (params) =>
             ###
@@ -99,7 +102,8 @@ define ['cs!widget'], (Widget) ->
                 return
           
             context_2d = @canvas.getContext('2d')
-            @drawImage(context_2d)
+            temp_context_2d = @temp_canvas.getContext('2d')
+            @drawImage(temp_context_2d)
           
             # Check if image and skeleton ar at most 1s apart
             ###
@@ -110,7 +114,12 @@ define ['cs!widget'], (Widget) ->
                   return
             ###
             
-            @drawSkeleton(context_2d)
+            @drawSkeleton(temp_context_2d)
+
+            # Scale down to lower res
+            context_2d.drawImage(@temp_canvas,
+                                 0, 0, @temp_canvas.width, @temp_canvas.height,
+                                 0, 0, @canvas.width, @canvas.height)
 
         saveImageToFile: (event) =>
             urlData = @canvas.toDataURL('image/jpeg')
