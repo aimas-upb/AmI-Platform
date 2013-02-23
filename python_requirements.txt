@@ -9,3 +9,4 @@ mongoengine==0.7.9
 nose==1.2.1
 fabric==1.5.2
 requests
+redis==2.7.2
