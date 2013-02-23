@@ -1,8 +1,8 @@
 import logging
-import math
 
 from faces import face_detect
 from geometry import rectangle_scale, rectangle_intersection
+from lib.files import random_file_name
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,19 @@ def crop_face_from_image(image):
     cropping_rect = rectangle_intersection(face_rect, image_rect)
     logger.info("Final cropping rect has dimensions %d x %d" % (cropping_rect[2] - cropping_rect[0],
                                                                 cropping_rect[3] - cropping_rect[1]))
-    logger.info("Cropping rect actual coordinates: %r" % cropping_rect)
+    logger.info("Cropping rect: %.2f %.2f %.2f %.2f" % (cropping_rect[0],
+                                                        cropping_rect[1],
+                                                        cropping_rect[2],
+                                                        cropping_rect[3]))
 
-    return image.crop(cropping_rect)
+    cropped_image = image.crop(cropping_rect)
+
+    # Save both images and log this so we can debug more easily
+    temp_path_full_image = random_file_name('jpg')
+    temp_path_face_image = random_file_name('jpg')
+    image.save(temp_path_full_image)
+    cropped_image.save(temp_path_face_image)
+    logger.info("Saved full image at %s" % temp_path_full_image)
+    logger.info("Saved full image at %s" % temp_path_face_image)
+
+    return cropped_image
