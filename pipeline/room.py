@@ -97,7 +97,7 @@ class Room(PDU):
         """ Switch on the air conditioning. """
         params = {
             'cmd': 'on',
-            'ip': '192.168.0.30',
+            'ip': '172.16.4.99',
             'output': '1',
         }
         self.send_to('ip-power', params)
@@ -106,7 +106,7 @@ class Room(PDU):
         """ Switch on the air conditioning. """
         params = {
             'cmd': 'off',
-            'ip': '192.168.0.30',
+            'ip': '172.16.4.99',
             'output': '1',
         }
         self.send_to('ip_power', params)
