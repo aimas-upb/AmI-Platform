@@ -38,12 +38,16 @@ def crop_head(message):
     last_skeleton = message['hack']['last_skeleton']
     last_skeleton_at = message['hack']['last_skeleton_at']
 
+    # No image means nothing to crop, se we're done.
+    if last_image is None:
+        return None
+
     cropped_head = None
 
     # If this is an image, and we have a "recent" skeleton, or vice-versa
     # try to crop the face. For this, we need to have
     # at least one skeleton and one image.
-    if last_image is not None and last_skeleton is not None:
+    if last_skeleton is not None:
         if abs(last_image_at - last_skeleton_at) < MAX_TIME:
             logger.info("Trying to crop head using correlation between "
                         "skeleton and RGB image (skeleton_ts = %d, "
@@ -58,7 +62,7 @@ def crop_head(message):
 
     # If we have no "recent" skeleton or no skeleton at all,
     # we'll detect the face from image
-    elif (last_image is not None):
+    else:
         logger.info("We have no skeleton so far, so we're using face "
                     "detection in order to crop the head")
         cropped_head = _crop_head_using_face_detection(last_image)
