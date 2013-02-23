@@ -68,6 +68,7 @@ def crop_head(message):
         cropped_head = _crop_head_using_face_detection(last_image)
 
     if cropped_head is not None:
+        logger.info("%s gave us a face to recognize!" % message['sensor_id'])
         return image_to_base64(cropped_head)
     else:
         return None
