@@ -15,7 +15,7 @@ define ['cs!controller'], (Controller) ->
 
             channels_params =
                 '/latest_kinect_rgb': {'sensor_id': 'daq-03'}
-                '/latest_kinect_skeleton': {'sensor_id': 'daq-3'}
+                '/latest_kinect_skeleton': {'sensor_id': 'daq-03'}
             [latest_kinect_rgb_3, latest_kinect_skeleton_3] = Utils.newDataChannels(channels_params)
 
             channels_params =
