@@ -1,0 +1,4 @@
+check process ami-dashboard
+	with pidfile /var/run/ami-dashboard.pid
+	start = "/usr/sbin/service ami-dashboard start"
+	stop = "/usr/sbin/service ami-dashboard stop"

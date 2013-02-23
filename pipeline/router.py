@@ -19,7 +19,14 @@ class Router(PDU):
         self.send_to('mongo-writer', message)
         self.send_to('head-crop', message)
         # self.send_to('recorder', message)
-        self.send_to('room-position', message)
+
+        # Only send to room position if it's a Kinect skeleton
+        if message['sensor_type'] == 'kinect' and message['type'] == 'skeleton':
+            self.send_to('room-position', message)
+
+        # Only send to dashboard if it's a Kinect RGB image
+        if message['sensor_type'] == 'kinect' and message['type'] == 'image_rgb':
+            self.send_to('dashboard', message)
 
 if __name__ == "__main__":
     setup_logging()
