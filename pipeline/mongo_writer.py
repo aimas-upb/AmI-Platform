@@ -64,6 +64,7 @@ class MongoWriter(PDU):
             return None
 
     def _should_be_saved(self, message):
+        return True
         """ Decide whether the current message should be written or not.
 
         The decision is mased based on the last time a write was performed
