@@ -47,6 +47,7 @@ class FaceRecognition(ParallelPDU):
     QUEUE = 'face-recognition'
     ORDERED_DELIVERY = True
     POOL_SIZE = 8
+    UNFINISHED_TASKS_THRESHOLD = 2 * POOL_SIZE
     BEST_PERSON_THRESHOLD = 0.75
     UPGRADE_FACE_SAMPLES_THRESHOLD = 0.85
 
