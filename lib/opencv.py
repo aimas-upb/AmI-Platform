@@ -17,7 +17,7 @@ def crop_face_from_image(image):
         return None
 
     (x, y, w, h) = faces[0][0]
-    logger.info("Found face with width = %d pixels and height = %d pixels" % (w, h))
+    logger.info("Found face with size %d x %d" % (w, h))
 
     # Take the first detected face and scale the rectangle
     # 2 times around its center.
