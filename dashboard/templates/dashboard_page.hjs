@@ -1,9 +1,5 @@
-<span class="first">
-    <div class="mozaic-widget" data-widget="image" data-params="{{latest_kinect_rgb_params_1}}" style="display: inline-block;"></div>
-    <div class="mozaic-widget" data-widget="image" data-params="{{latest_kinect_rgb_params_3}}" style="display: inline-block;"></div>
-</span>
-
-<span class="second">
-    <div class="mozaic-widget" data-widget="image" data-params="{{latest_kinect_rgb_params_4}}" style="display: inline-block;"></div>
-    <div class="mozaic-widget" data-widget="image" data-params="{{latest_kinect_rgb_params_5}}" style="display: inline-block;"></div>
-</span>
+<div class="mozaic-widget" data-widget="image" data-params="{{latest_kinect_rgb_params_1}}" style="display: inline-block;"></div>
+<div class="mozaic-widget" data-widget="image" data-params="{{latest_kinect_rgb_params_2}}" style="display: inline-block;"></div>
+<div class="mozaic-widget" data-widget="image" data-params="{{latest_kinect_rgb_params_3}}" style="display: inline-block;"></div>
+<div class="mozaic-widget" data-widget="image" data-params="{{latest_kinect_rgb_params_4}}" style="display: inline-block;"></div>
+<div class="mozaic-widget" data-widget="image" data-params="{{latest_kinect_rgb_params_5}}" style="display: inline-block;"></div>
