@@ -4,6 +4,14 @@ from bottle import route, run, request, abort
 from pymongo import Connection
 from core import settings
 
+# Create indexes for mongo database
+import pymongo
+measurements = pymongo.Connection(settings.MONGO_SERVER).measurements.docs.
+measurements.ensure_index([('sensor_id', pymongo.ASCENDING),
+                           ('sensor_type', pymongo.ASCENDING),
+                           ('type', pymongo.ASCENDING),
+                           ('created_at', pymongo.DESCENDING)])
+
 @route('/latest_kinect_rgb', method='GET')
 def get_latest_kinect_rgb():
     connection = Connection(settings.MONGO_SERVER)
