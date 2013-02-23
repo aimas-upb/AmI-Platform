@@ -6,7 +6,7 @@ from core import settings
 
 # Create indexes for mongo database
 import pymongo
-measurements = pymongo.Connection(settings.MONGO_SERVER).measurements.docs.
+measurements = pymongo.Connection(settings.MONGO_SERVER).measurements.docs
 measurements.ensure_index([('sensor_id', pymongo.ASCENDING),
                            ('sensor_type', pymongo.ASCENDING),
                            ('type', pymongo.ASCENDING),
