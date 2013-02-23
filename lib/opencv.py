@@ -36,6 +36,8 @@ def crop_face_from_image(image):
                                                         cropping_rect[2],
                                                         cropping_rect[3]))
 
+    cropping_rect = (int(cropping_rect[0]), int(cropping_rect[1]),
+                     int(cropping_rect[2]), int(cropping_rect[3]))
     cropped_image = image.crop(cropping_rect)
 
     # Save both images and log this so we can debug more easily
