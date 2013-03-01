@@ -2,3 +2,5 @@ ami-mongo-writer
 ami-router
 ami-room-position
 ami-text_to_speech
+ami-dashboard
+ami-api

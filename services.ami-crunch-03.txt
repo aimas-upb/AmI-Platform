@@ -1,1 +1,2 @@
 ami-head-crop
+ami-face-recognition
