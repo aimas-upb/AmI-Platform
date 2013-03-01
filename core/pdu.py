@@ -23,7 +23,9 @@ class PDU(object):
 
     def __init__(self, **kwargs):
         """ Set-up connections to Mongo and Kestrel by default on each PDU. """
-        self._queue_system = kwargs.get('queue_system', None) or kestrel.Client(settings.KESTREL_SERVERS)
+        self._input_queue_system = kwargs.get('queue_system', None) or kestrel.Client(settings.KESTREL_SERVERS)
+        self._output_queue_system = kwargs.get('queue_system', None) or kestrel.Client(getattr(settings, 'KESTREL_SERVERS_OUTPUT',
+                                                                                               settings.KESTREL_SERVERS))
         self._mongo_connection = pymongo.Connection(settings.MONGO_SERVER)
         self._last_stats = time.time()
         self._processed_messages = 0
@@ -37,8 +39,12 @@ class PDU(object):
         self.logger.log(level, message)
 
     @property
-    def queue_system(self):
-        return self._queue_system
+    def input_queue_system(self):
+        return self._input_queue_system
+
+    @property
+    def output_queue_system(self):
+        return self._output_queue_system
 
     @property
     def mongo_connection(self):
@@ -53,7 +59,7 @@ class PDU(object):
     def send_to(self, queue, message):
         """ Send a message to another queue. """
         self.log("Enqueueing message to %s" % queue, level = logging.INFO)
-        self.queue_system.add(queue, json.dumps(message))
+        self.output_queue_system.add(queue, json.dumps(message))
 
     def _truncate_strs(self, dictionary):
         # Edge case - dictionary is in fact not a dictionary, but a string
@@ -133,7 +139,7 @@ class PDU(object):
                     continue
 
                 # Step 1 - get message from message queue
-                message = self.queue_system.get(self.QUEUE, timeout = 1)
+                message = self.input_queue_system.get(self.QUEUE, timeout = 1)
                 if not message:
                     """self.log("Could not get message from queue %s Retrying ..."
                              % self.QUEUE)"""
