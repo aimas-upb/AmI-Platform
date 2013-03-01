@@ -25,7 +25,7 @@ class Router(PDU):
             self.send_to('room-position', message)
 
         # Only send to dashboard if it's a Kinect RGB image
-        if message['sensor_type'] == 'kinect' and message['type'] == 'image_rgb':
+        if message['sensor_type'] == 'kinect' and message['type'] in ['image_rgb', 'skeleton']:
             self.send_to('dashboard', message)
 
 if __name__ == "__main__":

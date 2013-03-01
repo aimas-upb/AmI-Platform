@@ -1,6 +1,6 @@
 import logging
 
-from faces import face_detect
+from faces import voting_face_detect
 from geometry import rectangle_scale, rectangle_intersection
 from lib.files import random_file_name
 
@@ -12,7 +12,7 @@ def crop_face_from_image(image):
     # Try to detect faces in the image - if there is None,
     # there is nothing to do. Otherwise, keep only the first
     # face regardless of how many were detected.
-    faces = face_detect(image)
+    faces = voting_face_detect(image)
     if len(faces) == 0:
         return None
 
