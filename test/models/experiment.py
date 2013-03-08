@@ -13,15 +13,12 @@ class ExperimentTestCase(TestCase):
 
     def setUp(self):
         super(ExperimentTestCase, self).setUp()
-        connect('experiments')
+        connect('experiments', host=settings.MONGO_SERVER)
         Experiment.objects.all().delete()
 
     @attr('unit')
     def test_save_and_fetch(self):
         """ Test that an experiment can be saved and fetched correctly. """
-
-        connect('experiments', host=settings.MONGO_SERVER)
-
         e = Experiment(name='e1')
         e.since = datetime.now()
         e.until = datetime.now()
@@ -35,8 +32,6 @@ class ExperimentTestCase(TestCase):
 
     @attr('unit')
     def test_get_active_experiments_returns_active_experiment(self):
-        connect('experiments')
-
         """ Test that get_active_experiments works correctly indeed. """
         e = Experiment(name = "e1", file = 'file2.txt', since = datetime.now())
         e.save()
@@ -58,7 +53,6 @@ class ExperimentTestCase(TestCase):
 
     @attr('unit')
     def test_get_active_experiments_matching(self):
-        connect('experiments')
         Experiment.objects.all().delete()
 
         e1 = Experiment(name = 'e1', file = 'file3.txt', filters = {'a': 'b'})
@@ -80,7 +74,6 @@ class ExperimentTestCase(TestCase):
 
     @attr('unit')
     def test_inactive_matching_experiment_is_not_returned(self):
-        connect('experiments')
         Experiment.objects.all().delete()
         e1 = Experiment(name = 'e1', file = 'file4.txt', filters = {'a': 'b'}, active=False)
         e1.save()
