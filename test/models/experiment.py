@@ -7,6 +7,8 @@ from nose.tools import eq_, ok_
 
 from models.experiment import Experiment
 
+from core import settings
+
 class ExperimentTestCase(TestCase):
 
     def setUp(self):
@@ -18,7 +20,7 @@ class ExperimentTestCase(TestCase):
     def test_save_and_fetch(self):
         """ Test that an experiment can be saved and fetched correctly. """
 
-        connect('experiments')
+        connect('experiments', host=settings.MONGO_SERVER)
 
         e = Experiment(name='e1')
         e.since = datetime.now()
