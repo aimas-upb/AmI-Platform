@@ -2,9 +2,7 @@ import json
 import logging
 
 from bottle import route, run
-from pymongo import Connection
 
-from core import settings
 from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
 
