@@ -10,3 +10,5 @@ nose==1.2.1
 fabric==1.5.2
 requests
 redis==2.7.2
+mock==1.0.1
+nose-cov==1.6

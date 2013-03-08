@@ -8,6 +8,7 @@ from mongoengine import connect
 from nose.plugins.attrib import attr
 from nose.tools import eq_
 
+from core import settings
 from core.recording_pdu import ExperimentFile, RecordingPDU
 from models.experiment import Experiment
 
@@ -18,7 +19,7 @@ class RecordingPDUTestCase(TestCase):
     
     def setUp(self):
         super(RecordingPDUTestCase, self).setUp()
-        connect('recording_pdu_test_experiments')
+        connect('recording_pdu_test_experiments', host=settings.MONGO_SERVER)
         Experiment.objects.all().delete()
 
     @attr('unit')
