@@ -1,9 +1,11 @@
+import logging
 import math
 
 import cv
 
 from core import PDU
-from lib import log
+from lib.log import setup_logging
+
 
 class RoomPosition(PDU):
     ''' PDU that reads skeleton messages from kinect and translates the position 
@@ -33,7 +35,6 @@ class RoomPosition(PDU):
             """ We are doing rotation using the euler angles
                 see http://en.wikipedia.org/wiki/Rotation_matrix
             """
-            
             alpha = sensor_position['alpha']
             beta = sensor_position['beta']
             gamma  = sensor_position['gamma']
@@ -65,19 +66,22 @@ class RoomPosition(PDU):
             pos[1,0] = temp_pos[1,0] + sensor_position['Y']
             pos[2,0] = temp_pos[2,0] + sensor_position['Z']
             
-            position_message = {}
-            position_message['X'] = pos[0,0]
-            position_message['Y'] = pos[1,0]
-            position_message['Z'] = pos[2,0]
+            position_message = {
+                'type': 'subject_position',
+                'sensor_id': message['sensor_id'],
+                'created_at': message['created_at'],
+                'X': pos[0,0],
+                'Y': pos[1,0],
+                'Z': pos[2,0],
+            }
+            # TODO: if received message has a 'player' field,
+            # pass it forward in pipeline
+            # if 'player' in message:
+            #     position_message['player'] = message['player']
             
-            position_message['sensor_id'] = message['sensor_id']
-            position_message['created_at'] = message['created_at']
-            
-            if 'player' in message:
-                position_message['player'] = message['player']
-            
+            # Save subject position in database
             self.log('Found position %s' % position_message)
-            self.send_to('subject-position', {'subject_position': position_message})
+            self.send_to('mongo-writer', position_message)
             
         return None
 
@@ -113,6 +117,6 @@ def rot_z(phi):
     return mat
 
 if __name__ == "__main__":
-    log.setup_logging()
+    setup_logging()
     module = RoomPosition()
     module.run()
