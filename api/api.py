@@ -2,7 +2,9 @@ import json
 import logging
 
 from bottle import route, run
+from pymongo import Connection
 
+from core import settings
 from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
 
@@ -33,18 +35,19 @@ def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
         logger.exception("Failed to get latest kinect skeleton from Redis")
         return {}
 
-@route('/get_latest_subject_positions', method='GET')
-def get_latest_subject_positions():
-#    db = get_db()
-#    finddict = {
-#        'type': 'subject_position'
-#    }
-#    positions = list(db.find(finddict, limit = POSITIONS_LIMIT).sort(
-#                                                            'created_at', -1))
-#    for position in positions:
-#        del position['_id']
-#    return json.dumps(positions)
-    return {}
+@route('/latest_subject_positions/:sensor_id', method='GET')
+def get_latest_subject_positions(sensor_id = 'daq-01'):
+    try:
+        result = dashboard_cache.lrange(sensor_id=sensor_id,
+                                        sensor_type='kinect',
+                                        measurement_type='subject_position',
+                                        start=0,
+                                        stop=POSITIONS_LIMIT)
+        return json.loads(result)
+    except:
+        logger.exception("Failed to get list of latest subject positions from "
+                         "Redis")
+        return {}
 
 setup_logging()
 run(host='0.0.0.0', port=8000)
