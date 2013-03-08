@@ -355,6 +355,7 @@ int main(int argc, char **argv)
 	XnStatus nRetVal = XN_STATUS_OK;
 
 	base64_init();
+	SceneDrawerInit();
 	
 	xn::EnumerationErrors errors;
     printf("Before context init\n");
