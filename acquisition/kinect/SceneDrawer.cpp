@@ -358,8 +358,11 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 
 	char *context = get_context();
 
-	snprintf((char*)buf, 10000, 
-		"{\"context\": \"%s\","
+	timespec t;
+	 clock_gettime(CLOCK_REALTIME, &t);
+	snprintf((char*)buf, 10000,
+		"{\"created_at\": %ld,"
+		"\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\","
 		"\"sensor_id\": \"%s\","
 		"\"sensor_position\": %s,"
@@ -368,7 +371,8 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		"\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
 		"\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 		 
-		 get_context(),
+		t.tv_sec,
+		get_context(),
 		 getSensorID(),
 		 getSensorPosition(),
 		 player, //player_name,
@@ -478,15 +482,19 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 
     img64 = base64_encode(img, width*height*3, &outlen);
     printf("SaveImage: width = %d, height = %d\n", width, height);
+    timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
 
 	snprintf(buf, buf_size, 
-		"{\"context\": \"%s\","
+		"{\"created_at\": %ld,"
+		"\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\"," 
 		"\"sensor_id\": \"%s\","
 		"\"sensor_position\": %s,"
 		"\"type\": \"%s\","
 		"\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
 		
+		t.tv_sec,
 		context, 
 		getSensorID(),
 		getSensorPosition(),
