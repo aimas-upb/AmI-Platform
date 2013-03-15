@@ -23,11 +23,14 @@
 // Includes
 //---------------------------------------------------------------------------
 #include <math.h>
+#include <time.h>
+#include <string>
 
 #include "SceneDrawer.h"
 #include "context.h"
 #include "base64.h"
 #include "ami_environment.h"
+#include "MemcacheWorker.h"
 
 #ifndef USE_GLES
 #if (XN_PLATFORM == XN_PLATFORM_MACOSX)
@@ -39,9 +42,6 @@
     #include "opengles.h"
 #endif
 
-#if USE_MEMCACHE
-    #include <libmemcached/memcached.h>
-#endif
 
 using namespace std;
 
@@ -62,9 +62,21 @@ extern XnBool g_bPrintState;
 extern XnBool g_bPrintFrameID;
 extern XnBool g_bMarkJoints;
 
-#if USE_MEMCACHE
-extern memcached_st* g_MemCache;
-#endif
+#define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 1
+#define MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT 1
+
+static double last_skeleton_time = 0;
+static double last_image_time = 0;
+static MemcacheWorker worker(4);
+
+void SceneDrawerInit() {
+	timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	double nowd = now.tv_sec + now.tv_nsec / 10E9;
+	last_skeleton_time = nowd - MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT;
+	last_image_time = nowd - MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT;
+	printf("Last times: %lf, %lf\n", last_image_time, last_skeleton_time);
+}
 
 #include <map>
 std::map<XnUInt32, std::pair<XnCalibrationStatus, XnPoseDetectionStatus> > m_Errors;
@@ -346,8 +358,11 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 
 	char *context = get_context();
 
-	snprintf((char*)buf, 10000, 
-		"{\"context\": \"%s\","
+	timespec t;
+	 clock_gettime(CLOCK_REALTIME, &t);
+	snprintf((char*)buf, 10000,
+		"{\"created_at\": %ld,"
+		"\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\","
 		"\"sensor_id\": \"%s\","
 		"\"sensor_position\": %s,"
@@ -356,7 +371,8 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		"\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
 		"\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 		 
-		 get_context(),
+		t.tv_sec,
+		get_context(),
 		 getSensorID(),
 		 getSensorPosition(),
 		 player, //player_name,
@@ -369,20 +385,19 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
 #if USE_MEMCACHE
-    memcached_return rc;
-    printf("g_MemCache = %p\n", g_MemCache);
-    rc = memcached_set(g_MemCache,
-             "measurements", strlen("measurements"),
-             buf, strlen(buf),
-             (time_t)0, (uint32_t)0);
-    if (rc != MEMCACHED_SUCCESS) {
-        printf("Could NOT send to memcache. I'm very very sad :-( :-( :-(\n");
-    } else {
-        printf("I can send to memcache. HURRAY!! :-) :-) :-)\n");
-    }
-#endif
+	timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	double nowd = now.tv_sec + now.tv_nsec / 10E9;
 
-    free(buf);
+	if (nowd - last_skeleton_time > MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT) {
+		last_skeleton_time = nowd;
+		worker.AddMessage(buf);
+	} else {
+		free(buf);
+	}
+#else
+	free(buf);
+#endif
 
     free(head);
     free(neck);
@@ -467,15 +482,19 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 
     img64 = base64_encode(img, width*height*3, &outlen);
     printf("SaveImage: width = %d, height = %d\n", width, height);
+    timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
 
 	snprintf(buf, buf_size, 
-		"{\"context\": \"%s\","
+		"{\"created_at\": %ld,"
+		"\"context\": \"%s\","
 		"\"sensor_type\": \"kinect\"," 
 		"\"sensor_id\": \"%s\","
 		"\"sensor_position\": %s,"
 		"\"type\": \"%s\","
 		"\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
 		
+		t.tv_sec,
 		context, 
 		getSensorID(),
 		getSensorPosition(),
@@ -484,20 +503,21 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 		outlen/sizeof(char), img64, width, height);
 
 #if USE_MEMCACHE
-    memcached_return rc;
-    printf("Before sending to memcache..\n");
-    rc = memcached_set(g_MemCache,
-             "measurements", strlen("measurements"),
-             buf, strlen(buf),
-             (time_t)0, (uint32_t)0);
-    if (rc != MEMCACHED_SUCCESS) {
-        printf("%s: Could NOT send to memcache. I'm very very sad :-( :-( :-(\n", sensor_type);
-    } else {
-        printf("%s: I can send to memcache. HURRAY!! :-) :-) :-)\n", sensor_type);
-    }
+	timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	double nowd = now.tv_sec + now.tv_nsec / 10E9;
+	if (nowd - last_image_time > MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT) {
+		last_image_time = nowd;
+		worker.AddMessage(buf);
+	} else {
+		free(buf);
+	}
+#else
+	free(buf);
 #endif
 
-    free(buf);
+
+
     free(img64);
     free(context);
 }
