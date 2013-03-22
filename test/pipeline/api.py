@@ -1,3 +1,4 @@
+import httplib
 import logging
 from unittest import TestCase
 
@@ -22,8 +23,8 @@ class ApiTest(TestCase):
         message = self._skeleton_message()
         RoomPosition().process_message(message)
         path = '/latest_subject_positions/%s' % message['sensor_id']
-        response = self.client.get(path)
-        # TODO: test this test!
         import pdb;pdb.set_trace()
+        conn = httplib.HTTPConnection('127.0.0.1')
+        conn.request('GET', path)
+        response = conn.getresponse() 
         eq_(200, response.status_code)
-    
