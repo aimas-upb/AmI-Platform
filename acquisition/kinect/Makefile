@@ -5,6 +5,7 @@ BIN_DIR = ./Bin
 INC_DIRS =./Include =/usr/include/ni
 
 SRC_FILES = ./*.cpp
+SRC_FILES += ./util/*.cpp
 
 EXE_NAME = Sample-NiUserTracker
 
@@ -24,9 +25,11 @@ else
 endif
 
 USED_LIBS += OpenNI
+USED_LIBS += opencv_core
+USED_LIBS += opencv_highgui
 
 DEFINES += USE_MEMCACHE
-#DEFINES += MEMCACHE_WORKER_DEBUG
+DEFINES += MEMCACHE_WORKER_DEBUG
 USED_LIBS += memcached
 
 LIB_DIRS += ./Lib
