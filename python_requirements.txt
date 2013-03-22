@@ -12,3 +12,4 @@ requests
 redis==2.7.2
 mock==1.0.1
 nose-cov==1.6
+httpretty==0.5.12
