@@ -5,9 +5,9 @@
 #include <unistd.h>
 
 #include <libmemcached/memcached.h>
-extern memcached_st* g_MemCache;
 
-#include "MemcacheWorker.h"
+#include "Worker.h"
+#include "StopWatch.h"
 
 #ifdef MEMCACHE_WORKER_DEBUG
 #define DBG(format, value) printf((format), (value))
@@ -17,8 +17,9 @@ extern memcached_st* g_MemCache;
 #define DBG1(format, value, value2)
 #endif
 
+namespace util {
 ////Cosmin: TODO: check for errors
-MemcacheWorker::MemcacheWorker(size_t max) : queue_max(max),total_kbytes(0.0) {
+Worker::Worker(size_t max) : queue_max(max), done(false) {
 	DBG("%s enter\n", __FUNCTION__);
 	pthread_condattr_t cond_attr;
 	pthread_condattr_init(&cond_attr);
@@ -37,7 +38,7 @@ MemcacheWorker::MemcacheWorker(size_t max) : queue_max(max),total_kbytes(0.0) {
 
 }
 
-bool MemcacheWorker::isFull() {
+bool Worker::isFull() {
 	bool ret = false;
 	pthread_mutex_lock(&mutex);
 	ret = queue.size() >= queue_max;
@@ -46,7 +47,7 @@ bool MemcacheWorker::isFull() {
 	return ret;
 }
 
-MemcacheWorker::~MemcacheWorker() {
+Worker::~Worker() {
 	DBG("%s enter\n", __FUNCTION__);
 	pthread_mutex_lock(&mutex);
 	done = true;
@@ -60,14 +61,14 @@ MemcacheWorker::~MemcacheWorker() {
 	DBG("%s exit\n", __FUNCTION__);
 }
 
-void MemcacheWorker::Run() {
+void Worker::Run() {
 	DBG("%s enter\n", __FUNCTION__);
 
 	bool isDone = false;
-	char* message;
+	RunnableRegistration* r = NULL;
 
 	while(!isDone) {
-		message = NULL;
+		r = NULL;
 
 		pthread_mutex_lock(&mutex);
 		while (!done && queue.size() == 0) {
@@ -75,30 +76,46 @@ void MemcacheWorker::Run() {
 		}
 		isDone = done;
 		if (queue.size() != 0) {
-			message = queue.front();
+			r = queue.front();
 			queue.pop_front();
-			total_kbytes += strlen(message) / 1024.0;
 		}
 
 
 		pthread_mutex_unlock(&mutex);
-		if (!isDone && message != NULL) {
-			DBG("%s sending message\n", __FUNCTION__);
-			printf("%s\n", message);
-			memcached_return rc;
-			printf("g_MemCache = %p\n", g_MemCache);
-			rc = memcached_set(g_MemCache,
-					 "measurements", strlen("measurements"),
-					 message, strlen(message),
-					 (time_t)0, (uint32_t)0);
+		if (!isDone && r != NULL) {
+//			DBG("%s sending message\n", __FUNCTION__);
+////			printf("%s\n", message);
+//			memcached_return rc;
+//			util::StopWatch sw;
+//			sw.Start();
+//			printf("g_MemCache = %p\n", g_MemCache);
+//			size_t size = strlen(message);
+//			rc = memcached_set(g_MemCache,
+//					 "measurements", strlen("measurements"),
+//					 message, size,
+//					 (time_t)0, (uint32_t)0);
+//
+//			if (rc != MEMCACHED_SUCCESS) {
+//				printf("Could NOT send to memcache. I'm very very sad :-( :-( :-(\n");
+//			} else {
+//				printf("I can send to memcache. HURRAY!! :-) :-) :-)\n");
+//			}
+//			sw.Stop();
+//			DBG1("%s sent message in %ld ms\n", __FUNCTION__, sw.GetTime());
+//			DBG1("%s sent message of size %ld \n", __FUNCTION__, size);
+//			free(message);
+			try {
+				r->runnable->Run();
+			} catch (...) {
 
-			if (rc != MEMCACHED_SUCCESS) {
-				printf("Could NOT send to memcache. I'm very very sad :-( :-( :-(\n");
-			} else {
-				printf("I can send to memcache. HURRAY!! :-) :-) :-)\n");
 			}
-			free(message);
-			sleep(1);
+			try {
+				r->callback(r->runnable, r->arg);
+			} catch (...) {
+
+			}
+
+			delete r;
 		}
 
 	}
@@ -106,18 +123,22 @@ void MemcacheWorker::Run() {
 	DBG("%s exit\n", __FUNCTION__);
 }
 
-bool MemcacheWorker::AddMessage(char* message) {
+bool Worker::AddMessage(Runnable * runnable, TaskDoneCallback callback, void* arg) {
 	DBG("%s enter\n", __FUNCTION__);
 	bool ret = true;
 	pthread_mutex_lock(&mutex);
 	if (queue.size() < queue_max) {
-		queue.push_back(message);
+		RunnableRegistration* r = new RunnableRegistration();
+		r->arg = arg;
+		r->runnable = runnable;
+		r->callback = callback;
+		queue.push_back(r);
 		ret = true;
 		pthread_cond_signal(&cond);
 	} else {
-		DBG1("%s full queue. Message ignored (sent %lf)\n", __FUNCTION__, total_kbytes);
-		free(message);
+		DBG("%s full queue. Message ignored \n", __FUNCTION__);
 		ret = false;
+		callback(runnable, arg);
 	}
 	pthread_mutex_unlock(&mutex);
 	DBG("%s exit\n", __FUNCTION__);
@@ -126,8 +147,9 @@ bool MemcacheWorker::AddMessage(char* message) {
 
 }
 
-void* MemcacheWorker::gRun(void* v) {
-	((MemcacheWorker*)v) ->Run();
+void* Worker::gRun(void* v) {
+	((Worker*)v) ->Run();
 	return NULL;
 }
 
+}
