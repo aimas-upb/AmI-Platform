@@ -14,7 +14,8 @@ class Router(PDU):
         # Route messages towards mongo-writer
 
         # created_at = time at which message arrived on the router
-        message['created_at'] = int(time.time())
+	if not 'created_at' in message:
+	    message['created_at'] = int(time.time())
 
         self.send_to('mongo-writer', message)
         if message['type'] in ['image_rgb', 'skeleton']:
