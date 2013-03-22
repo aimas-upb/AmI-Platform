@@ -42,25 +42,10 @@
     #include "opengles.h"
 #endif
 
-
 using namespace std;
-
-static const std::string base64_chars =
-             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-             "abcdefghijklmnopqrstuvwxyz"
-             "0123456789+/";
 
 extern xn::UserGenerator g_UserGenerator;
 extern xn::DepthGenerator g_DepthGenerator;
-
-extern XnBool g_bDrawBackground;
-extern XnBool g_bDrawPixels;
-extern XnBool g_bDrawSkeleton;
-extern XnBool g_bPrintID;
-extern XnBool g_bPrintState;
-
-extern XnBool g_bPrintFrameID;
-extern XnBool g_bMarkJoints;
 
 #define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 1
 #define MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT 1
@@ -76,17 +61,6 @@ void SceneDrawerInit() {
 	last_skeleton_time = nowd - MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT;
 	last_image_time = nowd - MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT;
 	printf("Last times: %lf, %lf\n", last_image_time, last_skeleton_time);
-}
-
-#include <map>
-std::map<XnUInt32, std::pair<XnCalibrationStatus, XnPoseDetectionStatus> > m_Errors;
-void XN_CALLBACK_TYPE MyCalibrationInProgress(xn::SkeletonCapability& /*capability*/, XnUserID id, XnCalibrationStatus calibrationError, void* /*pCookie*/)
-{
-    m_Errors[id].first = calibrationError;
-}
-void XN_CALLBACK_TYPE MyPoseInProgress(xn::PoseDetectionCapability& /*capability*/, const XnChar* /*strPose*/, XnUserID id, XnPoseDetectionStatus poseError, void* /*pCookie*/)
-{
-    m_Errors[id].second = poseError;
 }
 
 unsigned int getClosestPowerOfTwo(unsigned int n)
@@ -522,6 +496,88 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
     free(context);
 }
 
+void DrawJoints(XnUserID user) {
+    glColor4f(1-Colors[user%nColors][0], 1-Colors[user%nColors][1], 1-Colors[user%nColors][2], 1);
+
+	// Try to draw all joints
+	DrawJoint(user, XN_SKEL_HEAD);
+	DrawJoint(user, XN_SKEL_NECK);
+	DrawJoint(user, XN_SKEL_TORSO);
+	DrawJoint(user, XN_SKEL_WAIST);
+
+	DrawJoint(user, XN_SKEL_LEFT_COLLAR);
+	DrawJoint(user, XN_SKEL_LEFT_SHOULDER);
+	DrawJoint(user, XN_SKEL_LEFT_ELBOW);
+	DrawJoint(user, XN_SKEL_LEFT_WRIST);
+	DrawJoint(user, XN_SKEL_LEFT_HAND);
+	DrawJoint(user, XN_SKEL_LEFT_FINGERTIP);
+
+	DrawJoint(user, XN_SKEL_RIGHT_COLLAR);
+	DrawJoint(user, XN_SKEL_RIGHT_SHOULDER);
+	DrawJoint(user, XN_SKEL_RIGHT_ELBOW);
+	DrawJoint(user, XN_SKEL_RIGHT_WRIST);
+	DrawJoint(user, XN_SKEL_RIGHT_HAND);
+	DrawJoint(user, XN_SKEL_RIGHT_FINGERTIP);
+
+	DrawJoint(user, XN_SKEL_LEFT_HIP);
+	DrawJoint(user, XN_SKEL_LEFT_KNEE);
+	DrawJoint(user, XN_SKEL_LEFT_ANKLE);
+	DrawJoint(user, XN_SKEL_LEFT_FOOT);
+
+	DrawJoint(user, XN_SKEL_RIGHT_HIP);
+	DrawJoint(user, XN_SKEL_RIGHT_KNEE);
+	DrawJoint(user, XN_SKEL_RIGHT_ANKLE);
+	DrawJoint(user, XN_SKEL_RIGHT_FOOT);
+}
+
+void DrawSkeleton(XnUserID user) {
+#ifndef USE_GLES
+	glBegin(GL_LINES);
+#endif
+    DrawLimb(user, XN_SKEL_HEAD, XN_SKEL_NECK);
+
+	DrawLimb(user, XN_SKEL_NECK, XN_SKEL_LEFT_SHOULDER);
+	DrawLimb(user, XN_SKEL_LEFT_SHOULDER, XN_SKEL_LEFT_ELBOW);
+	if (!DrawLimb(user, XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_WRIST))
+	{
+		DrawLimb(user, XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_HAND);
+	}
+	else
+	{
+		DrawLimb(user, XN_SKEL_LEFT_WRIST, XN_SKEL_LEFT_HAND);
+		DrawLimb(user, XN_SKEL_LEFT_HAND, XN_SKEL_LEFT_FINGERTIP);
+	}
+
+
+	DrawLimb(user, XN_SKEL_NECK, XN_SKEL_RIGHT_SHOULDER);
+	DrawLimb(user, XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_ELBOW);
+	if (!DrawLimb(user, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_WRIST))
+	{
+		DrawLimb(user, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_HAND);
+	}
+	else
+	{
+		DrawLimb(user, XN_SKEL_RIGHT_WRIST, XN_SKEL_RIGHT_HAND);
+		DrawLimb(user, XN_SKEL_RIGHT_HAND, XN_SKEL_RIGHT_FINGERTIP);
+	}
+
+	DrawLimb(user, XN_SKEL_LEFT_SHOULDER, XN_SKEL_TORSO);
+	DrawLimb(user, XN_SKEL_RIGHT_SHOULDER, XN_SKEL_TORSO);
+
+	DrawLimb(user, XN_SKEL_TORSO, XN_SKEL_LEFT_HIP);
+	DrawLimb(user, XN_SKEL_LEFT_HIP, XN_SKEL_LEFT_KNEE);
+	DrawLimb(user, XN_SKEL_LEFT_KNEE, XN_SKEL_LEFT_FOOT);
+
+	DrawLimb(user, XN_SKEL_TORSO, XN_SKEL_RIGHT_HIP);
+	DrawLimb(user, XN_SKEL_RIGHT_HIP, XN_SKEL_RIGHT_KNEE);
+	DrawLimb(user, XN_SKEL_RIGHT_KNEE, XN_SKEL_RIGHT_FOOT);
+
+	DrawLimb(user, XN_SKEL_LEFT_HIP, XN_SKEL_RIGHT_HIP);
+#ifndef USE_GLES
+	glEnd();
+#endif
+}
+
 void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, const xn::ImageMetaData& imd)
 {
 
@@ -542,10 +598,8 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, co
         texWidth =  getClosestPowerOfTwo(dmd.XRes());
         texHeight = getClosestPowerOfTwo(dmd.YRes());
 
-//		printf("Initializing depth texture: width = %d, height = %d\n", texWidth, texHeight);
         depthTexID = initTexture((void**)&pDepthTexBuf,texWidth, texHeight) ;
 
-//		printf("Initialized depth texture: width = %d, height = %d\n", texWidth, texHeight);
         bInitialized = true;
 
         topLeftX = dmd.XRes();
@@ -609,60 +663,51 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, co
     char *img = (char *) malloc (3 * g_nXRes * g_nYRes);
     memset(img, 0, sizeof(img));
 
-    printf("xRes = %d, yRes = %d\n", g_nXRes, g_nYRes);
     pDepth = dmd.Data();
-    if (g_bDrawPixels)
-    {
-        XnUInt32 nIndex = 0;
-        // Prepare the texture map
-        for (nY=0; nY<g_nYRes; nY++)
-        {
-            for (nX=0; nX < g_nXRes; nX++, nIndex++)
-            {
+	XnUInt32 nIndex = 0;
+	// Prepare the texture map
+	for (nY=0; nY<g_nYRes; nY++)
+	{
+		for (nX=0; nX < g_nXRes; nX++, nIndex++)
+		{
 
-                pDestImage[0] = 0;
-                pDestImage[1] = 0;
-                pDestImage[2] = 0;
-                if (g_bDrawBackground || *pLabels != 0)
-                {
-                    nValue = *pDepth;
-                    XnLabel label = *pLabels;
-                    XnUInt32 nColorID = label % nColors;
-                    if (label == 0)
-                    {
-                        nColorID = nColors;
-                    }
+			pDestImage[0] = 0;
+			pDestImage[1] = 0;
+			pDestImage[2] = 0;
+			if (*pLabels != 0)
+			{
+				nValue = *pDepth;
+				XnLabel label = *pLabels;
+				XnUInt32 nColorID = label % nColors;
+				if (label == 0)
+				{
+					nColorID = nColors;
+				}
 
-                    if (nValue != 0)
-                    {
-                        nHistValue = pDepthHist[nValue];
+				if (nValue != 0)
+				{
+					nHistValue = pDepthHist[nValue];
 
-                        pDestImage[0] = nHistValue * Colors[nColorID][0];
-                        pDestImage[1] = nHistValue * Colors[nColorID][1];
-                        pDestImage[2] = nHistValue * Colors[nColorID][2];
-                    }
-                }
+					pDestImage[0] = nHistValue * Colors[nColorID][0];
+					pDestImage[1] = nHistValue * Colors[nColorID][1];
+					pDestImage[2] = nHistValue * Colors[nColorID][2];
+				}
+			}
 
-                img[(nY*g_nXRes +nX)*3+0] = (unsigned char) pDestImage[0];
-                img[(nY*g_nXRes +nX)*3+1] = (unsigned char) pDestImage[1];
-                img[(nY*g_nXRes +nX)*3+2] = (unsigned char) pDestImage[2];
+			img[(nY*g_nXRes +nX)*3+0] = (unsigned char) pDestImage[0];
+			img[(nY*g_nXRes +nX)*3+1] = (unsigned char) pDestImage[1];
+			img[(nY*g_nXRes +nX)*3+2] = (unsigned char) pDestImage[2];
 
-                pDepth++;
-                pLabels++;
-                pDestImage+=3;
-            }
+			pDepth++;
+			pLabels++;
+			pDestImage+=3;
+		}
 
-            pDestImage += (texWidth - g_nXRes) *3;
-        }
+		pDestImage += (texWidth - g_nXRes) *3;
+	}
 
-        SaveImage(img, g_nXRes, g_nYRes, "player1", "image_depth");
-        SaveImage((char*)pImage, 1280, 1024, "player1", "image_rgb");
-
-    }
-    else
-    {
-        xnOSMemSet(pDepthTexBuf, 0, 3*2*g_nXRes*g_nYRes);
-    }
+	SaveImage(img, g_nXRes, g_nYRes, "player1", "image_depth");
+	SaveImage((char*)pImage, 1280, 1024, "player1", "image_rgb");
 
     free(img);
 
@@ -676,150 +721,16 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, co
     DrawTexture(dmd.XRes(),dmd.YRes(),0,0);
     glDisable(GL_TEXTURE_2D);
 
-    char strLabel[50] = "";
     XnUserID aUsers[15];
     XnUInt16 nUsers = 15;
     g_UserGenerator.GetUsers(aUsers, nUsers);
     for (int i = 0; i < nUsers; ++i)
     {
-#ifndef USE_GLES
-        if (g_bPrintID)
+        if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
         {
-            XnPoint3D com;
-            g_UserGenerator.GetCoM(aUsers[i], com);
-            g_DepthGenerator.ConvertRealWorldToProjective(1, &com, &com);
-
-            XnUInt32 nDummy = 0;
-
-            xnOSMemSet(strLabel, 0, sizeof(strLabel));
-            if (!g_bPrintState)
-            {
-                // Tracking
-                xnOSStrFormat(strLabel, sizeof(strLabel), &nDummy, "%d", aUsers[i]);
-            }
-            else if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
-            {
-                // Tracking
-                xnOSStrFormat(strLabel, sizeof(strLabel), &nDummy, "%d - Tracking", aUsers[i]);
-            }
-            else if (g_UserGenerator.GetSkeletonCap().IsCalibrating(aUsers[i]))
-            {
-                // Calibrating
-                xnOSStrFormat(strLabel, sizeof(strLabel), &nDummy, "%d - Calibrating [%s]", aUsers[i], GetCalibrationErrorString(m_Errors[aUsers[i]].first));
-            }
-            else
-            {
-                // Nothing
-                xnOSStrFormat(strLabel, sizeof(strLabel), &nDummy, "%d - Looking for pose [%s]", aUsers[i], GetPoseErrorString(m_Errors[aUsers[i]].second));
-            }
-
-
-            glColor4f(1-Colors[i%nColors][0], 1-Colors[i%nColors][1], 1-Colors[i%nColors][2], 1);
-
-            glRasterPos2i(com.X, com.Y);
-            glPrintString(GLUT_BITMAP_HELVETICA_18, strLabel);
-        }
-#endif
-        if (g_bDrawSkeleton && g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
-        {
-            glColor4f(1-Colors[aUsers[i]%nColors][0], 1-Colors[aUsers[i]%nColors][1], 1-Colors[aUsers[i]%nColors][2], 1);
-
-            // Draw Joints
-            if (g_bMarkJoints)
-            {
-                // Try to draw all joints
-                DrawJoint(aUsers[i], XN_SKEL_HEAD);
-                DrawJoint(aUsers[i], XN_SKEL_NECK);
-                DrawJoint(aUsers[i], XN_SKEL_TORSO);
-                DrawJoint(aUsers[i], XN_SKEL_WAIST);
-
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_COLLAR);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_SHOULDER);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_ELBOW);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_WRIST);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_HAND);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_FINGERTIP);
-
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_COLLAR);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_SHOULDER);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_ELBOW);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_WRIST);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_HAND);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_FINGERTIP);
-
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_HIP);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_KNEE);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_ANKLE);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_FOOT);
-
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_HIP);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_KNEE);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_ANKLE);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_FOOT);
-            }
-
+        	DrawJoints(aUsers[i]);
             SaveSkeleton(aUsers[i], "player1", "kinect1");
-#ifndef USE_GLES
-            glBegin(GL_LINES);
-#endif
-
-            // Draw Limbs
-            DrawLimb(aUsers[i], XN_SKEL_HEAD, XN_SKEL_NECK);
-
-            DrawLimb(aUsers[i], XN_SKEL_NECK, XN_SKEL_LEFT_SHOULDER);
-            DrawLimb(aUsers[i], XN_SKEL_LEFT_SHOULDER, XN_SKEL_LEFT_ELBOW);
-            if (!DrawLimb(aUsers[i], XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_WRIST))
-            {
-                DrawLimb(aUsers[i], XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_HAND);
-            }
-            else
-            {
-                DrawLimb(aUsers[i], XN_SKEL_LEFT_WRIST, XN_SKEL_LEFT_HAND);
-                DrawLimb(aUsers[i], XN_SKEL_LEFT_HAND, XN_SKEL_LEFT_FINGERTIP);
-            }
-
-
-            DrawLimb(aUsers[i], XN_SKEL_NECK, XN_SKEL_RIGHT_SHOULDER);
-            DrawLimb(aUsers[i], XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_ELBOW);
-            if (!DrawLimb(aUsers[i], XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_WRIST))
-            {
-                DrawLimb(aUsers[i], XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_HAND);
-            }
-            else
-            {
-                DrawLimb(aUsers[i], XN_SKEL_RIGHT_WRIST, XN_SKEL_RIGHT_HAND);
-                DrawLimb(aUsers[i], XN_SKEL_RIGHT_HAND, XN_SKEL_RIGHT_FINGERTIP);
-            }
-
-            DrawLimb(aUsers[i], XN_SKEL_LEFT_SHOULDER, XN_SKEL_TORSO);
-            DrawLimb(aUsers[i], XN_SKEL_RIGHT_SHOULDER, XN_SKEL_TORSO);
-
-            DrawLimb(aUsers[i], XN_SKEL_TORSO, XN_SKEL_LEFT_HIP);
-            DrawLimb(aUsers[i], XN_SKEL_LEFT_HIP, XN_SKEL_LEFT_KNEE);
-            DrawLimb(aUsers[i], XN_SKEL_LEFT_KNEE, XN_SKEL_LEFT_FOOT);
-
-            DrawLimb(aUsers[i], XN_SKEL_TORSO, XN_SKEL_RIGHT_HIP);
-            DrawLimb(aUsers[i], XN_SKEL_RIGHT_HIP, XN_SKEL_RIGHT_KNEE);
-            DrawLimb(aUsers[i], XN_SKEL_RIGHT_KNEE, XN_SKEL_RIGHT_FOOT);
-
-            DrawLimb(aUsers[i], XN_SKEL_LEFT_HIP, XN_SKEL_RIGHT_HIP);
-#ifndef USE_GLES
-            glEnd();
-#endif
+            DrawSkeleton(aUsers[i]);
         }
-    }
-
-    if (g_bPrintFrameID)
-    {
-        static XnChar strFrameID[80];
-        xnOSMemSet(strFrameID, 0, 80);
-        XnUInt32 nDummy = 0;
-        xnOSStrFormat(strFrameID, sizeof(strFrameID), &nDummy, "%d", dmd.FrameID());
-
-        glColor4f(1, 0, 0, 1);
-
-        glRasterPos2i(10, 10);
-
-        glPrintString(GLUT_BITMAP_HELVETICA_18, strFrameID);
     }
 }
