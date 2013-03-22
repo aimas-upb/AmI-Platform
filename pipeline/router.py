@@ -17,7 +17,9 @@ class Router(PDU):
         message['created_at'] = int(time.time())
 
         self.send_to('mongo-writer', message)
-        self.send_to('head-crop', message)
+        if message['type'] in ['image_rgb', 'skeleton']:
+            self.send_to('head-crop', message)
+            
         # self.send_to('recorder', message)
 
         # Only send to room position if it's a Kinect skeleton

@@ -25,12 +25,23 @@
 #include <math.h>
 #include <time.h>
 #include <string>
+#include <sstream>
+
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/ostream_iterator.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
+
+
 
 #include "SceneDrawer.h"
 #include "context.h"
 #include "base64.h"
 #include "ami_environment.h"
-#include "MemcacheWorker.h"
+#include "util/Worker.h"
+#include "util/StopWatch.h"
 
 #ifndef USE_GLES
 #if (XN_PLATFORM == XN_PLATFORM_MACOSX)
@@ -41,7 +52,6 @@
 #else
     #include "opengles.h"
 #endif
-
 
 using namespace std;
 
@@ -62,20 +72,78 @@ extern XnBool g_bPrintState;
 extern XnBool g_bPrintFrameID;
 extern XnBool g_bMarkJoints;
 
-#define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 1
-#define MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT 1
+#define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 10 //ms
+#define MIN_DELAY_BETWEEN_RGB_MEASUREMENT 1000
+#define MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT 1000
 
-static double last_skeleton_time = 0;
-static double last_image_time = 0;
-static MemcacheWorker worker(4);
+
+class DataThrottle {
+public:
+	bool running;
+	long min_delay;
+	util::StopWatch sw;
+
+	/** min delay is in milliseconds*/
+	DataThrottle(long min_delay): running(false), min_delay(min_delay) {}
+	bool CanSend() {
+		return !running && (sw.GetState() == util::StopWatch::STATE_READY || sw.GetSplitTime() >= min_delay);
+	}
+
+	void MarkSend() {
+		if (sw.GetState() == util::StopWatch::STATE_READY) {
+			sw.Start();
+		} else {
+			sw.ReStart();
+		}
+	}
+};
+
+DataThrottle skeleton_throttle(MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT);
+DataThrottle rgb_throttle(MIN_DELAY_BETWEEN_RGB_MEASUREMENT);
+DataThrottle depth_throttle(MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT);
+
+
+#ifdef USE_MEMCACHE
+#include <libmemcached/memcached.h>
+extern memcached_st* g_MemCache;
+
+static util::Worker worker(200);
+
+static void SendCompleted(util::Runnable* r, void* arg) {
+	DataThrottle* dt = static_cast<DataThrottle*>(arg);
+	delete r;
+	dt->running = false;
+}
+
+class Send : public util::Runnable {
+public:
+	char* buffer;
+	Send(char* b) : buffer(b) {}
+	~Send() {
+		free(buffer);
+	}
+
+	void Run() {
+		memcached_return rc;
+		size_t len = strlen(buffer);
+		rc = memcached_set(g_MemCache,
+				"measurements", strlen("measurements"),
+				buffer, len,
+				(time_t)0, (uint32_t)0);
+
+		if (rc != MEMCACHED_SUCCESS) {
+			printf("Could NOT send to memcache. I'm very very sad :-( :-( :-(\n");
+		} else {
+			printf("I can send %5.3f kB to memcache. HURRAY!! :-) :-) :-)\n", len / 1024.0);
+		}
+	}
+
+};
+#endif
+
+
 
 void SceneDrawerInit() {
-	timespec now;
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	double nowd = now.tv_sec + now.tv_nsec / 10E9;
-	last_skeleton_time = nowd - MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT;
-	last_image_time = nowd - MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT;
-	printf("Last times: %lf, %lf\n", last_image_time, last_skeleton_time);
 }
 
 #include <map>
@@ -293,7 +361,7 @@ const XnChar* GetPoseErrorString(XnPoseDetectionStatus error)
     }
 }
 
-char* JointToJSON(XnUserID player, XnSkeletonJoint eJoint, char *name)
+char* JointToJSON(XnUserID player, XnSkeletonJoint eJoint, const char *name)
 {
     XnSkeletonJointPosition joint;
     g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, eJoint, joint);
@@ -304,7 +372,7 @@ char* JointToJSON(XnUserID player, XnSkeletonJoint eJoint, char *name)
     return buf;
 }
 
-char* JointTo2DJSON(XnUserID player, XnSkeletonJoint eJoint, char *name)
+char* JointTo2DJSON(XnUserID player, XnSkeletonJoint eJoint, const char *name)
 {
     XnSkeletonJointPosition joint;
     g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, eJoint, joint);
@@ -321,8 +389,9 @@ char* JointTo2DJSON(XnUserID player, XnSkeletonJoint eJoint, char *name)
  * Kestrel, a message-queue system used to communicate with the rest of the
  * system.
  */
-void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
+static void SaveSkeleton(XnUserID player, const char* player_name, const char* sensor_name)
 {
+#if USE_MEMCACHE
 	char* buf = (char*) malloc(10000 * sizeof(char));
 	char* head = JointToJSON(player, XN_SKEL_HEAD, "head");
 	char* neck = JointToJSON(player, XN_SKEL_NECK, "neck");
@@ -380,20 +449,8 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 		 right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
 		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
-#if USE_MEMCACHE
-	timespec now;
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	double nowd = now.tv_sec + now.tv_nsec / 10E9;
 
-	if (nowd - last_skeleton_time > MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT) {
-		last_skeleton_time = nowd;
-		worker.AddMessage(buf);
-	} else {
-		free(buf);
-	}
-#else
-	free(buf);
-#endif
+	worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
 
     free(head);
     free(neck);
@@ -428,6 +485,7 @@ void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
     free(right_foot_2d);
 
     free(context);
+#endif
 }
 
 void SaveImageToFile(unsigned char *img, int width, int height) {
@@ -453,7 +511,7 @@ void SaveImageToFile(unsigned char *img, int width, int height) {
     bmpinfoheader[11] = (unsigned char)(  height>>24);
 
 
-    FILE *f = fopen("/home/ami/AmI-Platform/image","w");
+    FILE *f = fopen("/home/ami/AmI-Platform/image.bmp","w");
     fwrite(bmpfileheader,1,14,f);
     fwrite(bmpinfoheader,1,40,f);
     for(i=0; i<height; i++)
@@ -461,6 +519,28 @@ void SaveImageToFile(unsigned char *img, int width, int height) {
         fwrite(img + (3 * width * (height-1-i)), 3, width, f);
     }
     fclose(f);
+
+
+	cv::Mat mat(height, width, CV_8UC3, img);
+
+	util::StopWatch sw;
+	sw.Start();
+	vector<int> compression_params;
+	compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+	compression_params.push_back(3);
+	cv::imwrite("/home/ami/AmI-Platform/image.png", mat, compression_params);
+
+
+	printf("SW: png in %ld ms\n", sw.Stop());
+
+	sw.Reset();
+	sw.Start();
+	compression_params.clear();
+	compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
+	compression_params.push_back(95);
+	cv::imwrite("/home/ami/AmI-Platform/image.jpg", mat, compression_params);
+	printf("SW: jpg in %ld ms\n", sw.Stop());
+
 }
 
 /*
@@ -468,50 +548,68 @@ void SaveImageToFile(unsigned char *img, int width, int height) {
  * Kestrel, a message-queue system used to communicate with the rest of the
  * system.
  */
-void SaveImage(char *img, int width, int height, char *player_name, char* sensor_type) {
-    size_t outlen, outlen2;
+static void SaveImage(char *img, int width, int height, const char* player_name, const char* sensor_type, DataThrottle* throttle) {
+#if USE_MEMCACHE
+	size_t outlen, outlen2;
 
-    int buf_size = width * height * 3 * 2;
-    char* buf = (char*) malloc(buf_size * sizeof(char));
-    char* img64;
-    char* context = get_context();
+	//TODO: maybe move compression to the worker thread
+	vector<int> compression_params;
+	compression_params.clear();
+	compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
+	compression_params.push_back(95);
 
-    img64 = base64_encode(img, width*height*3, &outlen);
-    printf("SaveImage: width = %d, height = %d\n", width, height);
+	cv::Mat mat(height, width, CV_8UC3, img);
+	vector<unsigned char> c_buf;
+	cv::imencode(".jpg", mat, c_buf, compression_params);
+	std::basic_stringstream<unsigned char> os;
 
-	snprintf(buf, buf_size, 
+	using namespace boost::archive::iterators;
+
+	typedef base64_from_binary< transform_width<vector<unsigned char>::iterator , 6, 8> > base64_text;
+
+	std::copy(
+		base64_text(c_buf.begin()),
+	    base64_text(c_buf.end()),
+	    boost::archive::iterators::ostream_iterator<unsigned char>(os)
+	 );
+
+	basic_string<unsigned char> encoded = os.str();
+
+	while (encoded.size() % 4 != 0) {
+		encoded += '=';
+	}
+
+
+	int buf_size = width * height * 3 * 2;
+	char* buf = (char*) malloc(buf_size * sizeof(char));
+	char* context = get_context();
+
+
+	printf("SaveImage: width = %d, height = %d\n", width, height);
+
+	snprintf(buf, buf_size,
 		"{\"context\": \"%s\","
-		"\"sensor_type\": \"kinect\"," 
+		"\"sensor_type\": \"kinect\","
 		"\"sensor_id\": \"%s\","
 		"\"sensor_position\": %s,"
 		"\"type\": \"%s\","
-		"\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
-		
-		context, 
+		"\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
+
+		context,
 		getSensorID(),
 		getSensorPosition(),
-		sensor_type, 
 		sensor_type,
-		outlen/sizeof(char), img64, width, height);
+		sensor_type,
+		encoded.c_str(), width, height);
 
-#if USE_MEMCACHE
-	timespec now;
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	double nowd = now.tv_sec + now.tv_nsec / 10E9;
-	if (nowd - last_image_time > MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT) {
-		last_image_time = nowd;
-		worker.AddMessage(buf);
-	} else {
-		free(buf);
-	}
-#else
-	free(buf);
+		printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
+
+
+	worker.AddMessage(new Send(buf), &SendCompleted, throttle);
+
+	free(context);
 #endif
 
-
-
-    free(img64);
-    free(context);
 }
 
 void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, const xn::ImageMetaData& imd)
@@ -647,8 +745,16 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, co
             pDestImage += (texWidth - g_nXRes) *3;
         }
 
-        SaveImage(img, g_nXRes, g_nYRes, "player1", "image_depth");
-        SaveImage((char*)pImage, 1280, 1024, "player1", "image_rgb");
+
+        if (rgb_throttle.CanSend()) {
+        	SaveImage(img, g_nXRes, g_nYRes, "player1", "image_depth", &rgb_throttle);
+        	rgb_throttle.MarkSend();
+        }
+
+        if (depth_throttle.CanSend()) {
+        	SaveImage((char*)pImage, 1280, 1024, "player1", "image_rgb", &depth_throttle);
+        	depth_throttle.MarkSend();
+        }
 
     }
     else
@@ -750,7 +856,10 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, co
                 DrawJoint(aUsers[i], XN_SKEL_RIGHT_FOOT);
             }
 
-            SaveSkeleton(aUsers[i], "player1", "kinect1");
+            if (skeleton_throttle.CanSend()) {
+            	SaveSkeleton(aUsers[i], "player1", "kinect1");
+            	skeleton_throttle.MarkSend();
+            }
 #ifndef USE_GLES
             glBegin(GL_LINES);
 #endif
