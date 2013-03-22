@@ -1,0 +1,3 @@
+<p>
+    {{latest_subject_positions}}
+</p>
