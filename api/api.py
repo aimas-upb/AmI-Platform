@@ -41,7 +41,7 @@ def get_latest_subject_positions(sensor_id = 'daq-01'):
                                         measurement_type='subject_position',
                                         start=0,
                                         stop=POSITIONS_LIMIT)
-        return json.loads(result)
+        return {'data': result}
     except:
         logger.exception("Failed to get list of latest subject positions from "
                          "Redis")
