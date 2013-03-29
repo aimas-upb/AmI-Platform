@@ -9,7 +9,7 @@ from lib.log import setup_logging
 logger = logging.getLogger(__name__)
 dashboard_cache = DashboardCache()
 
-POSITIONS_LIMIT = 50
+POSITIONS_LIMIT = 100
 
 @route('/latest_kinect_rgb/:sensor_id', method='GET')
 def get_latest_kinect_rgb(sensor_id = 'daq-01'):
