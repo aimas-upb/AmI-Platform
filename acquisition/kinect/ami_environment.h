@@ -5,5 +5,6 @@ char* getKestrelServerIP();
 int getKestrelServerPort();
 char* getSensorPosition();
 char* getSensorID();
+char* getKinectXMLConfig();
 
 #endif

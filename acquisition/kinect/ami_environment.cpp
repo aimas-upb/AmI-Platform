@@ -34,3 +34,10 @@ char* getSensorID() {
 	return sensor_id;
 }
 
+char* getKinectXMLConfig() {
+	char *config = getenv("AMI_KINECT_CONFIG_XML");
+	if (config == NULL)
+		return "/home/ami/AmI-Platform/acquisition/kinect/SamplesConfig.xml";
+	return config;
+}
+

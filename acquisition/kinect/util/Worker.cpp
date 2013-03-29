@@ -1,5 +1,5 @@
 #include <errno.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -25,16 +25,16 @@ Worker::Worker(size_t max) : queue_max(max), done(false) {
 	pthread_condattr_init(&cond_attr);
 	pthread_cond_init(&cond, &cond_attr);
 
-	pthread_mutexattr_t mutex_attr;
-	pthread_mutexattr_init(&mutex_attr);
+    pthread_mutexattr_t mutex_attr;
+    pthread_mutexattr_init(&mutex_attr);
 
-	pthread_mutex_init(&mutex, &mutex_attr);
+    pthread_mutex_init(&mutex, &mutex_attr);
 
-	pthread_attr_t attr;
-	pthread_attr_init(&attr);
-	pthread_create(&thread, &attr, &gRun, this);
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_create(&thread, &attr, &gRun, this);
 
-	DBG("%s exit\n", __FUNCTION__);
+    DBG("%s exit\n", __FUNCTION__);
 
 }
 
@@ -44,7 +44,7 @@ bool Worker::isFull() {
 	ret = queue.size() >= queue_max;
 	pthread_mutex_unlock(&mutex);
 
-	return ret;
+    return ret;
 }
 
 Worker::~Worker() {
@@ -143,8 +143,6 @@ bool Worker::AddMessage(Runnable * runnable, TaskDoneCallback callback, void* ar
 	pthread_mutex_unlock(&mutex);
 	DBG("%s exit\n", __FUNCTION__);
 	return ret;
-
-
 }
 
 void* Worker::gRun(void* v) {
