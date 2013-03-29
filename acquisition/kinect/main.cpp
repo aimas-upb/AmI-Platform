@@ -30,7 +30,7 @@
 #include "SceneDrawer.h"
 #include <XnPropNames.h>
 #if USE_MEMCACHE
-	#include <libmemcached/memcached.h>
+    #include <libmemcached/memcached.h>
 #endif
 
 #include "base64.h"
@@ -51,12 +51,12 @@ memcached_st* g_MemCache;
 
 #ifndef USE_GLES
 #if (XN_PLATFORM == XN_PLATFORM_MACOSX)
-	#include <GLUT/glut.h>
+    #include <GLUT/glut.h>
 #else
-	#include <GL/glut.h>
+    #include <GL/glut.h>
 #endif
 #else
-	#include "opengles.h"
+    #include "opengles.h"
 #endif
 
 #ifdef USE_GLES
@@ -72,122 +72,122 @@ XnBool g_bQuit = false;
 
 void CleanupExit()
 {
-	g_scriptNode.Release();
-	g_DepthGenerator.Release();
-	g_UserGenerator.Release();
-	g_Player.Release();
-	g_Context.Release();
-	g_ImageGenerator.Release();
-	exit (1);
+    g_scriptNode.Release();
+    g_DepthGenerator.Release();
+    g_UserGenerator.Release();
+    g_Player.Release();
+    g_Context.Release();
+    g_ImageGenerator.Release();
+    exit (1);
 }
 
 // Callback: New user was detected
 void XN_CALLBACK_TYPE User_NewUser(xn::UserGenerator& /*generator*/, XnUserID nId, void* /*pCookie*/)
 {
-	g_UserGenerator.GetSkeletonCap().RequestCalibration(nId, TRUE);
+    g_UserGenerator.GetSkeletonCap().RequestCalibration(nId, TRUE);
 }
 
 // Callback: Finished calibration
 void XN_CALLBACK_TYPE UserCalibration_CalibrationComplete(xn::SkeletonCapability& /*capability*/, XnUserID nId, XnCalibrationStatus eStatus, void* /*pCookie*/)
 {
-	if (eStatus == XN_CALIBRATION_STATUS_OK) {
-		// Calibration succeeded
-		g_UserGenerator.GetSkeletonCap().StartTracking(nId);
-	} else {
-		// Calibration failed
+    if (eStatus == XN_CALIBRATION_STATUS_OK) {
+        // Calibration succeeded
+        g_UserGenerator.GetSkeletonCap().StartTracking(nId);
+    } else {
+        // Calibration failed
         if(eStatus==XN_CALIBRATION_STATUS_MANUAL_ABORT) {
             printf("Manual abort occured, stop attempting to calibrate!");
         } else {
-        	g_UserGenerator.GetSkeletonCap().RequestCalibration(nId, TRUE);
+            g_UserGenerator.GetSkeletonCap().RequestCalibration(nId, TRUE);
         }
-	}
+    }
 }
 
 // this function is called each frame
 void glutDisplay (void)
 {
-	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Setup the OpenGL viewpoint
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
+    // Setup the OpenGL viewpoint
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
 
-	xn::SceneMetaData sceneMD;
-	xn::DepthMetaData depthMD;
-	xn::ImageMetaData imageMD;
-	g_DepthGenerator.GetMetaData(depthMD);
-	g_ImageGenerator.GetMetaData(imageMD);
-	
+    xn::SceneMetaData sceneMD;
+    xn::DepthMetaData depthMD;
+    xn::ImageMetaData imageMD;
+    g_DepthGenerator.GetMetaData(depthMD);
+    g_ImageGenerator.GetMetaData(imageMD);
+
 #ifndef USE_GLES
-	glOrtho(0, depthMD.XRes(), depthMD.YRes(), 0, -1.0, 1.0);
+    glOrtho(0, depthMD.XRes(), depthMD.YRes(), 0, -1.0, 1.0);
 #else
-	glOrthof(0, depthMD.XRes(), depthMD.YRes(), 0, -1.0, 1.0);
+    glOrthof(0, depthMD.XRes(), depthMD.YRes(), 0, -1.0, 1.0);
 #endif
 
-	glDisable(GL_TEXTURE_2D);
-	
-	// Read next available data
-	g_Context.WaitOneUpdateAll(g_UserGenerator);
+    glDisable(GL_TEXTURE_2D);
 
-	// Process the data
-	g_DepthGenerator.GetMetaData(depthMD);
-	g_UserGenerator.GetUserPixels(0, sceneMD);
-	g_ImageGenerator.GetMetaData(imageMD);
-	DrawDepthMap(depthMD, sceneMD, imageMD);
+    // Read next available data
+    g_Context.WaitOneUpdateAll(g_UserGenerator);
+
+    // Process the data
+    g_DepthGenerator.GetMetaData(depthMD);
+    g_UserGenerator.GetUserPixels(0, sceneMD);
+    g_ImageGenerator.GetMetaData(imageMD);
+    DrawDepthMap(depthMD, sceneMD, imageMD);
 
 #ifndef USE_GLES
-	glutSwapBuffers();
+    glutSwapBuffers();
 #endif
 }
 
 #ifndef USE_GLES
 void glutIdle (void)
 {
-	if (g_bQuit) {
-		CleanupExit();
-	}
+    if (g_bQuit) {
+        CleanupExit();
+    }
 
-	// Display the frame
-	glutPostRedisplay();
+    // Display the frame
+    glutPostRedisplay();
 }
 
 void glutKeyboard (unsigned char key, int /*x*/, int /*y*/)
 {
-	switch (key)
-	{
-	case 27:
-		CleanupExit();
-		break;
-	}
+    switch (key)
+    {
+    case 27:
+        CleanupExit();
+        break;
+    }
 }
 void glInit (int * pargc, char ** argv)
 {
-	glutInit(pargc, argv);
-	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
-	glutInitWindowSize(GL_WIN_SIZE_X, GL_WIN_SIZE_Y);
-	glutCreateWindow ("User Tracker Viewer");
-	//glutFullScreen();
-	glutSetCursor(GLUT_CURSOR_NONE);
+    glutInit(pargc, argv);
+    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+    glutInitWindowSize(GL_WIN_SIZE_X, GL_WIN_SIZE_Y);
+    glutCreateWindow ("User Tracker Viewer");
+    //glutFullScreen();
+    glutSetCursor(GLUT_CURSOR_NONE);
 
-	glutKeyboardFunc(glutKeyboard);
-	glutDisplayFunc(glutDisplay);
-	glutIdleFunc(glutIdle);
+    glutKeyboardFunc(glutKeyboard);
+    glutDisplayFunc(glutDisplay);
+    glutIdleFunc(glutIdle);
 
-	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_TEXTURE_2D);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_2D);
 
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
 }
 #endif // USE_GLES
 
 #define CHECK_RC(nRetVal, what)										\
-	if (nRetVal != XN_STATUS_OK)									\
-	{																\
-		printf("%s failed: %s\n", what, xnGetStatusString(nRetVal));\
-		exit(nRetVal);												\
-	}
+    if (nRetVal != XN_STATUS_OK)									\
+    {																\
+        printf("%s failed: %s\n", what, xnGetStatusString(nRetVal));\
+        exit(nRetVal);												\
+    }
 
 void initFromContextFile() {
     /*
@@ -200,120 +200,118 @@ void initFromContextFile() {
         will stop the program altogether.
     */
 
-	XnStatus nRetVal = XN_STATUS_OK;
-	xn::EnumerationErrors errors;
-	
-	if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
-	{
-		XnChar strError[1024];
-		errors.ToString(strError, 1024);
-		printf("%s\n", strError);
-		exit(1);
-	}
-	else if (nRetVal != XN_STATUS_OK)
-	{
-		printf("Open failed: %s\n", xnGetStatusString(nRetVal));
-		exit(1);
-	}
+    XnStatus nRetVal = XN_STATUS_OK;
+    xn::EnumerationErrors errors;
 
-	nRetVal = g_Context.InitFromXmlFile(getKinectXMLConfig(), g_scriptNode, &errors);
+    if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
+    {
+        XnChar strError[1024];
+        errors.ToString(strError, 1024);
+        printf("%s\n", strError);
+        exit(1);
+    }
+    else if (nRetVal != XN_STATUS_OK)
+    {
+        printf("Open failed: %s\n", xnGetStatusString(nRetVal));
+        exit(1);
+    }
 
-	if (g_Context.FindExistingNode(XN_NODE_TYPE_DEPTH, g_DepthGenerator) != XN_STATUS_OK) {
-		printf("XML file should contain a depth generator");
-		exit(1);
-	}
+    nRetVal = g_Context.InitFromXmlFile(getKinectXMLConfig(), g_scriptNode, &errors);
 
-	if (g_Context.FindExistingNode(XN_NODE_TYPE_IMAGE, g_DepthGenerator) != XN_STATUS_OK) {
-		printf("XML file should contain an image generator");
-		exit(1);
-	}
+    if (g_Context.FindExistingNode(XN_NODE_TYPE_DEPTH, g_DepthGenerator) != XN_STATUS_OK) {
+        printf("XML file should contain a depth generator\n");
+        exit(1);
+    }
 
-	if (g_Context.FindExistingNode(XN_NODE_TYPE_USER, g_UserGenerator) != XN_STATUS_OK) {
-		printf("XML file should contain an user generator");
-		exit(1);
-	}
+    if (g_Context.FindExistingNode(XN_NODE_TYPE_IMAGE, g_DepthGenerator) != XN_STATUS_OK) {
+        printf("XML file should contain an image generator\n");
+        exit(1);
+    }
 
-	if (!g_UserGenerator.IsCapabilitySupported(XN_CAPABILITY_SKELETON)) {
-		printf("Supplied user generator doesn't support skeleton\n");
-		exit(1);
-	}
+    if (g_Context.FindExistingNode(XN_NODE_TYPE_USER, g_UserGenerator) != XN_STATUS_OK) {
+        printf("XML file should contain an user generator\n");
+        exit(1);
+    }
+
+    if (!g_UserGenerator.IsCapabilitySupported(XN_CAPABILITY_SKELETON)) {
+        printf("Supplied user generator doesn't support skeleton\n");
+        exit(1);
+    }
 }
 
 void registerUserCallbacks() {
-	XnStatus nRetVal = XN_STATUS_OK;
-	XnCallbackHandle hUserCallbacks, hCalibrationStart, hCalibrationComplete, hPoseDetected, hCalibrationInProgress, hPoseInProgress;
+    XnStatus nRetVal = XN_STATUS_OK;
+    XnCallbackHandle hUserCallbacks, hCalibrationStart, hCalibrationComplete, hPoseDetected, hCalibrationInProgress, hPoseInProgress;
 
-	g_UserGenerator.GetSkeletonCap().SetSkeletonProfile(XN_SKEL_PROFILE_ALL);
-	nRetVal = g_UserGenerator.GetSkeletonCap().RegisterToCalibrationComplete(UserCalibration_CalibrationComplete, NULL, hCalibrationComplete);
-	CHECK_RC(nRetVal, "Register to calibration complete");
-	nRetVal = g_UserGenerator.GetSkeletonCap().RegisterToCalibrationInProgress(MyCalibrationInProgress, NULL, hCalibrationInProgress);
-	CHECK_RC(nRetVal, "Register to calibration in progress");
+    g_UserGenerator.GetSkeletonCap().SetSkeletonProfile(XN_SKEL_PROFILE_ALL);
+    nRetVal = g_UserGenerator.GetSkeletonCap().RegisterToCalibrationComplete(UserCalibration_CalibrationComplete, NULL, hCalibrationComplete);
+    CHECK_RC(nRetVal, "Register to calibration complete");
 }
 
 void initializeKestrelConnection() {
-	/*
-	 * Kestrel is a distributed queueing system that we use to
-	 */
-	g_MemCache = memcached_create(NULL);
-	memcached_server_st* servers = NULL;
-	memcached_return rc;
-	servers = memcached_server_list_append(servers,
-										   getKestrelServerIP(),
-										   getKestrelServerPort(),
-										   &rc);
-	memcached_server_push(g_MemCache, servers);
-	printf("Pushed server %s:%d to list of kestrels\n", getKestrelServerIP(), getKestrelServerPort());
-	if (rc != MEMCACHED_SUCCESS) {
-		printf("Failed to register to memcache library\n");
-		exit(-1);
-	}
+    /*
+     * Kestrel is a distributed queueing system that we use to
+     */
+    g_MemCache = memcached_create(NULL);
+    memcached_server_st* servers = NULL;
+    memcached_return rc;
+    servers = memcached_server_list_append(servers,
+                                           getKestrelServerIP(),
+                                           getKestrelServerPort(),
+                                           &rc);
+    memcached_server_push(g_MemCache, servers);
+    printf("Pushed server %s:%d to list of kestrels\n", getKestrelServerIP(), getKestrelServerPort());
+    if (rc != MEMCACHED_SUCCESS) {
+        printf("Failed to register to memcache library\n");
+        exit(-1);
+    }
 }
 
 void openglMainLoop(int argc, char **argv) {
-	/*
-	 * OpenGL main loop, depending on which type of library is available:
-	 * - GLUT
-	 * - OpenGL ES
-	 */
-	
+    /*
+     * OpenGL main loop, depending on which type of library is available:
+     * - GLUT
+     * - OpenGL ES
+     */
+
 #ifndef USE_GLES
-	glInit(&argc, argv);
-	glutMainLoop();
+    glInit(&argc, argv);
+    glutMainLoop();
 #else
-	if (!opengles_init(GL_WIN_SIZE_X, GL_WIN_SIZE_Y, &display, &surface, &context))
-	{
-		printf("Error initializing opengles\n");
-		CleanupExit();
-	}
+    if (!opengles_init(GL_WIN_SIZE_X, GL_WIN_SIZE_Y, &display, &surface, &context))
+    {
+        printf("Error initializing opengles\n");
+        CleanupExit();
+    }
 
-	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_TEXTURE_2D);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_2D);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
 
-	while (!g_bQuit)
-	{
-		glutDisplay();
-		eglSwapBuffers(display, surface);	
-	}
-	opengles_shutdown(display, surface, context);
+    while (!g_bQuit)
+    {
+        glutDisplay();
+        eglSwapBuffers(display, surface);
+    }
+    opengles_shutdown(display, surface, context);
 
-	base64_done();
-	CleanupExit();
+    base64_done();
+    CleanupExit();
 #endif
 }
 
 int main(int argc, char **argv)
 {
-	XnStatus nRetVal = XN_STATUS_OK;
+    XnStatus nRetVal = XN_STATUS_OK;
 
-	base64_init();
-	SceneDrawerInit();
-	initFromContextFile();
-	registerUserCallbacks();
+    base64_init();
+    SceneDrawerInit();
+    initFromContextFile();
+    registerUserCallbacks();
 
-	nRetVal = g_Context.StartGeneratingAll();
-	CHECK_RC(nRetVal, "StartGenerating");
+    nRetVal = g_Context.StartGeneratingAll();
+    CHECK_RC(nRetVal, "StartGenerating");
 
 #if USE_MEMCACHE
     initializeKestrelConnection();

@@ -50,17 +50,16 @@ extern xn::DepthGenerator g_DepthGenerator;
 #define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 1
 #define MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT 1
 
-static double last_skeleton_time = 0;
-static double last_image_time = 0;
+static clock_t last_skeleton_time = 0;
+static clock_t last_image_time = 0;
 static MemcacheWorker worker(4);
 
 void SceneDrawerInit() {
-	timespec now;
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	double nowd = now.tv_sec + now.tv_nsec / 10E9;
-	last_skeleton_time = nowd - MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT;
-	last_image_time = nowd - MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT;
-	printf("Last times: %lf, %lf\n", last_image_time, last_skeleton_time);
+    clock_t now;
+    now = time(NULL);
+    last_skeleton_time = now - MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT;
+    last_image_time = now - MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT;
+    printf("Last times: %ld, %ld\n", last_image_time, last_skeleton_time);
 }
 
 unsigned int getClosestPowerOfTwo(unsigned int n)
@@ -297,80 +296,78 @@ char* JointTo2DJSON(XnUserID player, XnSkeletonJoint eJoint, char *name)
  */
 void SaveSkeleton(XnUserID player, char* player_name, char* sensor_name)
 {
-	char* buf = (char*) malloc(10000 * sizeof(char));
-	char* head = JointToJSON(player, XN_SKEL_HEAD, "head");
-	char* neck = JointToJSON(player, XN_SKEL_NECK, "neck");
-	char* left_shoulder = JointToJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
-	char* right_shoulder = JointToJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
-	char* left_elbow = JointToJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
-	char* right_elbow = JointToJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
-	char* left_hand = JointToJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
-	char* right_hand = JointToJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
-	char* torso = JointToJSON(player, XN_SKEL_TORSO, "torso");
-	char* left_hip = JointToJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
-	char* right_hip = JointToJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
-	char* left_knee = JointToJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
-	char* right_knee = JointToJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
-	char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
-	char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
+    char* buf = (char*) malloc(10000 * sizeof(char));
+    char* head = JointToJSON(player, XN_SKEL_HEAD, "head");
+    char* neck = JointToJSON(player, XN_SKEL_NECK, "neck");
+    char* left_shoulder = JointToJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
+    char* right_shoulder = JointToJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
+    char* left_elbow = JointToJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
+    char* right_elbow = JointToJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
+    char* left_hand = JointToJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
+    char* right_hand = JointToJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
+    char* torso = JointToJSON(player, XN_SKEL_TORSO, "torso");
+    char* left_hip = JointToJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
+    char* right_hip = JointToJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
+    char* left_knee = JointToJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
+    char* right_knee = JointToJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
+    char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
+    char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
 
-	char* head_2d = JointTo2DJSON(player, XN_SKEL_HEAD, "head");
-	char* neck_2d = JointTo2DJSON(player, XN_SKEL_NECK, "neck");
-	char* left_shoulder_2d = JointTo2DJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
-	char* right_shoulder_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
-	char* left_elbow_2d = JointTo2DJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
-	char* right_elbow_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
-	char* left_hand_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
-	char* right_hand_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
-	char* torso_2d = JointTo2DJSON(player, XN_SKEL_TORSO, "torso");
-	char* left_hip_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
-	char* right_hip_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
-	char* left_knee_2d = JointTo2DJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
-	char* right_knee_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
-	char* left_foot_2d = JointTo2DJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
-	char* right_foot_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
+    char* head_2d = JointTo2DJSON(player, XN_SKEL_HEAD, "head");
+    char* neck_2d = JointTo2DJSON(player, XN_SKEL_NECK, "neck");
+    char* left_shoulder_2d = JointTo2DJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
+    char* right_shoulder_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
+    char* left_elbow_2d = JointTo2DJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
+    char* right_elbow_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
+    char* left_hand_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
+    char* right_hand_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
+    char* torso_2d = JointTo2DJSON(player, XN_SKEL_TORSO, "torso");
+    char* left_hip_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
+    char* right_hip_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
+    char* left_knee_2d = JointTo2DJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
+    char* right_knee_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
+    char* left_foot_2d = JointTo2DJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
+    char* right_foot_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
 
-	char *context = get_context();
+    char *context = get_context();
 
-	timespec t;
-	 clock_gettime(CLOCK_REALTIME, &t);
-	snprintf((char*)buf, 10000,
-		"{\"created_at\": %ld,"
-		"\"context\": \"%s\","
-		"\"sensor_type\": \"kinect\","
-		"\"sensor_id\": \"%s\","
-		"\"sensor_position\": %s,"
-		"\"player\": \"%d\", "
-		"\"type\": \"skeleton\", "
-		"\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
-		"\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
-		 
-		t.tv_sec,
-		get_context(),
-		 getSensorID(),
-		 getSensorPosition(),
-		 player, //player_name,
-		 head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
-		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
-		 left_foot, right_foot,
+    clock_t t = time(NULL);
+    snprintf((char*)buf, 10000,
+        "{\"created_at\": %ld,"
+        "\"context\": \"%s\","
+        "\"sensor_type\": \"kinect\","
+        "\"sensor_id\": \"%s\","
+        "\"sensor_position\": %s,"
+        "\"player\": \"%d\", "
+        "\"type\": \"skeleton\", "
+        "\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
+        "\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 
-		 head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
-		 right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
-		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
+         t,
+         get_context(),
+         getSensorID(),
+         getSensorPosition(),
+         player, //player_name,
+         head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
+         left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
+         left_foot, right_foot,
+
+         head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
+         right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
+         right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
 #if USE_MEMCACHE
-	timespec now;
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	double nowd = now.tv_sec + now.tv_nsec / 10E9;
+    clock_t now;
+    now = time(NULL);
 
-	if (nowd - last_skeleton_time > MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT) {
-		last_skeleton_time = nowd;
-		worker.AddMessage(buf);
-	} else {
-		free(buf);
-	}
+    if (now - last_skeleton_time > MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT) {
+        last_skeleton_time = now;
+        worker.AddMessage(buf);
+    } else {
+        free(buf);
+    }
 #else
-	free(buf);
+    free(buf);
 #endif
 
     free(head);
@@ -456,41 +453,37 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 
     img64 = base64_encode(img, width*height*3, &outlen);
     printf("SaveImage: width = %d, height = %d\n", width, height);
-    timespec t;
-    clock_gettime(CLOCK_REALTIME, &t);
+    clock_t t = time(NULL);
 
-	snprintf(buf, buf_size, 
-		"{\"created_at\": %ld,"
-		"\"context\": \"%s\","
-		"\"sensor_type\": \"kinect\"," 
-		"\"sensor_id\": \"%s\","
-		"\"sensor_position\": %s,"
-		"\"type\": \"%s\","
-		"\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
-		
-		t.tv_sec,
-		context, 
-		getSensorID(),
-		getSensorPosition(),
-		sensor_type, 
-		sensor_type,
-		outlen/sizeof(char), img64, width, height);
+    snprintf(buf, buf_size,
+        "{\"created_at\": %ld,"
+        "\"context\": \"%s\","
+        "\"sensor_type\": \"kinect\","
+        "\"sensor_id\": \"%s\","
+        "\"sensor_position\": %s,"
+        "\"type\": \"%s\","
+        "\"%s\": {\"image\": \"%.*s\", \"width\": %d, \"height\": %d }}",
+
+        t,
+        context,
+        getSensorID(),
+        getSensorPosition(),
+        sensor_type,
+        sensor_type,
+        outlen/sizeof(char), img64, width, height);
 
 #if USE_MEMCACHE
-	timespec now;
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	double nowd = now.tv_sec + now.tv_nsec / 10E9;
-	if (nowd - last_image_time > MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT) {
-		last_image_time = nowd;
-		worker.AddMessage(buf);
-	} else {
-		free(buf);
-	}
+    clock_t now;
+    now = time(NULL);
+    if (now - last_image_time > MIN_DELAY_BETWEEN_IMAGE_MEASUREMENT) {
+        last_image_time = now;
+        worker.AddMessage(buf);
+    } else {
+        free(buf);
+    }
 #else
-	free(buf);
+    free(buf);
 #endif
-
-
 
     free(img64);
     free(context);
@@ -499,82 +492,82 @@ void SaveImage(char *img, int width, int height, char *player_name, char* sensor
 void DrawJoints(XnUserID user) {
     glColor4f(1-Colors[user%nColors][0], 1-Colors[user%nColors][1], 1-Colors[user%nColors][2], 1);
 
-	// Try to draw all joints
-	DrawJoint(user, XN_SKEL_HEAD);
-	DrawJoint(user, XN_SKEL_NECK);
-	DrawJoint(user, XN_SKEL_TORSO);
-	DrawJoint(user, XN_SKEL_WAIST);
+    // Try to draw all joints
+    DrawJoint(user, XN_SKEL_HEAD);
+    DrawJoint(user, XN_SKEL_NECK);
+    DrawJoint(user, XN_SKEL_TORSO);
+    DrawJoint(user, XN_SKEL_WAIST);
 
-	DrawJoint(user, XN_SKEL_LEFT_COLLAR);
-	DrawJoint(user, XN_SKEL_LEFT_SHOULDER);
-	DrawJoint(user, XN_SKEL_LEFT_ELBOW);
-	DrawJoint(user, XN_SKEL_LEFT_WRIST);
-	DrawJoint(user, XN_SKEL_LEFT_HAND);
-	DrawJoint(user, XN_SKEL_LEFT_FINGERTIP);
+    DrawJoint(user, XN_SKEL_LEFT_COLLAR);
+    DrawJoint(user, XN_SKEL_LEFT_SHOULDER);
+    DrawJoint(user, XN_SKEL_LEFT_ELBOW);
+    DrawJoint(user, XN_SKEL_LEFT_WRIST);
+    DrawJoint(user, XN_SKEL_LEFT_HAND);
+    DrawJoint(user, XN_SKEL_LEFT_FINGERTIP);
 
-	DrawJoint(user, XN_SKEL_RIGHT_COLLAR);
-	DrawJoint(user, XN_SKEL_RIGHT_SHOULDER);
-	DrawJoint(user, XN_SKEL_RIGHT_ELBOW);
-	DrawJoint(user, XN_SKEL_RIGHT_WRIST);
-	DrawJoint(user, XN_SKEL_RIGHT_HAND);
-	DrawJoint(user, XN_SKEL_RIGHT_FINGERTIP);
+    DrawJoint(user, XN_SKEL_RIGHT_COLLAR);
+    DrawJoint(user, XN_SKEL_RIGHT_SHOULDER);
+    DrawJoint(user, XN_SKEL_RIGHT_ELBOW);
+    DrawJoint(user, XN_SKEL_RIGHT_WRIST);
+    DrawJoint(user, XN_SKEL_RIGHT_HAND);
+    DrawJoint(user, XN_SKEL_RIGHT_FINGERTIP);
 
-	DrawJoint(user, XN_SKEL_LEFT_HIP);
-	DrawJoint(user, XN_SKEL_LEFT_KNEE);
-	DrawJoint(user, XN_SKEL_LEFT_ANKLE);
-	DrawJoint(user, XN_SKEL_LEFT_FOOT);
+    DrawJoint(user, XN_SKEL_LEFT_HIP);
+    DrawJoint(user, XN_SKEL_LEFT_KNEE);
+    DrawJoint(user, XN_SKEL_LEFT_ANKLE);
+    DrawJoint(user, XN_SKEL_LEFT_FOOT);
 
-	DrawJoint(user, XN_SKEL_RIGHT_HIP);
-	DrawJoint(user, XN_SKEL_RIGHT_KNEE);
-	DrawJoint(user, XN_SKEL_RIGHT_ANKLE);
-	DrawJoint(user, XN_SKEL_RIGHT_FOOT);
+    DrawJoint(user, XN_SKEL_RIGHT_HIP);
+    DrawJoint(user, XN_SKEL_RIGHT_KNEE);
+    DrawJoint(user, XN_SKEL_RIGHT_ANKLE);
+    DrawJoint(user, XN_SKEL_RIGHT_FOOT);
 }
 
 void DrawSkeleton(XnUserID user) {
 #ifndef USE_GLES
-	glBegin(GL_LINES);
+    glBegin(GL_LINES);
 #endif
     DrawLimb(user, XN_SKEL_HEAD, XN_SKEL_NECK);
 
-	DrawLimb(user, XN_SKEL_NECK, XN_SKEL_LEFT_SHOULDER);
-	DrawLimb(user, XN_SKEL_LEFT_SHOULDER, XN_SKEL_LEFT_ELBOW);
-	if (!DrawLimb(user, XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_WRIST))
-	{
-		DrawLimb(user, XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_HAND);
-	}
-	else
-	{
-		DrawLimb(user, XN_SKEL_LEFT_WRIST, XN_SKEL_LEFT_HAND);
-		DrawLimb(user, XN_SKEL_LEFT_HAND, XN_SKEL_LEFT_FINGERTIP);
-	}
+    DrawLimb(user, XN_SKEL_NECK, XN_SKEL_LEFT_SHOULDER);
+    DrawLimb(user, XN_SKEL_LEFT_SHOULDER, XN_SKEL_LEFT_ELBOW);
+    if (!DrawLimb(user, XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_WRIST))
+    {
+        DrawLimb(user, XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_HAND);
+    }
+    else
+    {
+        DrawLimb(user, XN_SKEL_LEFT_WRIST, XN_SKEL_LEFT_HAND);
+        DrawLimb(user, XN_SKEL_LEFT_HAND, XN_SKEL_LEFT_FINGERTIP);
+    }
 
 
-	DrawLimb(user, XN_SKEL_NECK, XN_SKEL_RIGHT_SHOULDER);
-	DrawLimb(user, XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_ELBOW);
-	if (!DrawLimb(user, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_WRIST))
-	{
-		DrawLimb(user, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_HAND);
-	}
-	else
-	{
-		DrawLimb(user, XN_SKEL_RIGHT_WRIST, XN_SKEL_RIGHT_HAND);
-		DrawLimb(user, XN_SKEL_RIGHT_HAND, XN_SKEL_RIGHT_FINGERTIP);
-	}
+    DrawLimb(user, XN_SKEL_NECK, XN_SKEL_RIGHT_SHOULDER);
+    DrawLimb(user, XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_ELBOW);
+    if (!DrawLimb(user, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_WRIST))
+    {
+        DrawLimb(user, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_HAND);
+    }
+    else
+    {
+        DrawLimb(user, XN_SKEL_RIGHT_WRIST, XN_SKEL_RIGHT_HAND);
+        DrawLimb(user, XN_SKEL_RIGHT_HAND, XN_SKEL_RIGHT_FINGERTIP);
+    }
 
-	DrawLimb(user, XN_SKEL_LEFT_SHOULDER, XN_SKEL_TORSO);
-	DrawLimb(user, XN_SKEL_RIGHT_SHOULDER, XN_SKEL_TORSO);
+    DrawLimb(user, XN_SKEL_LEFT_SHOULDER, XN_SKEL_TORSO);
+    DrawLimb(user, XN_SKEL_RIGHT_SHOULDER, XN_SKEL_TORSO);
 
-	DrawLimb(user, XN_SKEL_TORSO, XN_SKEL_LEFT_HIP);
-	DrawLimb(user, XN_SKEL_LEFT_HIP, XN_SKEL_LEFT_KNEE);
-	DrawLimb(user, XN_SKEL_LEFT_KNEE, XN_SKEL_LEFT_FOOT);
+    DrawLimb(user, XN_SKEL_TORSO, XN_SKEL_LEFT_HIP);
+    DrawLimb(user, XN_SKEL_LEFT_HIP, XN_SKEL_LEFT_KNEE);
+    DrawLimb(user, XN_SKEL_LEFT_KNEE, XN_SKEL_LEFT_FOOT);
 
-	DrawLimb(user, XN_SKEL_TORSO, XN_SKEL_RIGHT_HIP);
-	DrawLimb(user, XN_SKEL_RIGHT_HIP, XN_SKEL_RIGHT_KNEE);
-	DrawLimb(user, XN_SKEL_RIGHT_KNEE, XN_SKEL_RIGHT_FOOT);
+    DrawLimb(user, XN_SKEL_TORSO, XN_SKEL_RIGHT_HIP);
+    DrawLimb(user, XN_SKEL_RIGHT_HIP, XN_SKEL_RIGHT_KNEE);
+    DrawLimb(user, XN_SKEL_RIGHT_KNEE, XN_SKEL_RIGHT_FOOT);
 
-	DrawLimb(user, XN_SKEL_LEFT_HIP, XN_SKEL_RIGHT_HIP);
+    DrawLimb(user, XN_SKEL_LEFT_HIP, XN_SKEL_RIGHT_HIP);
 #ifndef USE_GLES
-	glEnd();
+    glEnd();
 #endif
 }
 
@@ -664,50 +657,49 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, co
     memset(img, 0, sizeof(img));
 
     pDepth = dmd.Data();
-	XnUInt32 nIndex = 0;
-	// Prepare the texture map
-	for (nY=0; nY<g_nYRes; nY++)
-	{
-		for (nX=0; nX < g_nXRes; nX++, nIndex++)
-		{
+    // Prepare the texture map
+    for (nY=0; nY<g_nYRes; nY++)
+    {
+        for (nX=0; nX < g_nXRes; nX++, nIndex++)
+        {
 
-			pDestImage[0] = 0;
-			pDestImage[1] = 0;
-			pDestImage[2] = 0;
-			if (*pLabels != 0)
-			{
-				nValue = *pDepth;
-				XnLabel label = *pLabels;
-				XnUInt32 nColorID = label % nColors;
-				if (label == 0)
-				{
-					nColorID = nColors;
-				}
+            pDestImage[0] = 0;
+            pDestImage[1] = 0;
+            pDestImage[2] = 0;
+            if (*pLabels != 0)
+            {
+                nValue = *pDepth;
+                XnLabel label = *pLabels;
+                XnUInt32 nColorID = label % nColors;
+                if (label == 0)
+                {
+                    nColorID = nColors;
+                }
 
-				if (nValue != 0)
-				{
-					nHistValue = pDepthHist[nValue];
+                if (nValue != 0)
+                {
+                    nHistValue = pDepthHist[nValue];
 
-					pDestImage[0] = nHistValue * Colors[nColorID][0];
-					pDestImage[1] = nHistValue * Colors[nColorID][1];
-					pDestImage[2] = nHistValue * Colors[nColorID][2];
-				}
-			}
+                    pDestImage[0] = nHistValue * Colors[nColorID][0];
+                    pDestImage[1] = nHistValue * Colors[nColorID][1];
+                    pDestImage[2] = nHistValue * Colors[nColorID][2];
+                }
+            }
 
-			img[(nY*g_nXRes +nX)*3+0] = (unsigned char) pDestImage[0];
-			img[(nY*g_nXRes +nX)*3+1] = (unsigned char) pDestImage[1];
-			img[(nY*g_nXRes +nX)*3+2] = (unsigned char) pDestImage[2];
+            img[(nY*g_nXRes +nX)*3+0] = (unsigned char) pDestImage[0];
+            img[(nY*g_nXRes +nX)*3+1] = (unsigned char) pDestImage[1];
+            img[(nY*g_nXRes +nX)*3+2] = (unsigned char) pDestImage[2];
 
-			pDepth++;
-			pLabels++;
-			pDestImage+=3;
-		}
+            pDepth++;
+            pLabels++;
+            pDestImage+=3;
+        }
 
-		pDestImage += (texWidth - g_nXRes) *3;
-	}
+        pDestImage += (texWidth - g_nXRes) *3;
+    }
 
-	SaveImage(img, g_nXRes, g_nYRes, "player1", "image_depth");
-	SaveImage((char*)pImage, 1280, 1024, "player1", "image_rgb");
+    SaveImage(img, g_nXRes, g_nYRes, "player1", "image_depth");
+    SaveImage((char*)pImage, 1280, 1024, "player1", "image_rgb");
 
     free(img);
 
@@ -728,7 +720,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, co
     {
         if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
         {
-        	DrawJoints(aUsers[i]);
+            DrawJoints(aUsers[i]);
             SaveSkeleton(aUsers[i], "player1", "kinect1");
             DrawSkeleton(aUsers[i]);
         }
