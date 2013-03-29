@@ -256,9 +256,13 @@ void initFromContextFile() {
 
 void registerUserCallbacks() {
     XnStatus nRetVal = XN_STATUS_OK;
-    XnCallbackHandle hCalibrationComplete;
+    XnCallbackHandle hCalibrationComplete, hCalibrationInProgress, hCalibrationStart, hUserCallbacks;
+    
+    nRetVal = g_UserGenerator.RegisterUserCallbacks(User_NewUser, NULL, NULL, hUserCallbacks);
+CHECK_RC(nRetVal, "Register to user callbacks");
 
     g_UserGenerator.GetSkeletonCap().SetSkeletonProfile(XN_SKEL_PROFILE_ALL);
+
     nRetVal = g_UserGenerator.GetSkeletonCap().RegisterToCalibrationComplete(UserCalibration_CalibrationComplete, NULL, hCalibrationComplete);
     CHECK_RC(nRetVal, "Register to calibration complete");
 }
