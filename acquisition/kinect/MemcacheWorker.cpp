@@ -84,9 +84,7 @@ void MemcacheWorker::Run() {
         pthread_mutex_unlock(&mutex);
         if (!isDone && message != NULL) {
             DBG("%s sending message\n", __FUNCTION__);
-            printf("%s\n", message);
             memcached_return rc;
-            printf("g_MemCache = %p\n", g_MemCache);
             rc = memcached_set(g_MemCache,
                      "measurements", strlen("measurements"),
                      message, strlen(message),
@@ -94,9 +92,8 @@ void MemcacheWorker::Run() {
 
             if (rc != MEMCACHED_SUCCESS) {
                 printf("Could NOT send to memcache. I'm very very sad :-( :-( :-(\n");
-            } else {
-                printf("I can send to memcache. HURRAY!! :-) :-) :-)\n");
             }
+
             free(message);
             sleep(1);
         }
