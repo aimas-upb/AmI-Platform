@@ -21,9 +21,11 @@ void StopWatch::Reset() {
 	state = STATE_READY;
 }
 
-void StopWatch::ReStart() {
+long StopWatch::ReStart() {
 	Stop();
+	long time = GetTime();
 	Start();
+	return time;
 }
 
 long StopWatch::GetSplitTime() {
