@@ -105,7 +105,7 @@ define ['cs!widget'], (Widget) ->
             temp_context_2d = @temp_canvas.getContext('2d')
             @drawImage(temp_context_2d)
           
-            # Check if image and skeleton ar at most 1s apart
+            # Check if image and skeleton are at most 1s apart
             ###
               image_created_at = parseInt(@last_image.get('created_at'))
               skeleton_created_at = parseInt(@last_skeleton.get('created_at'))
