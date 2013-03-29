@@ -39,6 +39,7 @@
 #include "SceneDrawer.h"
 #include "context.h"
 #include "base64.h"
+#include "debug.h"
 #include "ami_environment.h"
 #include "util/Worker.h"
 #include "util/StopWatch.h"
@@ -55,27 +56,12 @@
 
 using namespace std;
 
-static const std::string base64_chars =
-             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-             "abcdefghijklmnopqrstuvwxyz"
-             "0123456789+/";
-
 extern xn::UserGenerator g_UserGenerator;
 extern xn::DepthGenerator g_DepthGenerator;
-
-extern XnBool g_bDrawBackground;
-extern XnBool g_bDrawPixels;
-extern XnBool g_bDrawSkeleton;
-extern XnBool g_bPrintID;
-extern XnBool g_bPrintState;
-
-extern XnBool g_bPrintFrameID;
-extern XnBool g_bMarkJoints;
 
 #define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 10 //ms
 #define MIN_DELAY_BETWEEN_RGB_MEASUREMENT 1000
 #define MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT 1000
-
 
 class DataThrottle {
 public:
@@ -102,6 +88,8 @@ DataThrottle skeleton_throttle(MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT);
 DataThrottle rgb_throttle(MIN_DELAY_BETWEEN_RGB_MEASUREMENT);
 DataThrottle depth_throttle(MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT);
 
+void SceneDrawerInit() {
+}
 
 #ifdef USE_MEMCACHE
 #include <libmemcached/memcached.h>
@@ -141,22 +129,6 @@ public:
 };
 #endif
 
-
-
-void SceneDrawerInit() {
-}
-
-#include <map>
-std::map<XnUInt32, std::pair<XnCalibrationStatus, XnPoseDetectionStatus> > m_Errors;
-void XN_CALLBACK_TYPE MyCalibrationInProgress(xn::SkeletonCapability& /*capability*/, XnUserID id, XnCalibrationStatus calibrationError, void* /*pCookie*/)
-{
-    m_Errors[id].first = calibrationError;
-}
-void XN_CALLBACK_TYPE MyPoseInProgress(xn::PoseDetectionCapability& /*capability*/, const XnChar* /*strPose*/, XnUserID id, XnPoseDetectionStatus poseError, void* /*pCookie*/)
-{
-    m_Errors[id].second = poseError;
-}
-
 unsigned int getClosestPowerOfTwo(unsigned int n)
 {
     unsigned int m = 2;
@@ -164,13 +136,12 @@ unsigned int getClosestPowerOfTwo(unsigned int n)
 
     return m;
 }
-GLuint initTexture(void** buf, int& width, int& height)
+GLuint initTexture(void** buf, int width, int height)
 {
+	// Ask OpenGL to generate a texture ID for us.
     GLuint texID = 0;
     glGenTextures(1,&texID);
 
-    width = getClosestPowerOfTwo(width);
-    height = getClosestPowerOfTwo(height);
     *buf = new unsigned char[width*height*4];
     glBindTexture(GL_TEXTURE_2D,texID);
 
@@ -180,27 +151,28 @@ GLuint initTexture(void** buf, int& width, int& height)
     return texID;
 }
 
-GLfloat texcoords[8];
-void DrawRectangle(float topLeftX, float topLeftY, float bottomRightX, float bottomRightY)
+void DrawRectangle(float topLeftX, float topLeftY,
+		           float bottomRightX, float bottomRightY)
 {
-    GLfloat verts[8] = {	topLeftX, topLeftY,
-        topLeftX, bottomRightY,
-        bottomRightX, bottomRightY,
-        bottomRightX, topLeftY
-    };
+    GLfloat verts[8] = {
+    						topLeftX, topLeftY,
+    						topLeftX, bottomRightY,
+    						bottomRightX, bottomRightY,
+    						bottomRightX, topLeftY
+    					};
     glVertexPointer(2, GL_FLOAT, 0, verts);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
     //TODO: Maybe glFinish needed here instead - if there's some bad graphics crap
     glFlush();
 }
-void DrawTexture(float topLeftX, float topLeftY, float bottomRightX, float bottomRightY)
+void DrawTexture(float topLeftX, float topLeftY,
+				 float bottomRightX, float bottomRightY,
+				 GLfloat *texcoords)
 {
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glTexCoordPointer(2, GL_FLOAT, 0, texcoords);
-
     DrawRectangle(topLeftX, topLeftY, bottomRightX, bottomRightY);
-
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
@@ -453,7 +425,6 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
 		 right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
 		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
-
 	worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
 
     free(head);
@@ -490,61 +461,6 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
 
     free(context);
 #endif
-}
-
-void SaveImageToFile(unsigned char *img, int width, int height) {
-    unsigned char bmpfileheader[14] = {'B','M', 0,0,0,0, 0,0, 0,0, 54,0,0,0};
-    unsigned char bmpinfoheader[40] = {40,0,0,0, 0,0,0,0, 0,0,0,0, 1,0, 24,0};
-    unsigned char bmppad[3] = {0,0,0};
-    unsigned int filesize = 3 * width * height;
-    unsigned int i;
-
-    // double word. file size
-    bmpfileheader[ 2] = (unsigned char)(filesize    );
-    bmpfileheader[ 3] = (unsigned char)(filesize>> 8);
-    bmpfileheader[ 4] = (unsigned char)(filesize>>16);
-    bmpfileheader[ 5] = (unsigned char)(filesize>>24);
-
-    bmpinfoheader[ 4] = (unsigned char)(   width	);
-    bmpinfoheader[ 5] = (unsigned char)(   width>> 8);
-    bmpinfoheader[ 6] = (unsigned char)(   width>>16);
-    bmpinfoheader[ 7] = (unsigned char)(   width>>24);
-    bmpinfoheader[ 8] = (unsigned char)(  height     );
-    bmpinfoheader[ 9] = (unsigned char)(  height>> 8);
-    bmpinfoheader[10] = (unsigned char)(  height>>16);
-    bmpinfoheader[11] = (unsigned char)(  height>>24);
-
-
-    FILE *f = fopen("/home/ami/AmI-Platform/image.bmp","w");
-    fwrite(bmpfileheader,1,14,f);
-    fwrite(bmpinfoheader,1,40,f);
-    for(i=0; i<height; i++)
-    {
-        fwrite(img + (3 * width * (height-1-i)), 3, width, f);
-    }
-    fclose(f);
-
-
-	cv::Mat mat(height, width, CV_8UC3, img);
-
-	util::StopWatch sw;
-	sw.Start();
-	vector<int> compression_params;
-	compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-	compression_params.push_back(3);
-	cv::imwrite("/home/ami/AmI-Platform/image.png", mat, compression_params);
-
-
-	printf("SW: png in %ld ms\n", sw.Stop());
-
-	sw.Reset();
-	sw.Start();
-	compression_params.clear();
-	compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
-	compression_params.push_back(95);
-	cv::imwrite("/home/ami/AmI-Platform/image.jpg", mat, compression_params);
-	printf("SW: jpg in %ld ms\n", sw.Stop());
-
 }
 
 /*
@@ -619,315 +535,279 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
 
 }
 
-void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, const xn::ImageMetaData& imd)
-{
+void DrawJoints(XnUserID user) {
+    glColor4f(1-Colors[user%nColors][0], 1-Colors[user%nColors][1], 1-Colors[user%nColors][2], 1);
 
-    static bool bInitialized = false;
-    static GLuint depthTexID;
-    static unsigned char* pDepthTexBuf;
-    static int texWidth, texHeight;
+    // Try to draw all joints
+    DrawJoint(user, XN_SKEL_HEAD);
+    DrawJoint(user, XN_SKEL_NECK);
+    DrawJoint(user, XN_SKEL_TORSO);
+    DrawJoint(user, XN_SKEL_WAIST);
 
-    float topLeftX;
-    float topLeftY;
-    float bottomRightY;
-    float bottomRightX;
-    float texXpos;
-    float texYpos;
+    DrawJoint(user, XN_SKEL_LEFT_COLLAR);
+    DrawJoint(user, XN_SKEL_LEFT_SHOULDER);
+    DrawJoint(user, XN_SKEL_LEFT_ELBOW);
+    DrawJoint(user, XN_SKEL_LEFT_WRIST);
+    DrawJoint(user, XN_SKEL_LEFT_HAND);
+    DrawJoint(user, XN_SKEL_LEFT_FINGERTIP);
 
-    if(!bInitialized)
+    DrawJoint(user, XN_SKEL_RIGHT_COLLAR);
+    DrawJoint(user, XN_SKEL_RIGHT_SHOULDER);
+    DrawJoint(user, XN_SKEL_RIGHT_ELBOW);
+    DrawJoint(user, XN_SKEL_RIGHT_WRIST);
+    DrawJoint(user, XN_SKEL_RIGHT_HAND);
+    DrawJoint(user, XN_SKEL_RIGHT_FINGERTIP);
+
+    DrawJoint(user, XN_SKEL_LEFT_HIP);
+    DrawJoint(user, XN_SKEL_LEFT_KNEE);
+    DrawJoint(user, XN_SKEL_LEFT_ANKLE);
+    DrawJoint(user, XN_SKEL_LEFT_FOOT);
+
+    DrawJoint(user, XN_SKEL_RIGHT_HIP);
+    DrawJoint(user, XN_SKEL_RIGHT_KNEE);
+    DrawJoint(user, XN_SKEL_RIGHT_ANKLE);
+    DrawJoint(user, XN_SKEL_RIGHT_FOOT);
+}
+
+void DrawSkeleton(XnUserID user) {
+#ifndef USE_GLES
+    glBegin(GL_LINES);
+#endif
+    DrawLimb(user, XN_SKEL_HEAD, XN_SKEL_NECK);
+
+    DrawLimb(user, XN_SKEL_NECK, XN_SKEL_LEFT_SHOULDER);
+    DrawLimb(user, XN_SKEL_LEFT_SHOULDER, XN_SKEL_LEFT_ELBOW);
+    if (!DrawLimb(user, XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_WRIST))
     {
-        texWidth =  getClosestPowerOfTwo(dmd.XRes());
-        texHeight = getClosestPowerOfTwo(dmd.YRes());
-
-//		printf("Initializing depth texture: width = %d, height = %d\n", texWidth, texHeight);
-        depthTexID = initTexture((void**)&pDepthTexBuf,texWidth, texHeight) ;
-
-//		printf("Initialized depth texture: width = %d, height = %d\n", texWidth, texHeight);
-        bInitialized = true;
-
-        topLeftX = dmd.XRes();
-        topLeftY = 0;
-        bottomRightY = dmd.YRes();
-        bottomRightX = 0;
-        texXpos =(float)dmd.XRes()/texWidth;
-        texYpos  =(float)dmd.YRes()/texHeight;
-
-        memset(texcoords, 0, 8*sizeof(float));
-        texcoords[0] = texXpos, texcoords[1] = texYpos, texcoords[2] = texXpos, texcoords[7] = texYpos;
-    }
-
-    unsigned int nValue = 0;
-    unsigned int nHistValue = 0;
-    unsigned int nIndex = 0;
-    unsigned int nX = 0;
-    unsigned int nY = 0;
-    unsigned int nNumberOfPoints = 0;
-    XnUInt16 g_nXRes = dmd.XRes();
-    XnUInt16 g_nYRes = dmd.YRes();
-
-    unsigned char* pDestImage = pDepthTexBuf;
-
-    const XnDepthPixel* pDepth = dmd.Data();
-    const XnLabel* pLabels = smd.Data();
-    const XnUInt8* pImage = imd.Data();
-
-    static unsigned int nZRes = dmd.ZRes();
-    static float* pDepthHist = (float*)malloc(nZRes* sizeof(float));
-
-    // Calculate the accumulative histogram
-    memset(pDepthHist, 0, nZRes*sizeof(float));
-    for (nY=0; nY<g_nYRes; nY++)
-    {
-        for (nX=0; nX<g_nXRes; nX++)
-        {
-            nValue = *pDepth;
-
-            if (nValue != 0)
-            {
-                pDepthHist[nValue]++;
-                nNumberOfPoints++;
-            }
-            pDepth++;
-        }
-    }
-
-    for (nIndex=1; nIndex<nZRes; nIndex++)
-    {
-        pDepthHist[nIndex] += pDepthHist[nIndex-1];
-    }
-    if (nNumberOfPoints)
-    {
-        for (nIndex=1; nIndex<nZRes; nIndex++)
-        {
-            pDepthHist[nIndex] = (unsigned int)(256 * (1.0f - (pDepthHist[nIndex] / nNumberOfPoints)));
-        }
-    }
-
-    char *img = (char *) malloc (3 * g_nXRes * g_nYRes);
-    memset(img, 0, sizeof(img));
-
-    printf("xRes = %d, yRes = %d\n", g_nXRes, g_nYRes);
-    pDepth = dmd.Data();
-    if (g_bDrawPixels)
-    {
-        XnUInt32 nIndex = 0;
-        // Prepare the texture map
-        for (nY=0; nY<g_nYRes; nY++)
-        {
-            for (nX=0; nX < g_nXRes; nX++, nIndex++)
-            {
-
-                pDestImage[0] = 0;
-                pDestImage[1] = 0;
-                pDestImage[2] = 0;
-                if (g_bDrawBackground || *pLabels != 0)
-                {
-                    nValue = *pDepth;
-                    XnLabel label = *pLabels;
-                    XnUInt32 nColorID = label % nColors;
-                    if (label == 0)
-                    {
-                        nColorID = nColors;
-                    }
-
-                    if (nValue != 0)
-                    {
-                        nHistValue = pDepthHist[nValue];
-
-                        pDestImage[0] = nHistValue * Colors[nColorID][0];
-                        pDestImage[1] = nHistValue * Colors[nColorID][1];
-                        pDestImage[2] = nHistValue * Colors[nColorID][2];
-                    }
-                }
-
-                img[(nY*g_nXRes +nX)*3+0] = (unsigned char) pDestImage[0];
-                img[(nY*g_nXRes +nX)*3+1] = (unsigned char) pDestImage[1];
-                img[(nY*g_nXRes +nX)*3+2] = (unsigned char) pDestImage[2];
-
-                pDepth++;
-                pLabels++;
-                pDestImage+=3;
-            }
-
-            pDestImage += (texWidth - g_nXRes) *3;
-        }
-
-
-        if (rgb_throttle.CanSend()) {
-        	SaveImage(img, g_nXRes, g_nYRes, "player1", "image_depth", &rgb_throttle);
-        	rgb_throttle.MarkSend();
-        }
-
-        if (depth_throttle.CanSend()) {
-        	SaveImage((char*)pImage, 1280, 1024, "player1", "image_rgb", &depth_throttle);
-        	depth_throttle.MarkSend();
-        }
-
+        DrawLimb(user, XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_HAND);
     }
     else
     {
-        xnOSMemSet(pDepthTexBuf, 0, 3*2*g_nXRes*g_nYRes);
+        DrawLimb(user, XN_SKEL_LEFT_WRIST, XN_SKEL_LEFT_HAND);
+        DrawLimb(user, XN_SKEL_LEFT_HAND, XN_SKEL_LEFT_FINGERTIP);
     }
 
-    free(img);
 
-    glBindTexture(GL_TEXTURE_2D, depthTexID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, pDepthTexBuf);
-
-    // Display the OpenGL texture map
-    glColor4f(0.75,0.75,0.75,1);
-
-    glEnable(GL_TEXTURE_2D);
-    DrawTexture(dmd.XRes(),dmd.YRes(),0,0);
-    glDisable(GL_TEXTURE_2D);
-
-    char strLabel[50] = "";
-    XnUserID aUsers[15];
-    XnUInt16 nUsers = 15;
-    g_UserGenerator.GetUsers(aUsers, nUsers);
-    for (int i = 0; i < nUsers; ++i)
+    DrawLimb(user, XN_SKEL_NECK, XN_SKEL_RIGHT_SHOULDER);
+    DrawLimb(user, XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_ELBOW);
+    if (!DrawLimb(user, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_WRIST))
     {
-#ifndef USE_GLES
-        if (g_bPrintID)
-        {
-            XnPoint3D com;
-            g_UserGenerator.GetCoM(aUsers[i], com);
-            g_DepthGenerator.ConvertRealWorldToProjective(1, &com, &com);
-
-            XnUInt32 nDummy = 0;
-
-            xnOSMemSet(strLabel, 0, sizeof(strLabel));
-            if (!g_bPrintState)
-            {
-                // Tracking
-                xnOSStrFormat(strLabel, sizeof(strLabel), &nDummy, "%d", aUsers[i]);
-            }
-            else if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
-            {
-                // Tracking
-                xnOSStrFormat(strLabel, sizeof(strLabel), &nDummy, "%d - Tracking", aUsers[i]);
-            }
-            else if (g_UserGenerator.GetSkeletonCap().IsCalibrating(aUsers[i]))
-            {
-                // Calibrating
-                xnOSStrFormat(strLabel, sizeof(strLabel), &nDummy, "%d - Calibrating [%s]", aUsers[i], GetCalibrationErrorString(m_Errors[aUsers[i]].first));
-            }
-            else
-            {
-                // Nothing
-                xnOSStrFormat(strLabel, sizeof(strLabel), &nDummy, "%d - Looking for pose [%s]", aUsers[i], GetPoseErrorString(m_Errors[aUsers[i]].second));
-            }
-
-
-            glColor4f(1-Colors[i%nColors][0], 1-Colors[i%nColors][1], 1-Colors[i%nColors][2], 1);
-
-            glRasterPos2i(com.X, com.Y);
-            glPrintString(GLUT_BITMAP_HELVETICA_18, strLabel);
-        }
-#endif
-        if (g_bDrawSkeleton && g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
-        {
-            glColor4f(1-Colors[aUsers[i]%nColors][0], 1-Colors[aUsers[i]%nColors][1], 1-Colors[aUsers[i]%nColors][2], 1);
-
-            // Draw Joints
-            if (g_bMarkJoints)
-            {
-                // Try to draw all joints
-                DrawJoint(aUsers[i], XN_SKEL_HEAD);
-                DrawJoint(aUsers[i], XN_SKEL_NECK);
-                DrawJoint(aUsers[i], XN_SKEL_TORSO);
-                DrawJoint(aUsers[i], XN_SKEL_WAIST);
-
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_COLLAR);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_SHOULDER);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_ELBOW);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_WRIST);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_HAND);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_FINGERTIP);
-
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_COLLAR);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_SHOULDER);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_ELBOW);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_WRIST);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_HAND);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_FINGERTIP);
-
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_HIP);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_KNEE);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_ANKLE);
-                DrawJoint(aUsers[i], XN_SKEL_LEFT_FOOT);
-
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_HIP);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_KNEE);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_ANKLE);
-                DrawJoint(aUsers[i], XN_SKEL_RIGHT_FOOT);
-            }
-
-            if (skeleton_throttle.CanSend()) {
-            	SaveSkeleton(aUsers[i], "player1", "kinect1");
-            	skeleton_throttle.MarkSend();
-            }
-#ifndef USE_GLES
-            glBegin(GL_LINES);
-#endif
-
-            // Draw Limbs
-            DrawLimb(aUsers[i], XN_SKEL_HEAD, XN_SKEL_NECK);
-
-            DrawLimb(aUsers[i], XN_SKEL_NECK, XN_SKEL_LEFT_SHOULDER);
-            DrawLimb(aUsers[i], XN_SKEL_LEFT_SHOULDER, XN_SKEL_LEFT_ELBOW);
-            if (!DrawLimb(aUsers[i], XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_WRIST))
-            {
-                DrawLimb(aUsers[i], XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_HAND);
-            }
-            else
-            {
-                DrawLimb(aUsers[i], XN_SKEL_LEFT_WRIST, XN_SKEL_LEFT_HAND);
-                DrawLimb(aUsers[i], XN_SKEL_LEFT_HAND, XN_SKEL_LEFT_FINGERTIP);
-            }
-
-
-            DrawLimb(aUsers[i], XN_SKEL_NECK, XN_SKEL_RIGHT_SHOULDER);
-            DrawLimb(aUsers[i], XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_ELBOW);
-            if (!DrawLimb(aUsers[i], XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_WRIST))
-            {
-                DrawLimb(aUsers[i], XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_HAND);
-            }
-            else
-            {
-                DrawLimb(aUsers[i], XN_SKEL_RIGHT_WRIST, XN_SKEL_RIGHT_HAND);
-                DrawLimb(aUsers[i], XN_SKEL_RIGHT_HAND, XN_SKEL_RIGHT_FINGERTIP);
-            }
-
-            DrawLimb(aUsers[i], XN_SKEL_LEFT_SHOULDER, XN_SKEL_TORSO);
-            DrawLimb(aUsers[i], XN_SKEL_RIGHT_SHOULDER, XN_SKEL_TORSO);
-
-            DrawLimb(aUsers[i], XN_SKEL_TORSO, XN_SKEL_LEFT_HIP);
-            DrawLimb(aUsers[i], XN_SKEL_LEFT_HIP, XN_SKEL_LEFT_KNEE);
-            DrawLimb(aUsers[i], XN_SKEL_LEFT_KNEE, XN_SKEL_LEFT_FOOT);
-
-            DrawLimb(aUsers[i], XN_SKEL_TORSO, XN_SKEL_RIGHT_HIP);
-            DrawLimb(aUsers[i], XN_SKEL_RIGHT_HIP, XN_SKEL_RIGHT_KNEE);
-            DrawLimb(aUsers[i], XN_SKEL_RIGHT_KNEE, XN_SKEL_RIGHT_FOOT);
-
-            DrawLimb(aUsers[i], XN_SKEL_LEFT_HIP, XN_SKEL_RIGHT_HIP);
-#ifndef USE_GLES
-            glEnd();
-#endif
-        }
+        DrawLimb(user, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_HAND);
     }
-
-    if (g_bPrintFrameID)
+    else
     {
-        static XnChar strFrameID[80];
-        xnOSMemSet(strFrameID, 0, 80);
-        XnUInt32 nDummy = 0;
-        xnOSStrFormat(strFrameID, sizeof(strFrameID), &nDummy, "%d", dmd.FrameID());
-
-        glColor4f(1, 0, 0, 1);
-
-        glRasterPos2i(10, 10);
-
-        glPrintString(GLUT_BITMAP_HELVETICA_18, strFrameID);
+        DrawLimb(user, XN_SKEL_RIGHT_WRIST, XN_SKEL_RIGHT_HAND);
+        DrawLimb(user, XN_SKEL_RIGHT_HAND, XN_SKEL_RIGHT_FINGERTIP);
     }
+
+    DrawLimb(user, XN_SKEL_LEFT_SHOULDER, XN_SKEL_TORSO);
+    DrawLimb(user, XN_SKEL_RIGHT_SHOULDER, XN_SKEL_TORSO);
+
+    DrawLimb(user, XN_SKEL_TORSO, XN_SKEL_LEFT_HIP);
+    DrawLimb(user, XN_SKEL_LEFT_HIP, XN_SKEL_LEFT_KNEE);
+    DrawLimb(user, XN_SKEL_LEFT_KNEE, XN_SKEL_LEFT_FOOT);
+
+    DrawLimb(user, XN_SKEL_TORSO, XN_SKEL_RIGHT_HIP);
+    DrawLimb(user, XN_SKEL_RIGHT_HIP, XN_SKEL_RIGHT_KNEE);
+    DrawLimb(user, XN_SKEL_RIGHT_KNEE, XN_SKEL_RIGHT_FOOT);
+
+    DrawLimb(user, XN_SKEL_LEFT_HIP, XN_SKEL_RIGHT_HIP);
+#ifndef USE_GLES
+    glEnd();
+#endif
+}
+
+/*
+ * Given a depth map, compute its depth histogram.
+ */
+float* getDepthHistogram(const xn::DepthMetaData& dmd)
+{
+	XnUInt16 g_nXRes = dmd.XRes();
+	XnUInt16 g_nYRes = dmd.YRes();
+	unsigned int nZRes = dmd.ZRes();
+	unsigned int nX, nY;
+	unsigned int nValue = 0;
+	unsigned int nIndex = 0;
+	float* pDepthHist = (float*)malloc(nZRes* sizeof(float));
+	unsigned int nNumberOfPoints = 0;
+	const XnDepthPixel* pDepth = dmd.Data();
+
+	// Calculate the accumulative histogram
+	memset(pDepthHist, 0, nZRes*sizeof(float));
+	for (nY=0; nY<g_nYRes; nY++)
+	{
+		for (nX=0; nX<g_nXRes; nX++)
+		{
+			nValue = *pDepth;
+
+			if (nValue != 0)
+			{
+				pDepthHist[nValue]++;
+				nNumberOfPoints++;
+			}
+			pDepth++;
+		}
+	}
+
+	for (nIndex=1; nIndex<nZRes; nIndex++)
+	{
+		pDepthHist[nIndex] += pDepthHist[nIndex-1];
+	}
+	if (nNumberOfPoints)
+	{
+		for (nIndex=1; nIndex<nZRes; nIndex++)
+		{
+			pDepthHist[nIndex] = (unsigned int)(256 * (1.0f - (pDepthHist[nIndex] / nNumberOfPoints)));
+		}
+		printf("Number of points with non-zero values in depth map: %d\n",
+				nNumberOfPoints);
+	} else
+	{
+		printf("WARNING: depth image has no non-zero pixels\n");
+	}
+
+	return pDepthHist;
+}
+
+/*
+ * Transforms the depth image into a texture and also colors people detected
+ * by the kinect. In order to do this, it gets from the scene meta data
+ * a matrix of labels, one label per pixel.
+ */
+void transformDepthImageIntoTexture(const xn::DepthMetaData& dmd,
+									const xn::SceneMetaData& smd,
+									unsigned char* pDestImage) {
+	XnUInt16 g_nXRes = dmd.XRes();
+	XnUInt16 g_nYRes = dmd.YRes();
+	unsigned int nX, nY;
+	unsigned int nIndex = 0;
+	const XnDepthPixel* pDepth = dmd.Data();
+	unsigned int nValue = 0;
+	float *pDepthHist = getDepthHistogram(dmd);
+	unsigned int nHistValue = 0;
+	const XnLabel* pLabels = smd.Data();
+	int texWidth;
+
+	texWidth = getClosestPowerOfTwo(dmd.XRes());
+	pDepth = dmd.Data();
+	// Prepare the texture map
+	for (nY=0; nY<g_nYRes; nY++)
+	{
+		for (nX=0; nX < g_nXRes; nX++, nIndex++)
+		{
+			pDestImage[0] = 0;
+			pDestImage[1] = 0;
+			pDestImage[2] = 0;
+
+			nValue = *pDepth;
+			// pLabels contains the label for each pixel - zero if there
+			// is no person, non-zero for the person ID (and each person
+			// gets a different color).
+			XnLabel label = *pLabels;
+			XnUInt32 nColorID = label % nColors;
+
+			if (label == 0)
+			{
+				nColorID = nColors;
+			}
+
+			if (nValue != 0)
+			{
+				nHistValue = pDepthHist[nValue];
+
+				pDestImage[0] = nHistValue * Colors[nColorID][0];
+				pDestImage[1] = nHistValue * Colors[nColorID][1];
+				pDestImage[2] = nHistValue * Colors[nColorID][2];
+			}
+
+			pDepth++;
+			pLabels++;
+			pDestImage+=3;
+		}
+
+		pDestImage += (texWidth - g_nXRes) *3;
+	}
+
+	free(pDepthHist);
+}
+
+void drawTrackedUsers() {
+	XnUserID aUsers[15];
+	XnUInt16 nUsers = 15;
+	g_UserGenerator.GetUsers(aUsers, nUsers);
+	for (int i = 0; i < nUsers; ++i)
+	{
+		if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
+		{
+			DrawJoints(aUsers[i]);
+			if (skeleton_throttle.CanSend()) {
+			     SaveSkeleton(aUsers[i], "player1", "kinect1");
+                             skeleton_throttle.MarkSend();
+                        }
+			DrawSkeleton(aUsers[i]);
+		}
+	}
+}
+
+void drawDepthMap(GLuint depthTexID,
+				  const xn::DepthMetaData& dmd,
+				  unsigned char* pDepthTexBuf) {
+	int texWidth =  getClosestPowerOfTwo(dmd.XRes());
+	int texHeight = getClosestPowerOfTwo(dmd.YRes());
+	GLfloat texcoords[8];
+	float texXpos;
+	float texYpos;
+
+	texXpos =(float)dmd.XRes()/texWidth;
+	texYpos  =(float)dmd.YRes()/texHeight;
+	memset(texcoords, 0, 8*sizeof(float));
+	texcoords[0] = texXpos;
+	texcoords[1] = texYpos;
+	texcoords[2] = texXpos;
+	texcoords[7] = texYpos;
+
+	glBindTexture(GL_TEXTURE_2D, depthTexID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0,
+				 GL_RGB, GL_UNSIGNED_BYTE, pDepthTexBuf);
+
+	// Display the OpenGL texture map
+	glColor4f(0.75,0.75,0.75,1);
+	glEnable(GL_TEXTURE_2D);
+	DrawTexture(dmd.XRes(),dmd.YRes(),0,0, texcoords);
+	glDisable(GL_TEXTURE_2D);
+}
+
+void DrawKinectInput(const xn::DepthMetaData& dmd,
+					 const xn::SceneMetaData& smd,
+					 const xn::ImageMetaData& imd)
+{
+    static bool bInitialized = false;
+    static GLuint depthTexID;
+    static unsigned char* pDepthTexBuf;
+    static int frames = 0;
+
+    // Static initialization of texture buffer + texture ID
+    if(!bInitialized)
+    {
+        depthTexID = initTexture((void**)&pDepthTexBuf,
+        						 getClosestPowerOfTwo(dmd.XRes()),
+        						 getClosestPowerOfTwo(dmd.YRes())) ;
+        bInitialized = true;
+    }
+
+    transformDepthImageIntoTexture(dmd, smd, pDepthTexBuf);
+
+    if (rgb_throttle.CanSend()) {
+    	SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
+    }
+    if (depth_throttle.CanSend()) {
+    	SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
+    }
+    SaveImageToFile((unsigned char*)dmd.Data(), dmd.XRes(), dmd.YRes());
+
+    drawDepthMap(depthTexID, dmd, pDepthTexBuf);
+    drawTrackedUsers();
+
+    frames += 1;
+    printf("Drawn %d frames so far\n", frames);
 }

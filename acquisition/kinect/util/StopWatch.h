@@ -22,7 +22,7 @@ public:
 	~StopWatch();
 
 	void Start();
-	void ReStart();
+	long ReStart();
 	/** returns measured time in milliseconds*/
 	long  Stop();
 
