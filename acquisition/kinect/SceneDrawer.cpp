@@ -425,7 +425,6 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
 		 right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
 		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
-
 	worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
 
     free(head);
@@ -741,7 +740,10 @@ void drawTrackedUsers() {
 		if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
 		{
 			DrawJoints(aUsers[i]);
-			SaveSkeleton(aUsers[i], "player1", "kinect1");
+			if (skeleton_throttle.CanSend()) {
+			     SaveSkeleton(aUsers[i], "player1", "kinect1");
+                             skeleton_throttle.MarkSend();
+                        }
 			DrawSkeleton(aUsers[i]);
 		}
 	}
