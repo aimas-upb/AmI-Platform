@@ -4,6 +4,7 @@ App.main_modules = App.main_modules || {};
 
 App.the_modules = {
 	'widget/image': 'modules/image',
+	'widget/trace': 'modules/trace',
 	'widget/DashboardController': 'modules/dashboard_controller',
 	'widget/TraceController': 'modules/trace_controller',
 };

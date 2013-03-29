@@ -1,4 +1,3 @@
-<!--<p>
-    {{latest_subject_positions}}
-</p>-->
-<p>Hello</>
+<p>Hello !</p>
+
+<canvas width="640" height="512"/>
