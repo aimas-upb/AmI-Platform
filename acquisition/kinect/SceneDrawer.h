@@ -24,8 +24,9 @@
 
 #include <XnCppWrapper.h>
 
-void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, const xn::ImageMetaData& imd);
+void DrawKinectInput(const xn::DepthMetaData& dmd,
+					 const xn::SceneMetaData& smd,
+					 const xn::ImageMetaData& imd);
 void SceneDrawerInit();
 
-void XN_CALLBACK_TYPE MyPoseInProgress(xn::PoseDetectionCapability& capability, const XnChar* strPose, XnUserID id, XnPoseDetectionStatus poseError, void* pCookie);
 #endif

@@ -135,7 +135,9 @@ void glutDisplay (void)
     g_DepthGenerator.GetMetaData(depthMD);
     g_UserGenerator.GetUserPixels(0, sceneMD);
     g_ImageGenerator.GetMetaData(imageMD);
-    DrawDepthMap(depthMD, sceneMD, imageMD);
+
+    // Draw the input fetched from the Kinect
+    DrawKinectInput(depthMD, sceneMD, imageMD);
 
 #ifndef USE_GLES
     glutSwapBuffers();
