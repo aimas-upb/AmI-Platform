@@ -325,7 +325,6 @@ int main(int argc, char **argv)
     initFromContextFile();
     registerUserCallbacks();
     nRetVal = g_Context.StartGeneratingAll();
-    initializeKestrelConnection();
 
     CHECK_RC(nRetVal, "StartGenerating");
 
