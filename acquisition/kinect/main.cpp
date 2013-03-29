@@ -106,6 +106,10 @@ void XN_CALLBACK_TYPE UserCalibration_CalibrationComplete(xn::SkeletonCapability
 // this function is called each frame
 void glutDisplay (void)
 {
+    xn::SceneMetaData sceneMD;
+    xn::DepthMetaData depthMD;
+    xn::ImageMetaData imageMD;
+
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Setup the OpenGL viewpoint
@@ -113,9 +117,6 @@ void glutDisplay (void)
     glPushMatrix();
     glLoadIdentity();
 
-    xn::SceneMetaData sceneMD;
-    xn::DepthMetaData depthMD;
-    xn::ImageMetaData imageMD;
     g_DepthGenerator.GetMetaData(depthMD);
     g_ImageGenerator.GetMetaData(imageMD);
 
@@ -217,13 +218,25 @@ void initFromContextFile() {
     }
 
     nRetVal = g_Context.InitFromXmlFile(getKinectXMLConfig(), g_scriptNode, &errors);
+	if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
+	{
+		XnChar strError[1024];
+		errors.ToString(strError, 1024);
+		printf("%s\n", strError);
+		exit(1);
+	}
+	else if (nRetVal != XN_STATUS_OK)
+	{
+		printf("Open failed: %s\n", xnGetStatusString(nRetVal));
+		exit(1);
+	}
 
     if (g_Context.FindExistingNode(XN_NODE_TYPE_DEPTH, g_DepthGenerator) != XN_STATUS_OK) {
         printf("XML file should contain a depth generator\n");
         exit(1);
     }
 
-    if (g_Context.FindExistingNode(XN_NODE_TYPE_IMAGE, g_DepthGenerator) != XN_STATUS_OK) {
+    if (g_Context.FindExistingNode(XN_NODE_TYPE_IMAGE, g_ImageGenerator) != XN_STATUS_OK) {
         printf("XML file should contain an image generator\n");
         exit(1);
     }
@@ -241,7 +254,7 @@ void initFromContextFile() {
 
 void registerUserCallbacks() {
     XnStatus nRetVal = XN_STATUS_OK;
-    XnCallbackHandle hUserCallbacks, hCalibrationStart, hCalibrationComplete, hPoseDetected, hCalibrationInProgress, hPoseInProgress;
+    XnCallbackHandle hCalibrationComplete;
 
     g_UserGenerator.GetSkeletonCap().SetSkeletonProfile(XN_SKEL_PROFILE_ALL);
     nRetVal = g_UserGenerator.GetSkeletonCap().RegisterToCalibrationComplete(UserCalibration_CalibrationComplete, NULL, hCalibrationComplete);
@@ -309,8 +322,9 @@ int main(int argc, char **argv)
     SceneDrawerInit();
     initFromContextFile();
     registerUserCallbacks();
-
     nRetVal = g_Context.StartGeneratingAll();
+    initializeKestrelConnection();
+
     CHECK_RC(nRetVal, "StartGenerating");
 
 #if USE_MEMCACHE
