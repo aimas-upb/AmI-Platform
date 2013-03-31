@@ -79,22 +79,29 @@ define ['cs!widget'], (Widget) ->
             pixels = context_2d.createImageData(width, height)
             
             # Get the base64-decoded image
-            image = @last_image.get('image_rgb/image') 
-            decoded_image = atob(image)
+            image = "data:image/jpeg;base64," + @last_image.get('image_rgb/image')
+            img = new Image
+            img.src = image
+            context_2d.drawImage(img,0,0)# // Or at whatever offset you like
+            
+ 
+            # decoded_image = atob(image)
             
             # Transfer pixels from the decoded image to canvas
             # buffer. NOTE: canvas also has an alpha channel.
-            for x in [0..width-1]
-                for y in [0..height-1]
-                    index = (y * width + x) * 4
-                    index2 = (y * width + x) * 3
-                    pixels.data[index] = decoded_image[index2].charCodeAt(0)
-                    pixels.data[index + 1] = decoded_image[index2 + 1].charCodeAt(0)
-                    pixels.data[index + 2] = decoded_image[index2 + 2].charCodeAt(0)
-                    pixels.data[index + 3] = 255
+            # for x in [0..width-1]
+                # for y in [0..height-1]
+                    # index = (y * width + x) * 4
+                    # index2 = (y * width + x) * 3
+                    # pixels.data[index] = decoded_image[index2].charCodeAt(0)
+                    # pixels.data[index + 1] = decoded_image[index2 + 1].charCodeAt(0)
+                    # pixels.data[index + 2] = decoded_image[index2 + 2].charCodeAt(0)
+                    # pixels.data[index + 3] = 255
+#             
+            # # Render the actual image to HTML
+            # context_2d.putImageData(pixels, 0, 0)
             
-            # Render the actual image to HTML
-            context_2d.putImageData(pixels, 0, 0)
+            
             
         drawImageAndSkeleton: =>
           
