@@ -13,14 +13,17 @@ class Router(PDU):
     def process_message(self, message):
         # Route messages towards mongo-writer
 
-        # created_at = time at which message arrived on the router
-	if not 'created_at' in message:
-	    message['created_at'] = int(time.time())
+        # created_at should be normally set as close to the data generation
+        # as possible and should be the timestamp that the measurement
+        # was phisically generated. Since this is not always possible, the
+        # default is the time of entry in the pipeline.
+        message['created_at'] = message.get('created_at', int(time.time()))
 
         self.send_to('mongo-writer', message)
+
         if message['type'] in ['image_rgb', 'skeleton']:
             self.send_to('head-crop', message)
-            
+
         # self.send_to('recorder', message)
 
         # Only send to room position if it's a Kinect skeleton

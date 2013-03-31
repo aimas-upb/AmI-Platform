@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime
 import time
 import pymongo
 from pymongo.errors import OperationFailure
@@ -19,13 +20,22 @@ class MongoWriter(PDU):
     def __init__(self):
         """ After performing base class initializations, make sure that
             the mongo collection where measurements are written has a TTL
-            index on the created_at column.
+            index on the inserted_at column.
         """
         super(MongoWriter, self).__init__()
-        self.collection.ensure_index([('created_at', pymongo.DESCENDING)],
+        # This index make sure that we only keep records in the measurements
+        # db for a single day. We do this in order to avoid filling it.
+        self.collection.ensure_index([('inserted_at', pymongo.DESCENDING)],
                                      background = True,
                                      expireAfterSeconds = self.TTL)
-        self.collection.ensure_index('context');
+
+        # Most common type of query will be to get the measurements of
+        # a given type from a given sensor.
+        self.collection.ensure_index([('sensor_id', pymongo.ASCENDING),
+                                      ('type', pymongo.ASCENDING)])
+        self.collection.ensure_index('sensor_id')
+        self.collection.ensure_index('type')
+
         self.last_written_for_sensor_type = defaultdict(lambda: 0)
 
     def process_message(self, message):
@@ -42,6 +52,10 @@ class MongoWriter(PDU):
             return
 
         try:
+            # Be careful to provide Mongo with the field in the format
+            # required by the TTL collections feature. If we save this
+            # as a plain unix timestamp, it won't get used correctly.
+            message['inserted_at'] = datetime.now()
             self.collection.save(message, safe = True)
 
             # After saving the message successfully, mark it as saved
