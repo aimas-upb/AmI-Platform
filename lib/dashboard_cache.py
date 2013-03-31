@@ -24,5 +24,15 @@ class DashboardCache(object):
         logger.info("Getting from redis at key %s" % key)
         return self.redis_cache.get(key)
 
+    def lpush(self, sensor_id, sensor_type, measurement_type, measurement):
+        key = self._redis_key(sensor_id, sensor_type, measurement_type)
+        logger.info("Pushing in redis at key %s" % key)
+        self.redis_cache.lpush(key, measurement)
+    
+    def lrange(self, sensor_id, sensor_type, measurement_type, start, stop):
+        key = self._redis_key(sensor_id, sensor_type, measurement_type)
+        logger.info("Get list from redis at key %s" % key)
+        return self.redis_cache.lrange(key, start, stop)
+
     def _redis_key(self, sensor_id, sensor_type, measurement_type):
         return '%s:%s:%s' % (sensor_id, sensor_type, measurement_type)
