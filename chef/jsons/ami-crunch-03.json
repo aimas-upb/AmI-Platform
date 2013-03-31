@@ -1,0 +1,12 @@
+{
+    "user_name": "ami",
+    "user_group": "ami",
+    "node_type":    "crunch",
+    "node_index":   "03",
+    "run_list": ["recipe[ami-node::ami-crunch]"],
+    "kestrel_server": "ami-crunch-01.local",
+    "kestrel_port":   "22133",
+    "mongodb_server": "ami-crunch-01.local",
+    "mongodb_port":   "27017",
+    "services": ["ami-face-recognition", "ami-head-crop"]
+}
