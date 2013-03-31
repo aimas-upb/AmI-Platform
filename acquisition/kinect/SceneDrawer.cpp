@@ -65,23 +65,23 @@ extern xn::DepthGenerator g_DepthGenerator;
 
 class DataThrottle {
 public:
-	bool running;
-	long min_delay;
-	util::StopWatch sw;
+    bool running;
+    long min_delay;
+    util::StopWatch sw;
 
-	/** min delay is in milliseconds*/
-	DataThrottle(long min_delay): running(false), min_delay(min_delay) {}
-	bool CanSend() {
-		return !running && (sw.GetState() == util::StopWatch::STATE_READY || sw.GetSplitTime() >= min_delay);
-	}
+    /** min delay is in milliseconds*/
+    DataThrottle(long min_delay): running(false), min_delay(min_delay) {}
+    bool CanSend() {
+        return !running && (sw.GetState() == util::StopWatch::STATE_READY || sw.GetSplitTime() >= min_delay);
+    }
 
-	void MarkSend() {
-		if (sw.GetState() == util::StopWatch::STATE_READY) {
-			sw.Start();
-		} else {
-			sw.ReStart();
-		}
-	}
+    void MarkSend() {
+        if (sw.GetState() == util::StopWatch::STATE_READY) {
+            sw.Start();
+        } else {
+            sw.ReStart();
+        }
+    }
 };
 
 DataThrottle skeleton_throttle(MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT);
@@ -98,33 +98,45 @@ extern memcached_st* g_MemCache;
 static util::Worker worker(200);
 
 static void SendCompleted(util::Runnable* r, void* arg) {
-	DataThrottle* dt = static_cast<DataThrottle*>(arg);
-	delete r;
-	dt->running = false;
+    DataThrottle* dt = static_cast<DataThrottle*>(arg);
+    delete r;
+    dt->running = false;
 }
 
 class Send : public util::Runnable {
 public:
-	char* buffer;
-	Send(char* b) : buffer(b) {}
-	~Send() {
-		free(buffer);
-	}
+    char* buffer;
+    send_count = 0;
+    send_size = 0;
 
-	void Run() {
-		memcached_return rc;
-		size_t len = strlen(buffer);
-		rc = memcached_set(g_MemCache,
-				"measurements", strlen("measurements"),
-				buffer, len,
-				(time_t)0, (uint32_t)0);
+    Send(char* b) : buffer(b) {}
+    ~Send() {
+        free(buffer);
+    }
 
-		if (rc != MEMCACHED_SUCCESS) {
-			printf("Could NOT send to memcache. I'm very very sad :-( :-( :-(\n");
-		} else {
-			printf("I can send %5.3f kB to memcache. HURRAY!! :-) :-) :-)\n", len / 1024.0);
-		}
-	}
+    void Run() {
+        memcached_return rc;
+        size_t len = strlen(buffer);
+        rc = memcached_set(g_MemCache,
+                "measurements", strlen("measurements"),
+                buffer, len,
+                (time_t)0, (uint32_t)0);
+
+        if (rc != MEMCACHED_SUCCESS) {
+            printf("Could NOT send to Kestrel at %s:%d\n",
+                   getKestrelServerIP(), getKestrelServerPort());
+        } else {
+            // Only print successful sends once in a while - avoid log pollution
+            send_count = send_count + 1;
+            send_size = send_size + len;
+            if (send_count % 100 == 0) {
+                printf("Sent %5.3f KB to Kestrel across the latest %d messages\n",
+                       send_size / 1024.0, send_count);
+                send_size = 0;
+                send_count = 0;
+            }
+        }
+    }
 
 };
 #endif
@@ -138,7 +150,7 @@ unsigned int getClosestPowerOfTwo(unsigned int n)
 }
 GLuint initTexture(void** buf, int width, int height)
 {
-	// Ask OpenGL to generate a texture ID for us.
+    // Ask OpenGL to generate a texture ID for us.
     GLuint texID = 0;
     glGenTextures(1,&texID);
 
@@ -152,14 +164,14 @@ GLuint initTexture(void** buf, int width, int height)
 }
 
 void DrawRectangle(float topLeftX, float topLeftY,
-		           float bottomRightX, float bottomRightY)
+                   float bottomRightX, float bottomRightY)
 {
     GLfloat verts[8] = {
-    						topLeftX, topLeftY,
-    						topLeftX, bottomRightY,
-    						bottomRightX, bottomRightY,
-    						bottomRightX, topLeftY
-    					};
+                            topLeftX, topLeftY,
+                            topLeftX, bottomRightY,
+                            bottomRightX, bottomRightY,
+                            bottomRightX, topLeftY
+                        };
     glVertexPointer(2, GL_FLOAT, 0, verts);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
@@ -167,8 +179,8 @@ void DrawRectangle(float topLeftX, float topLeftY,
     glFlush();
 }
 void DrawTexture(float topLeftX, float topLeftY,
-				 float bottomRightX, float bottomRightY,
-				 GLfloat *texcoords)
+                 float bottomRightX, float bottomRightY,
+                 GLfloat *texcoords)
 {
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glTexCoordPointer(2, GL_FLOAT, 0, texcoords);
@@ -191,17 +203,6 @@ XnFloat Colors[][3] =
     {1,1,1}
 };
 XnUInt32 nColors = 10;
-#ifndef USE_GLES
-void glPrintString(void *font, char *str)
-{
-    int i,l = (int)strlen(str);
-
-    for(i=0; i<l; i++)
-    {
-        glutBitmapCharacter(font,*str++);
-    }
-}
-#endif
 
 bool DrawLimb(XnUserID player, XnSkeletonJoint eJoint1, XnSkeletonJoint eJoint2)
 {
@@ -364,68 +365,68 @@ char* JointTo2DJSON(XnUserID player, XnSkeletonJoint eJoint, const char *name)
 static void SaveSkeleton(XnUserID player, const char* player_name, const char* sensor_name)
 {
 #if USE_MEMCACHE
-	char* buf = (char*) malloc(10000 * sizeof(char));
-	char* head = JointToJSON(player, XN_SKEL_HEAD, "head");
-	char* neck = JointToJSON(player, XN_SKEL_NECK, "neck");
-	char* left_shoulder = JointToJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
-	char* right_shoulder = JointToJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
-	char* left_elbow = JointToJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
-	char* right_elbow = JointToJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
-	char* left_hand = JointToJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
-	char* right_hand = JointToJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
-	char* torso = JointToJSON(player, XN_SKEL_TORSO, "torso");
-	char* left_hip = JointToJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
-	char* right_hip = JointToJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
-	char* left_knee = JointToJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
-	char* right_knee = JointToJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
-	char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
-	char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
+    char* buf = (char*) malloc(10000 * sizeof(char));
+    char* head = JointToJSON(player, XN_SKEL_HEAD, "head");
+    char* neck = JointToJSON(player, XN_SKEL_NECK, "neck");
+    char* left_shoulder = JointToJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
+    char* right_shoulder = JointToJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
+    char* left_elbow = JointToJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
+    char* right_elbow = JointToJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
+    char* left_hand = JointToJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
+    char* right_hand = JointToJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
+    char* torso = JointToJSON(player, XN_SKEL_TORSO, "torso");
+    char* left_hip = JointToJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
+    char* right_hip = JointToJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
+    char* left_knee = JointToJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
+    char* right_knee = JointToJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
+    char* left_foot = JointToJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
+    char* right_foot = JointToJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
 
-	char* head_2d = JointTo2DJSON(player, XN_SKEL_HEAD, "head");
-	char* neck_2d = JointTo2DJSON(player, XN_SKEL_NECK, "neck");
-	char* left_shoulder_2d = JointTo2DJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
-	char* right_shoulder_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
-	char* left_elbow_2d = JointTo2DJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
-	char* right_elbow_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
-	char* left_hand_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
-	char* right_hand_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
-	char* torso_2d = JointTo2DJSON(player, XN_SKEL_TORSO, "torso");
-	char* left_hip_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
-	char* right_hip_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
-	char* left_knee_2d = JointTo2DJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
-	char* right_knee_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
-	char* left_foot_2d = JointTo2DJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
-	char* right_foot_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
+    char* head_2d = JointTo2DJSON(player, XN_SKEL_HEAD, "head");
+    char* neck_2d = JointTo2DJSON(player, XN_SKEL_NECK, "neck");
+    char* left_shoulder_2d = JointTo2DJSON(player, XN_SKEL_LEFT_SHOULDER, "left_shoulder");
+    char* right_shoulder_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_SHOULDER, "right_shoulder");
+    char* left_elbow_2d = JointTo2DJSON(player, XN_SKEL_LEFT_ELBOW, "left_elbow");
+    char* right_elbow_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_ELBOW, "right_elbow");
+    char* left_hand_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HAND, "left_hand");
+    char* right_hand_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HAND, "right_hand");
+    char* torso_2d = JointTo2DJSON(player, XN_SKEL_TORSO, "torso");
+    char* left_hip_2d = JointTo2DJSON(player, XN_SKEL_LEFT_HIP, "left_hip");
+    char* right_hip_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_HIP, "right_hip");
+    char* left_knee_2d = JointTo2DJSON(player, XN_SKEL_LEFT_KNEE, "left_knee");
+    char* right_knee_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_KNEE, "right_knee");
+    char* left_foot_2d = JointTo2DJSON(player, XN_SKEL_LEFT_FOOT, "left_foot");
+    char* right_foot_2d = JointTo2DJSON(player, XN_SKEL_RIGHT_FOOT, "right_foot");
 
-	char *context = get_context();
+    char *context = get_context();
 
-	timespec t;
-	 clock_gettime(CLOCK_REALTIME, &t);
-	snprintf((char*)buf, 10000,
-		"{\"created_at\": %ld,"
-		"\"context\": \"%s\","
-		"\"sensor_type\": \"kinect\","
-		"\"sensor_id\": \"%s\","
-		"\"sensor_position\": %s,"
-		"\"player\": \"%d\", "
-		"\"type\": \"skeleton\", "
-		"\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
-		"\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
-		 
-		t.tv_sec,
-		get_context(),
-		 getSensorID(),
-		 getSensorPosition(),
-		 player, //player_name,
-		 head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
-		 left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
-		 left_foot, right_foot,
+    timespec t;
+     clock_gettime(CLOCK_REALTIME, &t);
+    snprintf((char*)buf, 10000,
+        "{\"created_at\": %ld,"
+        "\"context\": \"%s\","
+        "\"sensor_type\": \"kinect\","
+        "\"sensor_id\": \"%s\","
+        "\"sensor_position\": %s,"
+        "\"player\": \"%d\", "
+        "\"type\": \"skeleton\", "
+        "\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
+        "\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 
-		 head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
-		 right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
-		 right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
+        t.tv_sec,
+        get_context(),
+         getSensorID(),
+         getSensorPosition(),
+         player, //player_name,
+         head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
+         left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
+         left_foot, right_foot,
 
-	worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
+         head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
+         right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
+         right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
+
+    worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
 
     free(head);
     free(neck);
@@ -470,67 +471,67 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
  */
 static void SaveImage(char *img, int width, int height, const char* player_name, const char* sensor_type, DataThrottle* throttle) {
 #if USE_MEMCACHE
-	size_t outlen, outlen2;
+    size_t outlen, outlen2;
 
-	//TODO: maybe move compression to the worker thread
-	vector<int> compression_params;
-	compression_params.clear();
-	compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
-	compression_params.push_back(95);
+    //TODO: maybe move compression to the worker thread
+    vector<int> compression_params;
+    compression_params.clear();
+    compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
+    compression_params.push_back(95);
 
-	cv::Mat mat(height, width, CV_8UC3, img);
-	vector<unsigned char> c_buf;
-	cv::imencode(".jpg", mat, c_buf, compression_params);
-	std::basic_stringstream<unsigned char> os;
+    cv::Mat mat(height, width, CV_8UC3, img);
+    vector<unsigned char> c_buf;
+    cv::imencode(".jpg", mat, c_buf, compression_params);
+    std::basic_stringstream<unsigned char> os;
 
-	using namespace boost::archive::iterators;
+    using namespace boost::archive::iterators;
 
-	typedef base64_from_binary< transform_width<vector<unsigned char>::iterator , 6, 8> > base64_text;
+    typedef base64_from_binary< transform_width<vector<unsigned char>::iterator , 6, 8> > base64_text;
 
-	std::copy(
-		base64_text(c_buf.begin()),
-	    base64_text(c_buf.end()),
-	    boost::archive::iterators::ostream_iterator<unsigned char>(os)
-	 );
+    std::copy(
+        base64_text(c_buf.begin()),
+        base64_text(c_buf.end()),
+        boost::archive::iterators::ostream_iterator<unsigned char>(os)
+     );
 
-	basic_string<unsigned char> encoded = os.str();
+    basic_string<unsigned char> encoded = os.str();
 
-	while (encoded.size() % 4 != 0) {
-		encoded += '=';
-	}
+    while (encoded.size() % 4 != 0) {
+        encoded += '=';
+    }
 
 
-	int buf_size = width * height * 3 * 2;
-	char* buf = (char*) malloc(buf_size * sizeof(char));
-	char* context = get_context();
+    int buf_size = width * height * 3 * 2;
+    char* buf = (char*) malloc(buf_size * sizeof(char));
+    char* context = get_context();
 
-	printf("SaveImage: width = %d, height = %d\n", width, height);
+    printf("SaveImage: width = %d, height = %d\n", width, height);
 
-	timespec t;
+    timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
 
-	snprintf(buf, buf_size,
-		"{\"created_at\": %ld,"
-		"\"context\": \"%s\","
-		"\"sensor_type\": \"kinect\","
-		"\"sensor_id\": \"%s\","
-		"\"sensor_position\": %s,"
-		"\"type\": \"%s\","
-		"\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
-		t.tv_sec,
-		context,
-		getSensorID(),
-		getSensorPosition(),
-		sensor_type,
-		sensor_type,
-		encoded.c_str(), width, height);
+    snprintf(buf, buf_size,
+        "{\"created_at\": %ld,"
+        "\"context\": \"%s\","
+        "\"sensor_type\": \"kinect\","
+        "\"sensor_id\": \"%s\","
+        "\"sensor_position\": %s,"
+        "\"type\": \"%s\","
+        "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
+        t.tv_sec,
+        context,
+        getSensorID(),
+        getSensorPosition(),
+        sensor_type,
+        sensor_type,
+        encoded.c_str(), width, height);
 
-		printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
+        printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
 
 
-	worker.AddMessage(new Send(buf), &SendCompleted, throttle);
+    worker.AddMessage(new Send(buf), &SendCompleted, throttle);
 
-	free(context);
+    free(context);
 #endif
 
 }
@@ -622,51 +623,51 @@ void DrawSkeleton(XnUserID user) {
  */
 float* getDepthHistogram(const xn::DepthMetaData& dmd)
 {
-	XnUInt16 g_nXRes = dmd.XRes();
-	XnUInt16 g_nYRes = dmd.YRes();
-	unsigned int nZRes = dmd.ZRes();
-	unsigned int nX, nY;
-	unsigned int nValue = 0;
-	unsigned int nIndex = 0;
-	float* pDepthHist = (float*)malloc(nZRes* sizeof(float));
-	unsigned int nNumberOfPoints = 0;
-	const XnDepthPixel* pDepth = dmd.Data();
+    XnUInt16 g_nXRes = dmd.XRes();
+    XnUInt16 g_nYRes = dmd.YRes();
+    unsigned int nZRes = dmd.ZRes();
+    unsigned int nX, nY;
+    unsigned int nValue = 0;
+    unsigned int nIndex = 0;
+    float* pDepthHist = (float*)malloc(nZRes* sizeof(float));
+    unsigned int nNumberOfPoints = 0;
+    const XnDepthPixel* pDepth = dmd.Data();
 
-	// Calculate the accumulative histogram
-	memset(pDepthHist, 0, nZRes*sizeof(float));
-	for (nY=0; nY<g_nYRes; nY++)
-	{
-		for (nX=0; nX<g_nXRes; nX++)
-		{
-			nValue = *pDepth;
+    // Calculate the accumulative histogram
+    memset(pDepthHist, 0, nZRes*sizeof(float));
+    for (nY=0; nY<g_nYRes; nY++)
+    {
+        for (nX=0; nX<g_nXRes; nX++)
+        {
+            nValue = *pDepth;
 
-			if (nValue != 0)
-			{
-				pDepthHist[nValue]++;
-				nNumberOfPoints++;
-			}
-			pDepth++;
-		}
-	}
+            if (nValue != 0)
+            {
+                pDepthHist[nValue]++;
+                nNumberOfPoints++;
+            }
+            pDepth++;
+        }
+    }
 
-	for (nIndex=1; nIndex<nZRes; nIndex++)
-	{
-		pDepthHist[nIndex] += pDepthHist[nIndex-1];
-	}
-	if (nNumberOfPoints)
-	{
-		for (nIndex=1; nIndex<nZRes; nIndex++)
-		{
-			pDepthHist[nIndex] = (unsigned int)(256 * (1.0f - (pDepthHist[nIndex] / nNumberOfPoints)));
-		}
-		printf("Number of points with non-zero values in depth map: %d\n",
-				nNumberOfPoints);
-	} else
-	{
-		printf("WARNING: depth image has no non-zero pixels\n");
-	}
+    for (nIndex=1; nIndex<nZRes; nIndex++)
+    {
+        pDepthHist[nIndex] += pDepthHist[nIndex-1];
+    }
+    if (nNumberOfPoints)
+    {
+        for (nIndex=1; nIndex<nZRes; nIndex++)
+        {
+            pDepthHist[nIndex] = (unsigned int)(256 * (1.0f - (pDepthHist[nIndex] / nNumberOfPoints)));
+        }
+        printf("Number of points with non-zero values in depth map: %d\n",
+                nNumberOfPoints);
+    } else
+    {
+        printf("WARNING: depth image has no non-zero pixels\n");
+    }
 
-	return pDepthHist;
+    return pDepthHist;
 }
 
 /*
@@ -675,111 +676,111 @@ float* getDepthHistogram(const xn::DepthMetaData& dmd)
  * a matrix of labels, one label per pixel.
  */
 void transformDepthImageIntoTexture(const xn::DepthMetaData& dmd,
-									const xn::SceneMetaData& smd,
-									unsigned char* pDestImage) {
-	XnUInt16 g_nXRes = dmd.XRes();
-	XnUInt16 g_nYRes = dmd.YRes();
-	unsigned int nX, nY;
-	unsigned int nIndex = 0;
-	const XnDepthPixel* pDepth = dmd.Data();
-	unsigned int nValue = 0;
-	float *pDepthHist = getDepthHistogram(dmd);
-	unsigned int nHistValue = 0;
-	const XnLabel* pLabels = smd.Data();
-	int texWidth;
+                                    const xn::SceneMetaData& smd,
+                                    unsigned char* pDestImage) {
+    XnUInt16 g_nXRes = dmd.XRes();
+    XnUInt16 g_nYRes = dmd.YRes();
+    unsigned int nX, nY;
+    unsigned int nIndex = 0;
+    const XnDepthPixel* pDepth = dmd.Data();
+    unsigned int nValue = 0;
+    float *pDepthHist = getDepthHistogram(dmd);
+    unsigned int nHistValue = 0;
+    const XnLabel* pLabels = smd.Data();
+    int texWidth;
 
-	texWidth = getClosestPowerOfTwo(dmd.XRes());
-	pDepth = dmd.Data();
-	// Prepare the texture map
-	for (nY=0; nY<g_nYRes; nY++)
-	{
-		for (nX=0; nX < g_nXRes; nX++, nIndex++)
-		{
-			pDestImage[0] = 0;
-			pDestImage[1] = 0;
-			pDestImage[2] = 0;
+    texWidth = getClosestPowerOfTwo(dmd.XRes());
+    pDepth = dmd.Data();
+    // Prepare the texture map
+    for (nY=0; nY<g_nYRes; nY++)
+    {
+        for (nX=0; nX < g_nXRes; nX++, nIndex++)
+        {
+            pDestImage[0] = 0;
+            pDestImage[1] = 0;
+            pDestImage[2] = 0;
 
-			nValue = *pDepth;
-			// pLabels contains the label for each pixel - zero if there
-			// is no person, non-zero for the person ID (and each person
-			// gets a different color).
-			XnLabel label = *pLabels;
-			XnUInt32 nColorID = label % nColors;
+            nValue = *pDepth;
+            // pLabels contains the label for each pixel - zero if there
+            // is no person, non-zero for the person ID (and each person
+            // gets a different color).
+            XnLabel label = *pLabels;
+            XnUInt32 nColorID = label % nColors;
 
-			if (label == 0)
-			{
-				nColorID = nColors;
-			}
+            if (label == 0)
+            {
+                nColorID = nColors;
+            }
 
-			if (nValue != 0)
-			{
-				nHistValue = pDepthHist[nValue];
+            if (nValue != 0)
+            {
+                nHistValue = pDepthHist[nValue];
 
-				pDestImage[0] = nHistValue * Colors[nColorID][0];
-				pDestImage[1] = nHistValue * Colors[nColorID][1];
-				pDestImage[2] = nHistValue * Colors[nColorID][2];
-			}
+                pDestImage[0] = nHistValue * Colors[nColorID][0];
+                pDestImage[1] = nHistValue * Colors[nColorID][1];
+                pDestImage[2] = nHistValue * Colors[nColorID][2];
+            }
 
-			pDepth++;
-			pLabels++;
-			pDestImage+=3;
-		}
+            pDepth++;
+            pLabels++;
+            pDestImage+=3;
+        }
 
-		pDestImage += (texWidth - g_nXRes) *3;
-	}
+        pDestImage += (texWidth - g_nXRes) *3;
+    }
 
-	free(pDepthHist);
+    free(pDepthHist);
 }
 
 void drawTrackedUsers() {
-	XnUserID aUsers[15];
-	XnUInt16 nUsers = 15;
-	g_UserGenerator.GetUsers(aUsers, nUsers);
-	for (int i = 0; i < nUsers; ++i)
-	{
-		if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
-		{
-			DrawJoints(aUsers[i]);
-			if (skeleton_throttle.CanSend()) {
-			     SaveSkeleton(aUsers[i], "player1", "kinect1");
+    XnUserID aUsers[15];
+    XnUInt16 nUsers = 15;
+    g_UserGenerator.GetUsers(aUsers, nUsers);
+    for (int i = 0; i < nUsers; ++i)
+    {
+        if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
+        {
+            DrawJoints(aUsers[i]);
+            if (skeleton_throttle.CanSend()) {
+                 SaveSkeleton(aUsers[i], "player1", "kinect1");
                              skeleton_throttle.MarkSend();
                         }
-			DrawSkeleton(aUsers[i]);
-		}
-	}
+            DrawSkeleton(aUsers[i]);
+        }
+    }
 }
 
 void drawDepthMap(GLuint depthTexID,
-				  const xn::DepthMetaData& dmd,
-				  unsigned char* pDepthTexBuf) {
-	int texWidth =  getClosestPowerOfTwo(dmd.XRes());
-	int texHeight = getClosestPowerOfTwo(dmd.YRes());
-	GLfloat texcoords[8];
-	float texXpos;
-	float texYpos;
+                  const xn::DepthMetaData& dmd,
+                  unsigned char* pDepthTexBuf) {
+    int texWidth =  getClosestPowerOfTwo(dmd.XRes());
+    int texHeight = getClosestPowerOfTwo(dmd.YRes());
+    GLfloat texcoords[8];
+    float texXpos;
+    float texYpos;
 
-	texXpos =(float)dmd.XRes()/texWidth;
-	texYpos  =(float)dmd.YRes()/texHeight;
-	memset(texcoords, 0, 8*sizeof(float));
-	texcoords[0] = texXpos;
-	texcoords[1] = texYpos;
-	texcoords[2] = texXpos;
-	texcoords[7] = texYpos;
+    texXpos =(float)dmd.XRes()/texWidth;
+    texYpos  =(float)dmd.YRes()/texHeight;
+    memset(texcoords, 0, 8*sizeof(float));
+    texcoords[0] = texXpos;
+    texcoords[1] = texYpos;
+    texcoords[2] = texXpos;
+    texcoords[7] = texYpos;
 
-	glBindTexture(GL_TEXTURE_2D, depthTexID);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0,
-				 GL_RGB, GL_UNSIGNED_BYTE, pDepthTexBuf);
+    glBindTexture(GL_TEXTURE_2D, depthTexID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0,
+                 GL_RGB, GL_UNSIGNED_BYTE, pDepthTexBuf);
 
-	// Display the OpenGL texture map
-	glColor4f(0.75,0.75,0.75,1);
-	glEnable(GL_TEXTURE_2D);
-	DrawTexture(dmd.XRes(),dmd.YRes(),0,0, texcoords);
-	glDisable(GL_TEXTURE_2D);
+    // Display the OpenGL texture map
+    glColor4f(0.75,0.75,0.75,1);
+    glEnable(GL_TEXTURE_2D);
+    DrawTexture(dmd.XRes(),dmd.YRes(),0,0, texcoords);
+    glDisable(GL_TEXTURE_2D);
 }
 
 void DrawKinectInput(const xn::DepthMetaData& dmd,
-					 const xn::SceneMetaData& smd,
-					 const xn::ImageMetaData& imd)
+                     const xn::SceneMetaData& smd,
+                     const xn::ImageMetaData& imd)
 {
     static bool bInitialized = false;
     static GLuint depthTexID;
@@ -790,18 +791,18 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
     if(!bInitialized)
     {
         depthTexID = initTexture((void**)&pDepthTexBuf,
-        						 getClosestPowerOfTwo(dmd.XRes()),
-        						 getClosestPowerOfTwo(dmd.YRes())) ;
+                                 getClosestPowerOfTwo(dmd.XRes()),
+                                 getClosestPowerOfTwo(dmd.YRes())) ;
         bInitialized = true;
     }
 
     transformDepthImageIntoTexture(dmd, smd, pDepthTexBuf);
 
     if (rgb_throttle.CanSend()) {
-    	SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
+        SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
     }
     if (depth_throttle.CanSend()) {
-    	SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
+        SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
     }
 
     drawDepthMap(depthTexID, dmd, pDepthTexBuf);
