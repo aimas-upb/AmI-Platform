@@ -17,7 +17,9 @@ def _crop_head_using_skeleton(last_image, last_skeleton):
         'close enough' apart, crop off an image of the head. """
     image = base64_to_image(last_image['image'],
                             int(last_image['width']),
-                            int(last_image['height']))
+                            int(last_image['height']),
+                            last_image['encoder_name'])
+    
     skeleton = last_skeleton
 
     return crop_head_using_skeleton(image, skeleton)
@@ -28,7 +30,9 @@ def _crop_head_using_face_detection(last_image):
         and crop the first one of them, if any. """
     image = base64_to_image(last_image['image'],
                             int(last_image['width']),
-                            int(last_image['height']))
+                            int(last_image['height']),
+                            last_image['encoder_name'])
+    
     return crop_face_from_image(image)
 
 
@@ -96,7 +100,11 @@ class HeadCrop(ParallelPDU):
         if message['type'] == 'image_rgb' and\
             message['sensor_type'] == 'kinect':
             self.last_image = message['image_rgb']
+            if not 'encoder_name' in self.last_image:
+                self.last_image['encoder_name'] = 'raw'
+                
             self.last_image_at = time.time()
+            
         elif message['type'] == 'skeleton' and\
             message['sensor_type'] == 'kinect':
             self.last_skeleton = message['skeleton_2D']

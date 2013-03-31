@@ -1,8 +1,10 @@
 import time
 
-from core import PDU
+from mongoengine import connect
 
+from core import PDU, settings
 from lib.log import setup_logging
+from models.experiment import Experiment
 
 class Router(PDU):
     """ PDU that routes incoming measurements from sensors to the
@@ -10,15 +12,30 @@ class Router(PDU):
 
     QUEUE = 'measurements'
 
+    def __init__(self, **kwargs):
+        super(Router, self).__init__(**kwargs)
+        connect('experiments', host=settings.MONGO_SERVER)
+
     def process_message(self, message):
         # Route messages towards mongo-writer
 
-        # created_at = time at which message arrived on the router
-        message['created_at'] = int(time.time())
+        # created_at should be normally set as close to the data generation
+        # as possible and should be the timestamp that the measurement
+        # was phisically generated. Since this is not always possible, the
+        # default is the time of entry in the pipeline.
+        message['created_at'] = message.get('created_at', int(time.time()))
 
         self.send_to('mongo-writer', message)
-        self.send_to('head-crop', message)
-        # self.send_to('recorder', message)
+
+        # Images & skeletons should be sent to head-crop
+        if message['type'] in ['image_rgb', 'skeleton']:
+            self.send_to('head-crop', message)
+
+        # If there is at least one active experiment, send them to
+        # recorder. Otherwise, prevent bandwidth waste :)
+        active_experiments = Experiment.get_active_experiments()
+        if len(active_experiments) > 0:
+            self.send_to('recorder', message)
 
         # Only send to room position if it's a Kinect skeleton
         if message['sensor_type'] == 'kinect' and message['type'] == 'skeleton':

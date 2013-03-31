@@ -10,6 +10,7 @@ bin
 acquisition/kinect/Bin
 acquisition/kinect/x86-Release
 acquisition/kinect/x64-Release
+acquisition/kinect/x64-Debug
 acquisition/kinect/Win32Debug
 acquisition/kinect/Win32Release
 acquisition/kinect/NiUserTracker.opensdf
