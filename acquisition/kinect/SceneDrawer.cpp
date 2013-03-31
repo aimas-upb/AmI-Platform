@@ -803,7 +803,6 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
     if (depth_throttle.CanSend()) {
     	SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
     }
-    SaveImageToFile((unsigned char*)dmd.Data(), dmd.XRes(), dmd.YRes());
 
     drawDepthMap(depthTexID, dmd, pDepthTexBuf);
     drawTrackedUsers();
