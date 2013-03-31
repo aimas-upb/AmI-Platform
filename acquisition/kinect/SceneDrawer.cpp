@@ -106,10 +106,10 @@ static void SendCompleted(util::Runnable* r, void* arg) {
 class Send : public util::Runnable {
 public:
     char* buffer;
-    send_count = 0;
-    send_size = 0;
+    int send_count;
+    int send_size;
 
-    Send(char* b) : buffer(b) {}
+    Send(char* b) : buffer(b), send_count(0), send_size(0) {}
     ~Send() {
         free(buffer);
     }
