@@ -22,6 +22,24 @@ define ['cs!widget'], (Widget) ->
             @canvas.getContext('2d').fillStyle = Constants.BLACK;
             @canvas.getContext('2d').strokeRect(0, 0, @canvas.width, @canvas.height)
 
+            # draw kinects on dashboard trace
+            kinect_side = 20;
+            # daq-01
+            @canvas.getContext('2d').fillStyle = Constants.RED;
+            @canvas.getContext('2d').fillRect(@canvas.width/3, @canvas.height-kinect_side, kinect_side, kinect_side)
+            # daq-02
+            @canvas.getContext('2d').fillStyle = Constants.PURPLE;
+            @canvas.getContext('2d').fillRect(0, @canvas.height*2/3, kinect_side, kinect_side)
+            # daq-03
+            @canvas.getContext('2d').fillStyle = Constants.BLUE;
+            @canvas.getContext('2d').fillRect(@canvas.width/3, 0, kinect_side, kinect_side)
+            # daq-04
+            @canvas.getContext('2d').fillStyle = Constants.GREEN;
+            @canvas.getContext('2d').fillRect(@canvas.width-kinect_side, @canvas.height/3, kinect_side, kinect_side)
+            # daq-05
+            @canvas.getContext('2d').fillStyle = Constants.ORANGE;
+            @canvas.getContext('2d').fillRect(@canvas.width-kinect_side, @canvas.height*2/3, kinect_side, kinect_side)
+
             @temp_canvas = document.createElement("canvas")
             @temp_canvas.width = @canvas.width
             @temp_canvas.height = @canvas.height
@@ -55,8 +73,8 @@ define ['cs!widget'], (Widget) ->
             position_list = @trace_params.data.data
             for position in position_list
                 pos = $.parseJSON(position)
-                x = Math.floor(pos['X']/20)
-                z = Math.floor(pos['Z']/20)
+                x = Math.floor(pos['X']/10)
+                z = Math.floor(pos['Z']/10)
                 sensor_id = pos['sensor_id']
 
                 temp_context_2d.fillStyle = getColor(sensor_id)
@@ -69,14 +87,14 @@ define ['cs!widget'], (Widget) ->
             switch sensor_id
                 when "daq-01"
                   return Constants.RED
+                when "daq-02"
+                  return Constants.PURPLE
                 when "daq-03"
                   return Constants.BLUE
                 when "daq-04"
                   return Constants.GREEN
                 when "daq-05"
                   return Constants.ORANGE
-                when "daq-06"
-                  return Constants.PURPLE
                 when "anonymous"
                   return Constants.FUCHSIA
                 else
