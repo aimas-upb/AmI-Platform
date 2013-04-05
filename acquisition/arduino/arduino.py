@@ -1,20 +1,18 @@
 import requests
 import arduino_conf
 import logging
-from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
 import kestrel
 import json
 from itertools import chain
+from core import DAU
 
-class Arduino_Acquisition(object):
+class Arduino_Acquisition(DAU):
 
-	self.dashQueue = 'dashboard'
+	QUEUE = 'dashboard'
 
-	def __init__(self):
-		self.logger = logging.getLogger("__main__")
-		self.dashboard = DashboardCache()
-		self.data_queue = kestrel.Client(settings.KESTREL_SERVERS)
+	def __init__(self, **kwargs):
+		super(Arduino_Acquisition, self).__init__(**kwargs)
 		
 		
 	def get_data(self,device):
@@ -22,7 +20,7 @@ class Arduino_Acquisition(object):
 		device_id = device[1]
 		r =requests.get("http://%s" %ip )
 		if(r.status_code != requests.codes.ok):
-			logger.error("IP %(ip)s returned request code %(code)s" %{'ip': ip, 'code': r.status_code})
+			self.log("IP %(ip)s returned request code %(code)s" %{'ip': ip, 'code': r.status_code})
 		ard = r.json()
 		ard['sensor_id'] = device_id
 		measurements = list()
@@ -34,7 +32,7 @@ class Arduino_Acquisition(object):
 			measurements.append(message)
 		return measurements
 
-	def gather_data(self):
+	def acquire_data(self):
 		all_data = list()
 		for ard in arduino_conf.devices:
 			data = get_data(ard)
@@ -42,15 +40,9 @@ class Arduino_Acquisition(object):
 		final = list(chain.from_iterable(all_data))
 		return final
 	
-	def send_message(self, msg):
-		self.data_queue.add(self.dashQueue, json.dumps(msg))
 		
-	def send_data(self, data):
-		logger.info("Sending data")
-		for msg in data
-			send_message(msg)
-			co
+	
 if __name__ == '__main__':
 	setup_logging()
 	module = Arduino_Acquisition()
-	
+	module.run()
