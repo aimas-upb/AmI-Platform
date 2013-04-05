@@ -42,6 +42,7 @@
 #include "util/Worker.h"
 #include "util/StopWatch.h"
 #include "util/DataThrottle.h"
+#include "util/BufferSender.h"
 
 #ifndef USE_GLES
 #if (XN_PLATFORM == XN_PLATFORM_MACOSX)
@@ -83,47 +84,10 @@ static void SendCompleted(util::Runnable* r, void* arg) {
 
 static void SendToMemcache(const char* buf, const DataThrottle* throttle) {
     if (throttle->CanSend()) {
-        worker.AddMessage(new Send(buf), &SendCompleted, throttle);
+        worker.AddMessage(new BufferSender(buf), &SendCompleted, throttle);
     }
 }
 
-
-class Send : public util::Runnable {
-public:
-    char* buffer;
-
-    Send(char* b) : buffer(b) {}
-    ~Send() {
-        free(buffer);
-    }
-
-    void Run() {
-        static int send_count = 0;
-        static int send_size = 0;
-        memcached_return rc;
-        size_t len = strlen(buffer);
-        rc = memcached_set(g_MemCache,
-                "measurements", strlen("measurements"),
-                buffer, len,
-                (time_t)0, (uint32_t)0);
-
-        if (rc != MEMCACHED_SUCCESS) {
-            printf("Could NOT send to Kestrel at %s:%d\n",
-                   getKestrelServerIP(), getKestrelServerPort());
-        } else {
-            // Only print successful sends once in a while - avoid log pollution
-            send_count = send_count + 1;
-            send_size = send_size + len;
-            if (send_count % 10 == 0) {
-                printf("Sent %5.3f KB to Kestrel across the latest %d messages\n",
-                       send_size / 1024.0, send_count);
-                send_size = 0;
-                send_count = 0;
-            }
-        }
-    }
-
-};
 #endif
 
 unsigned int getClosestPowerOfTwo(unsigned int n)

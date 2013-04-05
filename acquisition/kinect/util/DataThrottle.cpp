@@ -1,19 +1,16 @@
-class DataThrottle {
-public:
-    long min_delay;
-    util::StopWatch sw;
+#include "DataThrottle.h"
 
-    /** min delay is in milliseconds*/
-    DataThrottle(long min_delay): min_delay(min_delay) {}
-    bool CanSend() {
-        return (sw.GetState() == util::StopWatch::STATE_READY || sw.GetSplitTime() >= min_delay);
-    }
+DataThrottle::DataThrottle(long min_delay): min_delay(min_delay) {}
 
-    void MarkSend() {
-        if (sw.GetState() == util::StopWatch::STATE_READY) {
-            sw.Start();
-        } else {
-            sw.ReStart();
-        }
+bool DataThrottle::CanSend() {
+    return (sw.GetState() == util::StopWatch::STATE_READY ||
+            sw.GetSplitTime() >= min_delay);
+}
+
+void DataThrottle::MarkSend() {
+    if (sw.GetState() == util::StopWatch::STATE_READY) {
+        sw.Start();
+    } else {
+        sw.ReStart();
     }
-};
+}
