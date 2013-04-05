@@ -78,6 +78,13 @@ static util::Worker worker(200);
 static void SendCompleted(util::Runnable* r, void* arg) {
     DataThrottle* dt = static_cast<DataThrottle*>(arg);
     delete r;
+    dt.MarkSend();
+}
+
+static void SendToMemcache(const char* buf, const DataThrottle* throttle) {
+    if (throttle->CanSend()) {
+        worker.AddMessage(new Send(buf), &SendCompleted, throttle);
+    }
 }
 
 
@@ -404,7 +411,7 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
          right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
          right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
-    worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
+    SendToMemcache(buf, &skeleton_throttle);
 
     free(head);
     free(neck);
@@ -507,7 +514,7 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
         printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
 
 
-    worker.AddMessage(new Send(buf), &SendCompleted, throttle);
+    SendToMemcache(buf, throttle);
 
     free(context);
 #endif
@@ -719,10 +726,7 @@ void drawTrackedUsers() {
         if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
         {
             DrawJoints(aUsers[i]);
-            if (skeleton_throttle.CanSend()) {
-                 SaveSkeleton(aUsers[i], "player1", "kinect1");
-                 skeleton_throttle.MarkSend();
-            }
+            SaveSkeleton(aUsers[i], "player1", "kinect1");
             DrawSkeleton(aUsers[i]);
         }
     }
@@ -776,14 +780,8 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
 
     transformDepthImageIntoTexture(dmd, smd, pDepthTexBuf);
 
-    if (rgb_throttle.CanSend()) {
-        SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
-        rgb_throttle.MarkSend();
-    }
-    if (depth_throttle.CanSend()) {
-        SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
-        depth_throttle.MarkSend();
-    }
+    SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
+    SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
 
     drawDepthMap(depthTexID, dmd, pDepthTexBuf);
     drawTrackedUsers();
