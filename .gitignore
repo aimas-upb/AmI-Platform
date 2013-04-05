@@ -22,3 +22,4 @@ acquisition/export-*.csv
 
 # Settings file
 core/settings.py
+dashboard/conf/general.user.js
