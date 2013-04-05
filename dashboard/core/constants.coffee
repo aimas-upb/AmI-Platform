@@ -10,6 +10,7 @@ define [], () ->
         PURPLE: "#800080"
         ORANGE: "#FFA500"
         FUCHSIA: "#FF00FF"
+        SECOND: 1000
 
     window.Constants = Constants
     return Constants

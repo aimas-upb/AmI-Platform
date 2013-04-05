@@ -56,14 +56,35 @@ define ['cs!widget'], (Widget) ->
 
         drawTrace: (context, params) =>
             i = 0
+            date = new Date()
+            now = date.getTime()
             while i < params.length
                 pos = $.parseJSON(params[i])
-                x = Math.floor(pos['X']/10)
-                z = Math.floor(pos['Z']/10)
-                size = @getSize(i, params.length)
-                context.fillStyle = getColor(pos['sensor_id'])
-                context.fillRect(x, z, size, size)
+                # display position iff is considered recent (less than 15s ago)
+                created_at = parseInt(pos['created_at'])
+                if (now - created_at*Constants.SECOND) < 30*Constants.SECOND 
+                  x = Math.floor(pos['X']/10)
+                  z = Math.floor(pos['Z']/10)
+                  size = @getSize(i, params.length)
+                  color = getColor(pos['sensor_id'])
+                  context.fillStyle = color
+                  context.fillRect(x, z, size, size)
+                  if i != 0
+                    previous = $.parseJSON(params[i-1])
+                    from_x = Math.floor(previous['X']/10)
+                    from_y = Math.floor(previous['Z']/10)
+                    @drawLine(context, color, from_x, from_y, x, z)
+                else
+                    break
                 i++
+
+        drawLine: (context, color, from_x, from_y, to_x, to_y) =>
+            context.beginPath();
+            context.moveTo(from_x, from_y);
+            context.lineTo(to_x, to_y);
+            context.closePath();
+            context.strokeStyle = color
+            context.stroke();
 
         drawKinects: (context) =>
             # draw kinects on dashboard trace
