@@ -29,10 +29,6 @@
 #include <XnCppWrapper.h>
 #include "SceneDrawer.h"
 #include <XnPropNames.h>
-#if USE_MEMCACHE
-    #include <libmemcached/memcached.h>
-#endif
-
 #include "base64.h"
 #include "ami_environment.h"
 
@@ -45,9 +41,6 @@ xn::DepthGenerator g_DepthGenerator;
 xn::UserGenerator g_UserGenerator;
 xn::ImageGenerator g_ImageGenerator;
 xn::Player g_Player;
-#if USE_MEMCACHE
-memcached_st* g_MemCache;
-#endif
 
 #ifndef USE_GLES
 #if (XN_PLATFORM == XN_PLATFORM_MACOSX)
@@ -267,25 +260,6 @@ CHECK_RC(nRetVal, "Register to user callbacks");
     CHECK_RC(nRetVal, "Register to calibration complete");
 }
 
-void initializeKestrelConnection() {
-    /*
-     * Kestrel is a distributed queueing system that we use to
-     */
-    g_MemCache = memcached_create(NULL);
-    memcached_server_st* servers = NULL;
-    memcached_return rc;
-    servers = memcached_server_list_append(servers,
-                                           getKestrelServerIP(),
-                                           getKestrelServerPort(),
-                                           &rc);
-    memcached_server_push(g_MemCache, servers);
-    printf("Pushed server %s:%d to list of kestrels\n", getKestrelServerIP(), getKestrelServerPort());
-    if (rc != MEMCACHED_SUCCESS) {
-        printf("Failed to register to memcache library\n");
-        exit(-1);
-    }
-}
-
 void openglMainLoop(int argc, char **argv) {
     /*
      * OpenGL main loop, depending on which type of library is available:
@@ -331,10 +305,6 @@ int main(int argc, char **argv)
     nRetVal = g_Context.StartGeneratingAll();
 
     CHECK_RC(nRetVal, "StartGenerating");
-
-#if USE_MEMCACHE
-    initializeKestrelConnection();
-#endif
 
     openglMainLoop(argc, argv);
 

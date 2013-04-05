@@ -71,20 +71,18 @@ void SceneDrawerInit() {
 }
 
 #ifdef USE_MEMCACHE
-#include <libmemcached/memcached.h>
-extern memcached_st* g_MemCache;
 
 static util::Worker worker(200);
 
 static void SendCompleted(util::Runnable* r, void* arg) {
     DataThrottle* dt = static_cast<DataThrottle*>(arg);
     delete r;
-    dt.MarkSend();
+    dt->MarkSend();
 }
 
-static void SendToMemcache(const char* buf, const DataThrottle* throttle) {
+static void SendToMemcache(char* buf, DataThrottle* throttle) {
     if (throttle->CanSend()) {
-        worker.AddMessage(new BufferSender(buf), &SendCompleted, throttle);
+        worker.AddMessage(new util::BufferSender(buf), &SendCompleted, throttle);
     }
 }
 
