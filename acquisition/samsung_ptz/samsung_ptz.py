@@ -47,7 +47,7 @@ def make_ptz_cam_http_request():
     requests.get(camera_url,
                  params=params,
                  auth=HTTPDigestAuth(username,password),
-                 prefetch=False,hooks=dict(response=response_hook))
+                 hooks=dict(response=response_hook))
 
 def get_header(chunk):
     """ Given a chunk of data from the iter_chunks iterator that
@@ -164,5 +164,5 @@ def iter_chunks(response, amt=None):
 if __name__ == '__main__':
     setup_logging()
     kestrel_client = kestrel.Client(KESTREL_SERVERS)
-    for image in iter_frames:
+    for image in iter_frames():
         kestrel_client.add('measurements', json.dumps(image))
