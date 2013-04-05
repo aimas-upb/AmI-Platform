@@ -5,6 +5,7 @@ define ['cs!widget'], (Widget) ->
         MIN_SIZE = 1
         MAX_SIZE = 10
         KINECT_SIDE = 20
+        TRACE_TTL = 30*Constants.SECOND
 
         template_name: 'templates/trace.hjs'
         subscribed_channels: ['/kinect1', '/kinect2', '/kinect3', '/kinect4',
@@ -55,14 +56,18 @@ define ['cs!widget'], (Widget) ->
             @canvas.getContext('2d').drawImage(temp_canvas, 0, 0)
 
         drawTrace: (context, params) =>
+            ###
+                Display traces for the subjects supervised by specific Kinect
+                device. Only recent positions will be displayed. (i.e. less
+                than 15s ago)
+            ###
             i = 0
             date = new Date()
             now = date.getTime()
             while i < params.length
                 pos = $.parseJSON(params[i])
-                # display position iff is considered recent (less than 15s ago)
-                created_at = parseInt(pos['created_at'])
-                if (now - created_at*Constants.SECOND) < 30*Constants.SECOND 
+                created_at = parseInt(pos['created_at']) * Constants.SECOND
+                if (now - created_at) < TRACE_TTL
                   x = Math.floor(pos['X']/10)
                   z = Math.floor(pos['Z']/10)
                   size = @getSize(i, params.length)
@@ -79,6 +84,9 @@ define ['cs!widget'], (Widget) ->
                 i++
 
         drawLine: (context, color, from_x, from_y, to_x, to_y) =>
+            ###
+                Draw line between two 2D points.
+            ###
             context.beginPath();
             context.moveTo(from_x, from_y);
             context.lineTo(to_x, to_y);
@@ -87,21 +95,24 @@ define ['cs!widget'], (Widget) ->
             context.stroke();
 
         drawKinects: (context) =>
-            # draw kinects on dashboard trace
+            ###
+                Draw the Kinect devices on the dashboard trace. Each Kinect
+                device has a specific color matching the traces'color.
+            ###
             # daq-01
-            context.fillStyle = Constants.RED;
+            context.fillStyle = getColor("daq-01");
             context.fillRect(@canvas.width/3, @canvas.height-KINECT_SIDE, KINECT_SIDE, KINECT_SIDE)
             # daq-02
-            context.fillStyle = Constants.PURPLE;
+            context.fillStyle = getColor("daq-02");
             context.fillRect(0, @canvas.height*2/3, KINECT_SIDE, KINECT_SIDE)
             # daq-03
-            context.fillStyle = Constants.BLUE;
+            context.fillStyle = getColor("daq-03");
             context.fillRect(@canvas.width/3, 0, KINECT_SIDE, KINECT_SIDE)
             # daq-04
-            context.fillStyle = Constants.GREEN;
+            context.fillStyle = getColor("daq-04");
             context.fillRect(@canvas.width-KINECT_SIDE, @canvas.height/3, KINECT_SIDE, KINECT_SIDE)
             # daq-05
-            context.fillStyle = Constants.ORANGE;
+            context.fillStyle = getColor("daq-05");
             context.fillRect(@canvas.width-KINECT_SIDE, @canvas.height*2/3, KINECT_SIDE, KINECT_SIDE)
 
         getColor = (sensor_id) =>
@@ -122,4 +133,8 @@ define ['cs!widget'], (Widget) ->
                   Constants.BLACK
 
         getSize: (index, len) =>
+            ###
+                Get the size of the displayed pixel based on the timestamp when
+                the position was detected.
+            ###
             return MAX_SIZE - (index * (MAX_SIZE-MIN_SIZE)/len)
