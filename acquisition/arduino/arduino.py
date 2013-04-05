@@ -49,7 +49,7 @@ class Arduino_Acquisition(object):
 		logger.info("Sending data")
 		for msg in data
 			send_message(msg)
-			
+			co
 if __name__ == '__main__':
 	setup_logging()
 	module = Arduino_Acquisition()
