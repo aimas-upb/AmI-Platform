@@ -35,7 +35,7 @@ class Arduino_Acquisition(DAU):
 	def acquire_data(self):
 		all_data = list()
 		for ard in arduino_conf.devices:
-			data = get_data(ard)
+			data = self.get_data(ard)
 			all_data.append(data)
 		final = list(chain.from_iterable(all_data))
 		return final
