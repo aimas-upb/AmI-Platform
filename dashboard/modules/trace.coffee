@@ -2,14 +2,6 @@ define ['cs!widget'], (Widget) ->
     
     class TraceWidget extends Widget
 
-        BLACK   = "#000000"
-        RED     = "#FF0000"
-        GREEN   = "#008000"
-        BLUE    = "#0000FF"
-        PURPLE  = "#800080"
-        ORANGE  = "#FFA500"
-        FUCHSIA = "#FF00FF"
-
         MIN_SIZE = 1
         MAX_SIZE = 10
 
@@ -27,7 +19,7 @@ define ['cs!widget'], (Widget) ->
             @renderLayout()
 
             @canvas = @view.$el.find('canvas').get(0)
-            @canvas.getContext('2d').fillStyle = BLACK;
+            @canvas.getContext('2d').fillStyle = Constants.BLACK;
             @canvas.getContext('2d').strokeRect(0, 0, @canvas.width, @canvas.height)
 
             @temp_canvas = document.createElement("canvas")
@@ -39,12 +31,6 @@ define ['cs!widget'], (Widget) ->
                 This gets called whenever there is a change
                 in the trace that has to be displayed.
             ###
-            # return unless (kinect_params[0].type == 'change' or
-                           # kinect_params[1].type == 'change' or
-                           # kinect_params[2].type == 'change' or
-                           # kinect_params[3].type == 'change' or
-                           # kinect_params[4].type == 'change')
-
             @trace_params = kinect_params[0].model
             _.extend(@trace_params, kinect_params[1].model)
             _.extend(@trace_params, kinect_params[2].model)
@@ -82,19 +68,19 @@ define ['cs!widget'], (Widget) ->
         getColor = (sensor_id) =>
             switch sensor_id
                 when "daq-01"
-                  return RED
+                  return Constants.RED
                 when "daq-03"
-                  return BLUE
+                  return Constants.BLUE
                 when "daq-04"
-                  return GREEN
+                  return Constants.GREEN
                 when "daq-05"
-                  return ORANGE
+                  return Constants.ORANGE
                 when "daq-06"
-                  return PURPLE
+                  return Constants.PURPLE
                 when "anonymous"
-                  return FUCHSIA
+                  return Constants.FUCHSIA
                 else
-                  BLACK
+                  Constants.BLACK
 
         getSize: (index, len) =>
             return (index * (MAX_SIZE - MIN_SIZE) + len*MIN_SIZE)/len
