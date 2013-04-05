@@ -27,7 +27,7 @@ class Arduino_Acquisition(DAU):
 		for measurement in ard['data'].keys():
 			message = {'sensor_type': ard['sensor_type'], \
 						'sensor_id': ard['sensor_id'], \
-						'measurement_type': measurement, \
+						'type': measurement, \
 						'measurement': ard['data'][measurement]}
 			measurements.append(message)
 		return measurements
@@ -38,6 +38,7 @@ class Arduino_Acquisition(DAU):
 			data = self.get_data(ard)
 			all_data.append(data)
 		final = list(chain.from_iterable(all_data))
+		#print final
 		return final
 	
 		
