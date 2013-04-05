@@ -34,8 +34,6 @@
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 
-
-
 #include "SceneDrawer.h"
 #include "context.h"
 #include "base64.h"
@@ -43,6 +41,7 @@
 #include "ami_environment.h"
 #include "util/Worker.h"
 #include "util/StopWatch.h"
+#include "util/DataThrottle.h"
 
 #ifndef USE_GLES
 #if (XN_PLATFORM == XN_PLATFORM_MACOSX)
@@ -63,27 +62,6 @@ extern xn::DepthGenerator g_DepthGenerator;
 #define MIN_DELAY_BETWEEN_RGB_MEASUREMENT 1000
 #define MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT 1000
 
-class DataThrottle {
-public:
-    bool running;
-    long min_delay;
-    util::StopWatch sw;
-
-    /** min delay is in milliseconds*/
-    DataThrottle(long min_delay): running(false), min_delay(min_delay) {}
-    bool CanSend() {
-        return !running && (sw.GetState() == util::StopWatch::STATE_READY || sw.GetSplitTime() >= min_delay);
-    }
-
-    void MarkSend() {
-        if (sw.GetState() == util::StopWatch::STATE_READY) {
-            sw.Start();
-        } else {
-            sw.ReStart();
-        }
-    }
-};
-
 DataThrottle skeleton_throttle(MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT);
 DataThrottle rgb_throttle(MIN_DELAY_BETWEEN_RGB_MEASUREMENT);
 DataThrottle depth_throttle(MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT);
@@ -100,7 +78,6 @@ static util::Worker worker(200);
 static void SendCompleted(util::Runnable* r, void* arg) {
     DataThrottle* dt = static_cast<DataThrottle*>(arg);
     delete r;
-    dt->running = false;
 }
 
 
@@ -115,8 +92,8 @@ public:
 
     void Run() {
         static int send_count = 0;
-		static int send_size = 0;
-		memcached_return rc;
+        static int send_size = 0;
+        memcached_return rc;
         size_t len = strlen(buffer);
         rc = memcached_set(g_MemCache,
                 "measurements", strlen("measurements"),
@@ -128,7 +105,7 @@ public:
                    getKestrelServerIP(), getKestrelServerPort());
         } else {
             // Only print successful sends once in a while - avoid log pollution
-			send_count = send_count + 1;
+            send_count = send_count + 1;
             send_size = send_size + len;
             if (send_count % 10 == 0) {
                 printf("Sent %5.3f KB to Kestrel across the latest %d messages\n",
@@ -745,7 +722,7 @@ void drawTrackedUsers() {
             if (skeleton_throttle.CanSend()) {
                  SaveSkeleton(aUsers[i], "player1", "kinect1");
                  skeleton_throttle.MarkSend();
-			}
+            }
             DrawSkeleton(aUsers[i]);
         }
     }
@@ -801,11 +778,11 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
 
     if (rgb_throttle.CanSend()) {
         SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
-		rgb_throttle.MarkSend();
+        rgb_throttle.MarkSend();
     }
     if (depth_throttle.CanSend()) {
         SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
-		depth_throttle.MarkSend();
+        depth_throttle.MarkSend();
     }
 
     drawDepthMap(depthTexID, dmd, pDepthTexBuf);
