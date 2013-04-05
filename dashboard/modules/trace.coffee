@@ -9,8 +9,9 @@ define ['cs!widget'], (Widget) ->
         template_name: 'templates/trace.hjs'
         subscribed_channels: ['/kinect1', '/kinect2', '/kinect3', '/kinect4',
                               '/kinect5', '/kinect6']
-        aggregated_channels: {get_latest_subject_positions: ['/kinect1',
-                              '/kinect2', '/kinect3', '/kinect4', '/kinect5', '/kinect6']}
+        aggregated_channels: {get_latest_subject_positions:
+                               ['/kinect1', '/kinect2', '/kinect3', '/kinect4',
+                                '/kinect5', '/kinect6']}
 
         initialize: =>
             ###
