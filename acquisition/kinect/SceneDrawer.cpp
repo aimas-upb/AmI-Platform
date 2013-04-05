@@ -103,19 +103,20 @@ static void SendCompleted(util::Runnable* r, void* arg) {
     dt->running = false;
 }
 
+
 class Send : public util::Runnable {
 public:
     char* buffer;
-    int send_count;
-    int send_size;
 
-    Send(char* b) : buffer(b), send_count(0), send_size(0) {}
+    Send(char* b) : buffer(b) {}
     ~Send() {
         free(buffer);
     }
 
     void Run() {
-        memcached_return rc;
+        static int send_count = 0;
+		static int send_size = 0;
+		memcached_return rc;
         size_t len = strlen(buffer);
         rc = memcached_set(g_MemCache,
                 "measurements", strlen("measurements"),
@@ -127,9 +128,9 @@ public:
                    getKestrelServerIP(), getKestrelServerPort());
         } else {
             // Only print successful sends once in a while - avoid log pollution
-            send_count = send_count + 1;
+			send_count = send_count + 1;
             send_size = send_size + len;
-            if (send_count % 100 == 0) {
+            if (send_count % 10 == 0) {
                 printf("Sent %5.3f KB to Kestrel across the latest %d messages\n",
                        send_size / 1024.0, send_count);
                 send_size = 0;
@@ -743,8 +744,8 @@ void drawTrackedUsers() {
             DrawJoints(aUsers[i]);
             if (skeleton_throttle.CanSend()) {
                  SaveSkeleton(aUsers[i], "player1", "kinect1");
-                             skeleton_throttle.MarkSend();
-                        }
+                 skeleton_throttle.MarkSend();
+			}
             DrawSkeleton(aUsers[i]);
         }
     }
@@ -800,9 +801,11 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
 
     if (rgb_throttle.CanSend()) {
         SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
+		rgb_throttle.MarkSend();
     }
     if (depth_throttle.CanSend()) {
         SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
+		depth_throttle.MarkSend();
     }
 
     drawDepthMap(depthTexID, dmd, pDepthTexBuf);
