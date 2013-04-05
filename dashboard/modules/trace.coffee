@@ -4,12 +4,13 @@ define ['cs!widget'], (Widget) ->
 
         MIN_SIZE = 1
         MAX_SIZE = 10
+        KINECT_SIDE = 20
 
         template_name: 'templates/trace.hjs'
         subscribed_channels: ['/kinect1', '/kinect2', '/kinect3', '/kinect4',
-                              '/kinect5']
+                              '/kinect5', '/kinect6']
         aggregated_channels: {get_latest_subject_positions: ['/kinect1',
-                              '/kinect2', '/kinect3', '/kinect4', '/kinect5']}
+                              '/kinect2', '/kinect3', '/kinect4', '/kinect5', '/kinect6']}
 
         initialize: =>
             ###
@@ -22,38 +23,19 @@ define ['cs!widget'], (Widget) ->
             @canvas.getContext('2d').fillStyle = Constants.BLACK;
             @canvas.getContext('2d').strokeRect(0, 0, @canvas.width, @canvas.height)
 
-            # draw kinects on dashboard trace
-            kinect_side = 20;
-            # daq-01
-            @canvas.getContext('2d').fillStyle = Constants.RED;
-            @canvas.getContext('2d').fillRect(@canvas.width/3, @canvas.height-kinect_side, kinect_side, kinect_side)
-            # daq-02
-            @canvas.getContext('2d').fillStyle = Constants.PURPLE;
-            @canvas.getContext('2d').fillRect(0, @canvas.height*2/3, kinect_side, kinect_side)
-            # daq-03
-            @canvas.getContext('2d').fillStyle = Constants.BLUE;
-            @canvas.getContext('2d').fillRect(@canvas.width/3, 0, kinect_side, kinect_side)
-            # daq-04
-            @canvas.getContext('2d').fillStyle = Constants.GREEN;
-            @canvas.getContext('2d').fillRect(@canvas.width-kinect_side, @canvas.height/3, kinect_side, kinect_side)
-            # daq-05
-            @canvas.getContext('2d').fillStyle = Constants.ORANGE;
-            @canvas.getContext('2d').fillRect(@canvas.width-kinect_side, @canvas.height*2/3, kinect_side, kinect_side)
-
-            @temp_canvas = document.createElement("canvas")
-            @temp_canvas.width = @canvas.width
-            @temp_canvas.height = @canvas.height
+            @drawKinects(@canvas.getContext('2d'))
 
         get_latest_subject_positions: (kinect_params...) =>
             ###
                 This gets called whenever there is a change
                 in the trace that has to be displayed.
             ###
-            @trace_params = kinect_params[0].model
-            _.extend(@trace_params, kinect_params[1].model)
-            _.extend(@trace_params, kinect_params[2].model)
-            _.extend(@trace_params, kinect_params[3].model)
-            _.extend(@trace_params, kinect_params[4].model)
+            @trace_params = []
+            @trace_params = _.union(@trace_params, kinect_params[1].model.data.data) if kinect_params[1].model?
+            @trace_params = _.union(@trace_params, kinect_params[2].model.data.data) if kinect_params[2].model?
+            @trace_params = _.union(@trace_params, kinect_params[3].model.data.data) if kinect_params[3].model?
+            @trace_params = _.union(@trace_params, kinect_params[4].model.data.data) if kinect_params[4].model?
+            @trace_params = _.union(@trace_params, kinect_params[5].model.data.data) if kinect_params[5].model?
 
             @drawTrace()
 
@@ -61,27 +43,46 @@ define ['cs!widget'], (Widget) ->
             ###
                 Draws the image with the subjects'traces.
             ###
-            if not @trace_params.data?
-                return
-            if not @trace_params.data.data?
-                return
+            
+            temp_canvas = document.createElement("canvas")
+            temp_canvas.width = @canvas.width
+            temp_canvas.height = @canvas.height
+            temp_context_2d = temp_canvas.getContext('2d')
+            temp_context_2d.fillStyle = Constants.WHITE
+            temp_context_2d.fillRect(1, 1, @canvas.width-2, @canvas.height-2)
 
-            context_2d = @canvas.getContext('2d')
-            temp_context_2d = @temp_canvas.getContext('2d')
-            temp_context_2d.clearRect(1, 1, @canvas.width-1, @canvas.height-1)
-
-            position_list = @trace_params.data.data
-            for position in position_list
+            for position in @trace_params
                 pos = $.parseJSON(position)
+                sensor_id = pos['sensor_id']
                 x = Math.floor(pos['X']/10)
                 z = Math.floor(pos['Z']/10)
-                sensor_id = pos['sensor_id']
 
+                #size = @getSize(position_list.indexOf(position), position_list.length)
+                size = 10
                 temp_context_2d.fillStyle = getColor(sensor_id)
-                size = @getSize(position_list.indexOf(position), position_list.length)
                 temp_context_2d.fillRect(x, z, size, size)
 
-            @canvas.getContext('2d').drawImage(@temp_canvas, 0, 0)
+            # TODO (diana): find a solution to avoid redrawing kinects everytime
+            @drawKinects(temp_context_2d)
+            @canvas.getContext('2d').drawImage(temp_canvas, 0, 0)
+
+        drawKinects: (context) =>
+            # draw kinects on dashboard trace
+            # daq-01
+            context.fillStyle = Constants.RED;
+            context.fillRect(@canvas.width/3, @canvas.height-KINECT_SIDE, KINECT_SIDE, KINECT_SIDE)
+            # daq-02
+            context.fillStyle = Constants.PURPLE;
+            context.fillRect(0, @canvas.height*2/3, KINECT_SIDE, KINECT_SIDE)
+            # daq-03
+            context.fillStyle = Constants.BLUE;
+            context.fillRect(@canvas.width/3, 0, KINECT_SIDE, KINECT_SIDE)
+            # daq-04
+            context.fillStyle = Constants.GREEN;
+            context.fillRect(@canvas.width-KINECT_SIDE, @canvas.height/3, KINECT_SIDE, KINECT_SIDE)
+            # daq-05
+            context.fillStyle = Constants.ORANGE;
+            context.fillRect(@canvas.width-KINECT_SIDE, @canvas.height*2/3, KINECT_SIDE, KINECT_SIDE)
 
         getColor = (sensor_id) =>
             switch sensor_id

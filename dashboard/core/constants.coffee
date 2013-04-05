@@ -5,6 +5,7 @@ define [], () ->
         ROOM_X: 5000
         ROOM_Y: 9000
         BLACK: "#000000"
+        WHITE: "#FFFFFF"
         RED: "#FF0000"
         GREEN: "#008000"
         BLUE: "#0000FF"

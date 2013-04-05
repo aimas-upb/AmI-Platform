@@ -5,6 +5,10 @@ define ['cs!controller'], (Controller) ->
         action: ->
             channels_params =
                 '/latest_subject_positions': {'sensor_id': 'daq-01'}
+            [latest_subject_positions_kinect6] = Utils.newDataChannels(channels_params)
+          
+            channels_params =
+                '/latest_subject_positions': {'sensor_id': 'daq-01'}
             [latest_subject_positions_kinect1] = Utils.newDataChannels(channels_params)
 
             channels_params =
@@ -31,4 +35,5 @@ define ['cs!controller'], (Controller) ->
                         '/kinect3': latest_subject_positions_kinect3
                         '/kinect4': latest_subject_positions_kinect4
                         '/kinect5': latest_subject_positions_kinect5
+                        '/kinect6': latest_subject_positions_kinect6
             @renderLayout(params)
