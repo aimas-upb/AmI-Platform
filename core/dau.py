@@ -5,10 +5,11 @@ import kestrel
 import settings
 """
 	Data Acquisition Unit for Ami-Lab framework
+	Its architecture resembles the design of PDU Class.
 """
 
 class DAU(object):
-	DATA_SAMPLING_FREQUENCY = 500
+	DATA_SAMPLING_FREQUENCY = 500 #miliseconds
 	
 	def __init__(self, **kwargs):
 		self._mongo_connection = pymongo.Connection(settings.MONGO_SERVER)
@@ -44,11 +45,10 @@ class DAU(object):
         """ Query whether the current PDU is running or not. """
         result = self._running
         return result
-	
-	def create_message(self, message):
-		raise NotImplemented("Please implement this in your sub-class!")
+
 		
 	def acquire_data(self):
+		#It should be designed to return a list of messages, as it is possible to retrieve multiple datasets at once
 		raise NotImplemented("Please implement this in your sub-class!")
 		
 	def run(self):
@@ -56,6 +56,7 @@ class DAU(object):
 		self.log("DAU %s is alive!" %self.__class__.__name__)
 		
 		while self._is_running():
-			message = self.create_message(self.acquire_data())
-			self.send_to(QUEUE, message)
-			time.sleep(DATA_SAMPLING_FREQUENCY)
+			messages = self.acquire_data()
+			for msg in messages:
+				self.send_to(QUEUE, message)
+			time.sleep(DATA_SAMPLING_FREQUENCY /1000f)
