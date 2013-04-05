@@ -44,6 +44,8 @@ def make_ptz_cam_http_request():
     password = '4321'
     camera_url = 'http://172.16.4.118/cgi-bin/video.cgi'
 
+    logger.info("Making HTTP request for PTZ camera..")
+
     requests.get(camera_url,
                  params=params,
                  auth=HTTPDigestAuth(username,password),
@@ -85,10 +87,13 @@ def iter_frames():
 
             # Skip empty chunks
             if not chunk:
+                logger.warn("Got empty chunk!")
                 continue
 
             header = get_header(chunk)
             if header:
+                logger.info("Found header within chunk.")                
+
                 # If a header has been found, first we complete the last frame
                 content += get_before_header(chunk)
 
@@ -105,12 +110,14 @@ def iter_frames():
                 frames += 1
                 content = get_after_header(chunk)
             else:
+                logger.info("Chunk without header here")
                 content += chunk	# chunk without header
 
     except requests.ConnectionError:
         logger.exception("Cannot connect to PTZ camera")
 
 def response_hook(response, *args, **kwargs):
+    logger.info("Response hook is being called")
     response.iter_chunks = lambda amt=None: iter_chunks(response.raw._fp, amt=amt)
     return response
 
@@ -165,4 +172,6 @@ if __name__ == '__main__':
     setup_logging()
     kestrel_client = kestrel.Client(KESTREL_SERVERS)
     for image in iter_frames():
-        kestrel_client.add('measurements', json.dumps(image))
+        measurement = json.dumps(image)
+        kestrel_client.add('measurements', measurement)
+        logger.info("Added a frame of size %d" % len(measurement))
