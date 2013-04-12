@@ -14,7 +14,7 @@ ARDUINO_DATA_LIMIT = 50
 
 ARDUINO_MEASUREMENTS = ["temperature", "luminosity", "sharp_data"]
 
-@route('/latest_kinect_rgb/:sensor_id', method='GET')
+@route('/latest_kinect_rgb/<sensor_id>', method='GET')
 def get_latest_kinect_rgb(sensor_id = 'daq-01'):
     try:
         result = dashboard_cache.get(sensor_id=sensor_id,
@@ -25,7 +25,7 @@ def get_latest_kinect_rgb(sensor_id = 'daq-01'):
         logger.exception("Failed to get latest kinect RGB from Redis")
         return {}
 
-@route('/latest_kinect_skeleton/:sensor_id', method='GET')
+@route('/latest_kinect_skeleton/<sensor_id>', method='GET')
 def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
     try:
         result = dashboard_cache.get(sensor_id=sensor_id,
@@ -36,7 +36,7 @@ def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
         logger.exception("Failed to get latest kinect skeleton from Redis")
         return {}
 
-@route('/latest_subject_positions/:sensor_id', method='GET')
+@route('/latest_subject_positions/<sensor_id>', method='GET')
 def get_latest_subject_positions(sensor_id = 'daq-01'):
     try:
         result = dashboard_cache.lrange(sensor_id=sensor_id,
@@ -67,7 +67,8 @@ def get_latest_arduino_measurements(sensor_id, measurement_type):
 		
 @route('/last_arduino_measurement/<sensor_id>/measurement_type>', method = 'GET')
 def get_last_arduino_measurement(sensor_id, measurement_type):
-	""" Will return last measurement value.
+	""" Will return last measurement value by using LIndex method. 
+		Return value is a dictionary containing """
 	try:
 		result = dashboard_cache.lindex(sensor_id = sensor_id,
 										sensor_type = 'arduino'
