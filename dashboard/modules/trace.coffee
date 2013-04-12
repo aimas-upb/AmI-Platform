@@ -26,6 +26,8 @@ define ['cs!widget'], (Widget) ->
             @canvas.getContext('2d').strokeRect(0, 0, @canvas.width, @canvas.height)
 
             @drawKinects(@canvas.getContext('2d'))
+            @drawLines = Constants.DRAW_LINES
+            @positionShape = Constants.POSITION_SHAPE
 
         get_latest_subject_positions: (kinect_params...) =>
             ###
@@ -45,11 +47,19 @@ define ['cs!widget'], (Widget) ->
             temp_context_2d.fillStyle = Constants.WHITE
             temp_context_2d.fillRect(1, 1, @canvas.width-2, @canvas.height-2)
 
-            @drawTrace(temp_context_2d, params[1].model.data.data) if params[1].model?
-            @drawTrace(temp_context_2d, params[2].model.data.data) if params[2].model?
-            @drawTrace(temp_context_2d, params[3].model.data.data) if params[3].model?
-            @drawTrace(temp_context_2d, params[4].model.data.data) if params[4].model?
-            @drawTrace(temp_context_2d, params[5].model.data.data) if params[5].model?
+            if @positionShape is 'CIRCLE'
+                @drawTraceWithCircles(temp_context_2d, params[1].model.data.data) if params[1].model?
+                @drawTraceWithCircles(temp_context_2d, params[2].model.data.data) if params[2].model?
+                @drawTraceWithCircles(temp_context_2d, params[3].model.data.data) if params[3].model?
+                @drawTraceWithCircles(temp_context_2d, params[4].model.data.data) if params[4].model?
+                @drawTraceWithCircles(temp_context_2d, params[5].model.data.data) if params[5].model?
+            else
+                # the default shape will be used: RECTANGLE
+                @drawTrace(temp_context_2d, params[1].model.data.data) if params[1].model?
+                @drawTrace(temp_context_2d, params[2].model.data.data) if params[2].model?
+                @drawTrace(temp_context_2d, params[3].model.data.data) if params[3].model?
+                @drawTrace(temp_context_2d, params[4].model.data.data) if params[4].model?
+                @drawTrace(temp_context_2d, params[5].model.data.data) if params[5].model?
 
             # TODO (diana): find a solution to avoid redrawing kinects everytime
             @drawKinects(temp_context_2d)
@@ -74,11 +84,39 @@ define ['cs!widget'], (Widget) ->
                   color = getColor(pos['sensor_id'])
                   context.fillStyle = color
                   context.fillRect(x, z, size, size)
-                  if i != 0
-                    previous = $.parseJSON(params[i-1])
-                    from_x = Math.floor(previous['X']/10)
-                    from_y = Math.floor(previous['Z']/10)
-                    @drawLine(context, color, from_x, from_y, x, z)
+                  if @drawLines
+                    if i != 0
+                      previous = $.parseJSON(params[i-1])
+                      from_x = Math.floor(previous['X']/10)
+                      from_y = Math.floor(previous['Z']/10)
+                      @drawLine(context, color, from_x, from_y, x, z)
+                else
+                    break
+                i++
+
+        drawTraceWithCircles: (context, params) =>
+            i = 0
+            date = new Date()
+            now = date.getTime()
+            while i < params.length
+                pos = $.parseJSON(params[i])
+                created_at = parseInt(pos['created_at']) * Constants.SECOND
+                if (now - created_at) < TRACE_TTL
+                  x = Math.floor(pos['X']/10)
+                  z = Math.floor(pos['Z']/10)
+                  size = @getSize(i, params.length)
+                  color = getColor(pos['sensor_id'])
+
+                  context.beginPath();
+                  context.arc(x, z, size/2, 0, 2 * Math.PI, false);
+                  context.fillStyle = color;
+                  context.fill();
+                  if @drawLines
+                    if i != 0
+                      previous = $.parseJSON(params[i-1])
+                      from_x = Math.floor(previous['X']/10)
+                      from_y = Math.floor(previous['Z']/10)
+                      @drawLine(context, color, from_x, from_y, x, z)
                 else
                     break
                 i++
