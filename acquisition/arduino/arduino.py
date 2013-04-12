@@ -27,9 +27,9 @@ class Arduino_Acquisition(DAU):
 		ard['sensor_id'] = device_id
 		measurements = list()
 		for measurement in ard['data'].keys():
-			message = {'sensor_type': ard['sensor_type'], \
+			message = {'sensor_type': ard['sensor_type'].uppercase, \
 						'sensor_id': ard['sensor_id'], \
-						'type': measurement, \
+						'type': measurement.uppercase, \
 						'measurement': ard['data'][measurement]}
 			measurements.append(message)
 		return measurements
