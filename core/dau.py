@@ -10,7 +10,6 @@ import time
 """
 
 class DAU(object):
-	DATA_SAMPLING_FREQUENCY = 500 #miliseconds
 	
 	def __init__(self, **kwargs):
 		self._mongo_connection = pymongo.Connection(settings.MONGO_SERVER)

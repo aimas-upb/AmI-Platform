@@ -6,11 +6,13 @@ import kestrel
 import json
 from itertools import chain
 from core import DAU
+import os
 
 class Arduino_Acquisition(DAU):
 
 	QUEUE = 'dashboard'
-
+	DATA_SAMPLING_FREQUENCY = int(os.environ["AMI_ARDUINO_SAMP_FREQ"]) #Needs to be in milliseconds
+	
 	def __init__(self, **kwargs):
 		super(Arduino_Acquisition, self).__init__(**kwargs)
 		
