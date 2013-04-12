@@ -55,7 +55,7 @@ def get_latest_arduino_measurements(sensor_id, measurement_type):
 	""" Will return last ARDUINO_DATA_LIMIT values for selected measurement. """
 	try:
 		result = dashboard_cache.lrange(sensor_id = sensor_id,
-										sensor_type = 'arduino'
+										sensor_type = 'arduino',
 										measurement_type = measurement_type,
 										start = 0,
 										stop = ARDUINO_DATA_LIMIT)
@@ -71,7 +71,7 @@ def get_last_arduino_measurement(sensor_id, measurement_type):
 		Return value is a dictionary containing """
 	try:
 		result = dashboard_cache.lindex(sensor_id = sensor_id,
-										sensor_type = 'arduino'
+										sensor_type = 'arduino',
 										measurement_type = measurement_type,
 										index = 0)
 		return json.loads(result)
