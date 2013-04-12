@@ -19,7 +19,7 @@ class Dashboard(PDU):
                                  measurement=json.dumps(message))
 								 
 	def get_pushing_function(self, message):
-		if(message['sensor_type'] == "arduino"):
+		if(message['sensor_type'] == "ARDUINO"):
 			return self.dashboard_cache.lpush
 		else:
 			return self.dashboard_cache.put
