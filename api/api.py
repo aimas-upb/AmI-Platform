@@ -52,6 +52,7 @@ def get_latest_subject_positions(sensor_id = 'daq-01'):
 
 @route('/latest_arduino_measurements/<sensor_id>/<measurement_type>', method='GET')
 def get_latest_arduino_measurements(sensor_id, measurement_type):
+	""" Will return last ARDUINO_DATA_LIMIT values for selected measurement. """
 	try:
 		result = dashboard_cache.lrange(sensor_id = sensor_id,
 										sensor_type = 'arduino'
@@ -66,6 +67,7 @@ def get_latest_arduino_measurements(sensor_id, measurement_type):
 		
 @route('/last_arduino_measurement/<sensor_id>/measurement_type>', method = 'GET')
 def get_last_arduino_measurement(sensor_id, measurement_type):
+	""" Will return last measurement value.
 	try:
 		result = dashboard_cache.lindex(sensor_id = sensor_id,
 										sensor_type = 'arduino'
@@ -82,7 +84,7 @@ def get_last_arduino_data(sensor_id):
 	try:
 		lst = {}
 		for measurement in ARDUINO_MEASUREMENTS:
-			lst[measurement] = json.loads(get_last_arduino_measurement(sensor_id, measurement))
+			lst[measurement] = get_last_arduino_measurement(sensor_id, measurement)
 		return lst
 	except:
 		logger.exception("Failed to get last data from Arduino id = %s" % sensor_id)
