@@ -6,11 +6,13 @@ import kestrel
 import json
 from itertools import chain
 from core import DAU
+import os
 
 class Arduino_Acquisition(DAU):
 
 	QUEUE = 'dashboard'
-
+	DATA_SAMPLING_FREQUENCY = int(os.environ["AMI_ARDUINO_SAMP_FREQ"]) #Needs to be in milliseconds
+	
 	def __init__(self, **kwargs):
 		super(Arduino_Acquisition, self).__init__(**kwargs)
 		
@@ -25,9 +27,9 @@ class Arduino_Acquisition(DAU):
 		ard['sensor_id'] = device_id
 		measurements = list()
 		for measurement in ard['data'].keys():
-			message = {'sensor_type': ard['sensor_type'], \
+			message = {'sensor_type': ard['sensor_type'].uppercase, \
 						'sensor_id': ard['sensor_id'], \
-						'type': measurement, \
+						'type': measurement.uppercase, \
 						'measurement': ard['data'][measurement]}
 			measurements.append(message)
 		return measurements
