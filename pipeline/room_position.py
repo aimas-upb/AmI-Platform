@@ -85,10 +85,6 @@ class RoomPosition(PDU):
                                  sensor_type=message['sensor_type'],
                                  measurement_type=position_message['type'],
                                  measurement=json.dumps(position_message))
-        self.dashboard_cache.ltrim(sensor_id=message['sensor_id'],
-                                 sensor_type=message['sensor_type'],
-                                 measurement_type=position_message['type'],
-                                 measurement=json.dumps(position_message))
         return None
 
 def rot_x(phi):

@@ -41,7 +41,13 @@ def get_latest_subject_positions(sensor_id = 'daq-01'):
                                         measurement_type='subject_position',
                                         start=0,
                                         stop=POSITIONS_LIMIT)
+        dashboard_cache.ltrim(sensor_id=sensor_id,
+                              sensor_type='kinect',
+                              measurement_type='subject_position',
+                              start=0,
+                              stop=POSITIONS_LIMIT)
         return {'data': result}
+
     except:
         logger.exception("Failed to get list of latest subject positions from "
                          "Redis")
