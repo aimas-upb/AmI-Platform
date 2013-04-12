@@ -38,8 +38,8 @@ class DashboardCache(object):
         key = self._redis_key(sensor_id, sensor_type, measurement_type)
         logger.info("Trim list from redis at key %s" % key)
         return self.redis_cache.ltrim(key, start, stop)
-		
-	def lindex(self, sensor_id, sensor_type, measurement_type, index):
+
+    def lindex(self, sensor_id, sensor_type, measurement_type, index):
         key = self._redis_key(sensor_id, sensor_type, measurement_type)
         logger.info("Get index %s list from redis at key %s" %index % key)
         return self.redis_cache.lindex(key, index)
