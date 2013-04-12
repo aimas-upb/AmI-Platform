@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 dashboard_cache = DashboardCache()
 
 POSITIONS_LIMIT = 100
+ARDUINO_DATA_LIMIT = 50
+
+ARDUINO_MEASUREMENTS = ["temperature", "luminosity", "sharp_data"]
 
 @route('/latest_kinect_rgb/:sensor_id', method='GET')
 def get_latest_kinect_rgb(sensor_id = 'daq-01'):
@@ -47,5 +50,43 @@ def get_latest_subject_positions(sensor_id = 'daq-01'):
                          "Redis")
         return {}
 
+@route('/latest_arduino_measurements/<sensor_id>/<measurement_type>', method='GET')
+def get_latest_arduino_measurements(sensor_id, measurement_type):
+	try:
+		result = dashboard_cache.lrange(sensor_id = sensor_id,
+										sensor_type = 'arduino'
+										measurement_type = measurement_type,
+										start = 0,
+										stop = ARDUINO_DATA_LIMIT)
+		return {'data': result}
+	except:
+		logger.exception("Failed to get list of latest Arduino %s data from "
+                         "Redis" % measurement_type)
+        return {}
+		
+@route('/last_arduino_measurement/<sensor_id>/measurement_type>', method = 'GET')
+def get_last_arduino_measurement(sensor_id, measurement_type):
+	try:
+		result = dashboard_cache.lindex(sensor_id = sensor_id,
+										sensor_type = 'arduino'
+										measurement_type = measurement_type,
+										index = 0)
+		return json.loads(result)
+	except:
+		logger.exception("Failed to get latest Arduino %s data from "
+                         "Redis" % measurement_type)
+        return {}
+		
+@route('/latest_arduino_data/<sensor_id>', method= 'GET')
+def get_last_arduino_data(sensor_id):
+	try:
+		lst = {}
+		for measurement in ARDUINO_MEASUREMENTS:
+			lst[measurement] = json.loads(get_last_arduino_measurement(sensor_id, measurement))
+		return lst
+	except:
+		logger.exception("Failed to get last data from Arduino id = %s" % sensor_id)
+		return {}
+		
 setup_logging()
 run(host='0.0.0.0', port=8000)
