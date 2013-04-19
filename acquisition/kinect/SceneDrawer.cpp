@@ -26,6 +26,8 @@
 #include <time.h>
 #include <string>
 #include <sstream>
+#include <sys/time.h>
+#include <time.h>
 
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/ostream_iterator.hpp>
@@ -33,8 +35,6 @@
 
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
-
-
 
 #include "SceneDrawer.h"
 #include "context.h"
@@ -401,8 +401,10 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
 
     char *context = get_context();
 
-    timespec t;
-     clock_gettime(CLOCK_REALTIME, &t);
+	struct timeval tim;
+	gettimeofday(&tim, NULL);
+
+	printf("Created at: %ld\n", tim.tv_sec*1000 + tim.tv_usec/1000);
     snprintf((char*)buf, 10000,
         "{\"created_at\": %ld,"
         "\"context\": \"%s\","
@@ -414,7 +416,7 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
         "\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
         "\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 
-        t.tv_sec,
+        tim.tv_sec*1000 + tim.tv_usec/1000,
         get_context(),
          getSensorID(),
          getSensorPosition(),
@@ -428,6 +430,7 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
          right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
     worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
+	printf("%s\n", getSensorID());
 
     free(head);
     free(neck);
@@ -508,10 +511,11 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
 
     printf("SaveImage: width = %d, height = %d\n", width, height);
 
-    timespec t;
-    clock_gettime(CLOCK_REALTIME, &t);
-
-    snprintf(buf, buf_size,
+	struct timeval tim;
+	gettimeofday(&tim, NULL);
+    
+	printf("Created at: %ld\n", tim.tv_sec*1000 + tim.tv_usec/1000);
+	snprintf(buf, buf_size,
         "{\"created_at\": %ld,"
         "\"context\": \"%s\","
         "\"sensor_type\": \"kinect\","
@@ -519,7 +523,7 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
         "\"sensor_position\": %s,"
         "\"type\": \"%s\","
         "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
-        t.tv_sec,
+        tim.tv_sec*1000 + tim.tv_usec/1000,
         context,
         getSensorID(),
         getSensorPosition(),
