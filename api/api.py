@@ -12,7 +12,7 @@ dashboard_cache = DashboardCache()
 POSITIONS_LIMIT = 100
 ARDUINO_DATA_LIMIT = 50
 
-ARDUINO_MEASUREMENTS = ["temperature", "luminosity", "sharp_data"]
+ARDUINO_MEASUREMENTS = ["TEMPERATURE", "LUMINOSITY", "SHARP_DATA"]
 
 @route('/latest_kinect_rgb/<sensor_id>', method='GET')
 def get_latest_kinect_rgb(sensor_id = 'daq-01'):
@@ -55,23 +55,23 @@ def get_latest_arduino_measurements(sensor_id, measurement_type):
 	""" Will return last ARDUINO_DATA_LIMIT values for selected measurement. """
 	try:
 		result = dashboard_cache.lrange(sensor_id = sensor_id,
-										sensor_type = 'arduino',
+										sensor_type = 'ARDUINO',
 										measurement_type = measurement_type,
 										start = 0,
 										stop = ARDUINO_DATA_LIMIT)
-		return {'data': result}
+		return result
 	except:
 		logger.exception("Failed to get list of latest Arduino %s data from "
                          "Redis" % measurement_type)
         return {}
 		
-@route('/last_arduino_measurement/<sensor_id>/measurement_type>', method = 'GET')
+@route('/last_arduino_measurement/<sensor_id>/<measurement_type>', method = 'GET')
 def get_last_arduino_measurement(sensor_id, measurement_type):
 	""" Will return last measurement value by using LIndex method. 
 		Return value is a dictionary containing """
 	try:
 		result = dashboard_cache.lindex(sensor_id = sensor_id,
-										sensor_type = 'arduino',
+										sensor_type = 'ARDUINO',
 										measurement_type = measurement_type,
 										index = 0)
 		return json.loads(result)
@@ -83,10 +83,10 @@ def get_last_arduino_measurement(sensor_id, measurement_type):
 @route('/latest_arduino_data/<sensor_id>', method= 'GET')
 def get_last_arduino_data(sensor_id):
 	try:
-		lst = {}
+		lst = []
 		for measurement in ARDUINO_MEASUREMENTS:
-			lst[measurement] = get_last_arduino_measurement(sensor_id, measurement)
-		return lst
+			lst.append(get_last_arduino_measurement(sensor_id, measurement))
+		return {'data': lst}
 	except:
 		logger.exception("Failed to get last data from Arduino id = %s" % sensor_id)
 		return {}
