@@ -77,7 +77,8 @@ char* gen_random(const int len)
     return s;
 }
 
-char* getSessionID(int player) {
+char* getSessionID(int player) 
+{
     const int HASH_LEN = 16;
     const int MAX_PLAYER_LEN = 3;
 
@@ -91,6 +92,25 @@ char* getSessionID(int player) {
     snprintf(sessionID, len, "%s_%s_%s", sensorID, playerID, gen_random(HASH_LEN));
     return sessionID;
 
+}
+
+int getFirstTrackedPlayer()
+{
+    int player = -1;
+
+    XnUserID aUsers[15];
+    XnUInt16 nUsers = 15;
+    g_UserGenerator.GetUsers(aUsers, nUsers);
+
+    for (int i = 0; i < nUsers; ++i)
+    {
+        if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
+        {
+            player = aUsers[i];
+            break;
+        }
+    }
+    return player;
 }
 
 
@@ -543,25 +563,48 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
 
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
-
-    snprintf(buf, buf_size,
-        "{\"created_at\": %ld,"
-        "\"context\": \"%s\","
-        "\"sensor_type\": \"kinect\","
-        "\"sensor_id\": \"%s\","
-        "\"sensor_position\": %s,"
-        "\"type\": \"%s\","
-        "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
-        t.tv_sec,
-        context,
-        getSensorID(),
-        getSensorPosition(),
-        sensor_type,
-        sensor_type,
-        encoded.c_str(), width, height);
-
-        printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
-
+    
+    int player = getFirstTrackedPlayer();
+    if (player > -1)
+    {
+    	snprintf(buf, buf_size,
+        	"{\"created_at\": %ld,"
+        	"\"context\": \"%s\","
+        	"\"sensor_type\": \"kinect\","
+        	"\"sensor_id\": \"%s\","
+        	"\"sensor_position\": %s,"
+                "\"session_id\": %s,"
+        	"\"type\": \"%s\","
+        	"\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
+        	t.tv_sec,
+        	context,
+        	getSensorID(),
+        	getSensorPosition(),
+		getSessionID(player),
+        	sensor_type,
+        	sensor_type,
+        	encoded.c_str(), width, height);
+    }
+    else
+    {
+	snprintf(buf, buf_size,
+                "{\"created_at\": %ld,"
+                "\"context\": \"%s\","
+                "\"sensor_type\": \"kinect\","
+                "\"sensor_id\": \"%s\","
+                "\"sensor_position\": %s,"
+                "\"type\": \"%s\","
+                "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
+                t.tv_sec,
+                context,
+                getSensorID(),
+                getSensorPosition(),
+                sensor_type,
+                sensor_type,
+                encoded.c_str(), width, height);
+    }
+  
+    printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
 
     worker.AddMessage(new Send(buf), &SendCompleted, throttle);
 
@@ -834,11 +877,11 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
 
     if (rgb_throttle.CanSend()) {
         SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
-		rgb_throttle.MarkSend();
+	rgb_throttle.MarkSend();
     }
     if (depth_throttle.CanSend()) {
         SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
-		depth_throttle.MarkSend();
+	depth_throttle.MarkSend();
     }
 
     drawDepthMap(depthTexID, dmd, pDepthTexBuf);
