@@ -410,22 +410,24 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
         "\"sensor_id\": \"%s\","
         "\"sensor_position\": %s,"
         "\"player\": \"%d\", "
+        "\"session_id\": \"%s\", "
         "\"type\": \"skeleton\", "
         "\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
         "\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 
         t.tv_sec,
         get_context(),
-         getSensorID(),
-         getSensorPosition(),
-         player, //player_name,
-         head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
-         left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
-         left_foot, right_foot,
+        getSensorID(),
+        getSensorPosition(),
+        player,
+        getSessionID(player),
+        head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
+        left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
+        left_foot, right_foot,
 
-         head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
-         right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
-         right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
+        head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
+        right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
+        right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
     worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
 
@@ -813,4 +815,35 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
 
     frames += 1;
     printf("Drawn %d frames so far\n", frames);
+}
+
+// TODO(diana): move these methods in utils/
+char* gen_random(const int len)
+{
+    int i;
+    char* s = (char*)malloc(len * sizeof(char));
+    static const char alphanum[] = "0123456789"\
+                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"\
+                                   "abcdefghijklmnopqrstuvwxyz";
+    for (i=0; i<len; i++)
+        s[i] = alphanum[rand() % (sizeof(alphanum)-1)];
+    s[len] = 0;
+    return s;
+}
+
+char* getSessionID(int player) {
+    const int HASH_LEN = 16;
+    const int MAX_PLAYER_LEN = 3;
+
+    char* playerID = (char*)malloc(MAX_PLAYER_LEN * sizeof(char));
+    snprintf(playerID, MAX_PLAYER_LEN, "%d", player);
+    char* sensorID = getSensorID();
+
+    int len = strlen(sensorID) + strlen(playerID) + HASH_LEN  + strlen("__0");
+    char *sessionID = (char*) malloc(len * sizeof(char));
+
+    snprintf(sessionID, len, "%s_%s_%s", sensorID, playerID, gen_random(HASH_LEN));
+    printf(".%s.\n", sessionID);
+    return sessionID;
+
 }
