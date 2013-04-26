@@ -63,6 +63,57 @@ extern xn::DepthGenerator g_DepthGenerator;
 #define MIN_DELAY_BETWEEN_RGB_MEASUREMENT 1000
 #define MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT 1000
 
+// TODO(diana): move these methods in utils/
+char* gen_random(const int len)
+{
+    int i;
+    char* s = (char*)malloc(len * sizeof(char));
+    static const char alphanum[] = "0123456789"\
+                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"\
+                                   "abcdefghijklmnopqrstuvwxyz";
+    for (i=0; i<len; i++)
+        s[i] = alphanum[rand() % (sizeof(alphanum)-1)];
+    s[len] = 0;
+    return s;
+}
+
+char* getSessionID(int player) 
+{
+    const int HASH_LEN = 16;
+    const int MAX_PLAYER_LEN = 3;
+
+    char* playerID = (char*)malloc(MAX_PLAYER_LEN * sizeof(char));
+    snprintf(playerID, MAX_PLAYER_LEN, "%d", player);
+    char* sensorID = getSensorID();
+
+    int len = strlen(sensorID) + strlen(playerID) + HASH_LEN  + strlen("__0");
+    char *sessionID = (char*) malloc(len * sizeof(char));
+
+    snprintf(sessionID, len, "%s_%s_%s", sensorID, playerID, gen_random(HASH_LEN));
+    return sessionID;
+
+}
+
+int getFirstTrackedPlayer()
+{
+    int player = -1;
+
+    XnUserID aUsers[15];
+    XnUInt16 nUsers = 15;
+    g_UserGenerator.GetUsers(aUsers, nUsers);
+
+    for (int i = 0; i < nUsers; ++i)
+    {
+        if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
+        {
+            player = aUsers[i];
+            break;
+        }
+    }
+    return player;
+}
+
+
 class DataThrottle {
 public:
     bool running;
@@ -402,7 +453,7 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
     char *context = get_context();
 
     timespec t;
-     clock_gettime(CLOCK_REALTIME, &t);
+    clock_gettime(CLOCK_REALTIME, &t);
     snprintf((char*)buf, 10000,
         "{\"created_at\": %ld,"
         "\"context\": \"%s\","
@@ -410,22 +461,24 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
         "\"sensor_id\": \"%s\","
         "\"sensor_position\": %s,"
         "\"player\": \"%d\", "
+        "\"session_id\": \"%s\", "
         "\"type\": \"skeleton\", "
         "\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
         "\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 
         t.tv_sec,
         get_context(),
-         getSensorID(),
-         getSensorPosition(),
-         player, //player_name,
-         head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
-         left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
-         left_foot, right_foot,
+        getSensorID(),
+        getSensorPosition(),
+        player,
+        getSessionID(player),
+        head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
+        left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
+        left_foot, right_foot,
 
-         head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
-         right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
-         right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
+        head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
+        right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
+        right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
     worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
 
@@ -510,25 +563,48 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
 
     timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
-
-    snprintf(buf, buf_size,
-        "{\"created_at\": %ld,"
-        "\"context\": \"%s\","
-        "\"sensor_type\": \"kinect\","
-        "\"sensor_id\": \"%s\","
-        "\"sensor_position\": %s,"
-        "\"type\": \"%s\","
-        "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
-        t.tv_sec,
-        context,
-        getSensorID(),
-        getSensorPosition(),
-        sensor_type,
-        sensor_type,
-        encoded.c_str(), width, height);
-
-        printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
-
+    
+    int player = getFirstTrackedPlayer();
+    if (player > -1)
+    {
+    	snprintf(buf, buf_size,
+        	"{\"created_at\": %ld,"
+        	"\"context\": \"%s\","
+        	"\"sensor_type\": \"kinect\","
+        	"\"sensor_id\": \"%s\","
+        	"\"sensor_position\": %s,"
+                "\"session_id\": %s,"
+        	"\"type\": \"%s\","
+        	"\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
+        	t.tv_sec,
+        	context,
+        	getSensorID(),
+        	getSensorPosition(),
+		getSessionID(player),
+        	sensor_type,
+        	sensor_type,
+        	encoded.c_str(), width, height);
+    }
+    else
+    {
+	snprintf(buf, buf_size,
+                "{\"created_at\": %ld,"
+                "\"context\": \"%s\","
+                "\"sensor_type\": \"kinect\","
+                "\"sensor_id\": \"%s\","
+                "\"sensor_position\": %s,"
+                "\"type\": \"%s\","
+                "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
+                t.tv_sec,
+                context,
+                getSensorID(),
+                getSensorPosition(),
+                sensor_type,
+                sensor_type,
+                encoded.c_str(), width, height);
+    }
+  
+    printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
 
     worker.AddMessage(new Send(buf), &SendCompleted, throttle);
 
@@ -801,11 +877,11 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
 
     if (rgb_throttle.CanSend()) {
         SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
-		rgb_throttle.MarkSend();
+	rgb_throttle.MarkSend();
     }
     if (depth_throttle.CanSend()) {
         SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
-		depth_throttle.MarkSend();
+	depth_throttle.MarkSend();
     }
 
     drawDepthMap(depthTexID, dmd, pDepthTexBuf);
@@ -814,3 +890,4 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
     frames += 1;
     printf("Drawn %d frames so far\n", frames);
 }
+

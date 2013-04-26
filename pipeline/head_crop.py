@@ -9,8 +9,7 @@ from lib.log import setup_logging
 from lib.opencv import crop_face_from_image
 
 logger = logging.getLogger(__name__)
-MAX_TIME = 0.1
-
+MAX_TIME = 1000
 
 def _crop_head_using_skeleton(last_image, last_skeleton):
     """ Given the last image and last skeleton which are
@@ -32,7 +31,7 @@ def _crop_head_using_face_detection(last_image):
                             int(last_image['width']),
                             int(last_image['height']),
                             last_image['encoder_name'])
-    
+
     return crop_face_from_image(image)
 
 
@@ -83,7 +82,6 @@ class HeadCrop(ParallelPDU):
         and crops images (head only) """
 
     QUEUE = 'head-crop'
-    MAX_TIME = 0.1
     POOL_SIZE = 20
     UNFINISHED_TASKS_THRESHOLD = 2 * POOL_SIZE
 
