@@ -63,6 +63,37 @@ extern xn::DepthGenerator g_DepthGenerator;
 #define MIN_DELAY_BETWEEN_RGB_MEASUREMENT 1000
 #define MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT 1000
 
+// TODO(diana): move these methods in utils/
+char* gen_random(const int len)
+{
+    int i;
+    char* s = (char*)malloc(len * sizeof(char));
+    static const char alphanum[] = "0123456789"\
+                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"\
+                                   "abcdefghijklmnopqrstuvwxyz";
+    for (i=0; i<len; i++)
+        s[i] = alphanum[rand() % (sizeof(alphanum)-1)];
+    s[len] = 0;
+    return s;
+}
+
+char* getSessionID(int player) {
+    const int HASH_LEN = 16;
+    const int MAX_PLAYER_LEN = 3;
+
+    char* playerID = (char*)malloc(MAX_PLAYER_LEN * sizeof(char));
+    snprintf(playerID, MAX_PLAYER_LEN, "%d", player);
+    char* sensorID = getSensorID();
+
+    int len = strlen(sensorID) + strlen(playerID) + HASH_LEN  + strlen("__0");
+    char *sessionID = (char*) malloc(len * sizeof(char));
+
+    snprintf(sessionID, len, "%s_%s_%s", sensorID, playerID, gen_random(HASH_LEN));
+    return sessionID;
+
+}
+
+
 class DataThrottle {
 public:
     bool running;
@@ -402,7 +433,7 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
     char *context = get_context();
 
     timespec t;
-     clock_gettime(CLOCK_REALTIME, &t);
+    clock_gettime(CLOCK_REALTIME, &t);
     snprintf((char*)buf, 10000,
         "{\"created_at\": %ld,"
         "\"context\": \"%s\","
@@ -817,33 +848,3 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
     printf("Drawn %d frames so far\n", frames);
 }
 
-// TODO(diana): move these methods in utils/
-char* gen_random(const int len)
-{
-    int i;
-    char* s = (char*)malloc(len * sizeof(char));
-    static const char alphanum[] = "0123456789"\
-                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"\
-                                   "abcdefghijklmnopqrstuvwxyz";
-    for (i=0; i<len; i++)
-        s[i] = alphanum[rand() % (sizeof(alphanum)-1)];
-    s[len] = 0;
-    return s;
-}
-
-char* getSessionID(int player) {
-    const int HASH_LEN = 16;
-    const int MAX_PLAYER_LEN = 3;
-
-    char* playerID = (char*)malloc(MAX_PLAYER_LEN * sizeof(char));
-    snprintf(playerID, MAX_PLAYER_LEN, "%d", player);
-    char* sensorID = getSensorID();
-
-    int len = strlen(sensorID) + strlen(playerID) + HASH_LEN  + strlen("__0");
-    char *sessionID = (char*) malloc(len * sizeof(char));
-
-    snprintf(sessionID, len, "%s_%s_%s", sensorID, playerID, gen_random(HASH_LEN));
-    printf(".%s.\n", sessionID);
-    return sessionID;
-
-}
