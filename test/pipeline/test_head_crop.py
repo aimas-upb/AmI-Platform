@@ -8,13 +8,16 @@ from nose.tools import eq_
 from PIL import Image
 
 from lib import log
+from lib.sessions_store import SessionsStore
+from messages import MEASUREMENTS_MESSAGE_IMAGE_RGB
 from pipeline.head_crop import HeadCrop
 
-class HeadCropTest(TestCase):
+
+class TestHeadCrop(TestCase):
     
     @classmethod
     def setUpClass(cls):
-        super(HeadCropTest, cls).setUpClass()
+        super(TestHeadCrop, cls).setUpClass()
         log.setup_logging(level=logging.DEBUG)
     
     def _image_message(self):
@@ -111,14 +114,13 @@ class HeadCropTest(TestCase):
     
     def head_crop(self, file_in):
         '''returns NONE or a rectangle'''
-        
 
     def test_face_cropped_ok(self):
         from lib.opencv import crop_face_from_image
         from os import listdir
         image_folder = "/home/ami/AmI-Platform/headcrop_dataset"
         images = [ image for image in listdir(image_folder) if not image.endswith('_result.jpg')]
-        
+
         for image_file in images:
             image = Image.open("%s/%s" % (image_folder,image_file))
             logging.debug("processing image %s" % image_file)
@@ -126,3 +128,13 @@ class HeadCropTest(TestCase):
             if cropped_head is not None:
                 cropped_head.save("%s/%s_result.jpg" % (image_folder, image_file))
                 print '.'
+
+    @patch.object(SessionsStore, "set")
+    def test_send_message_to_redis_when_cropped_head(self, sessions_store_mock):
+        pdu = HeadCrop()
+        message = MEASUREMENTS_MESSAGE_IMAGE_RGB
+        pdu.process_message(message)
+        sid = message['session_id']
+        time = message['created_at']
+        mappings = {'head': pdu.heavy_preprocess}
+        sessions_store_mock.assert_called_once_with(sid, time, mappings)
