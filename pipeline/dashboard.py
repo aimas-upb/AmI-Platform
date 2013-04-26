@@ -1,10 +1,10 @@
 import json
 
-from core import PDU
 from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
+from pipeline.ami_lab_pdu import AmILabPDU
 
-class Dashboard(PDU):
+class Dashboard(AmILabPDU):
     QUEUE = 'dashboard'
 
     def __init__(self, **kwargs):
@@ -17,6 +17,14 @@ class Dashboard(PDU):
                                  sensor_type=message['sensor_type'],
                                  measurement_type=message['type'],
                                  measurement=json.dumps(message))
+
+        # Send the RGB image to SessionsStore only if the message has a
+        # session_id. This means that, at kinect-level, there is an active
+        # tracking session.
+        if message.get('session_id', None):
+            sid = message['session_id']
+            time = message['created_at']
+            self.add_to_session_store(sid, time, None)
 
     def get_pushing_function(self, message):
         if(message['sensor_type'] == "arduino"):
