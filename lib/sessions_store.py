@@ -7,11 +7,11 @@ from core import settings
 logger = logging.getLogger(__name__)
 
 class SessionsStore(object):
-    def __init__(self):
+
+    def __init__(self, db_name):
         self.redis = redis.StrictRedis(host=settings.REDIS_SERVER,
-                                             port=settings.REDIS_PORT,
-                                             db=settings.REDIS_DASHBOARD_DB)
-                
+                                       port=settings.REDIS_PORT,
+                                       db=db_name)
 
     def set(self, sid, time, mappings):
         """
