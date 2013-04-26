@@ -24,10 +24,11 @@ class Dashboard(PDU):
         # Send the RGB image to SessionsStore only if the message has a
         # session_id. This means that, at kinect-level, there is an active
         # tracking session.
-        if message.get('session_id', None):
+        if message['type'] == 'image_rgb' and message.get('session_id', None):
             sid = message['session_id']
             time = message['created_at']
-            self.session_tracker.track_event(sid, time, None)
+            mappings = {'image_rgb': message['image_rgb']}
+            self.add_to_session_store(sid, time, mappings)
 
     def get_pushing_function(self, message):
         if(message['sensor_type'] == "arduino"):

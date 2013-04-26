@@ -15,4 +15,5 @@ class TestDashboard(TestCase):
         pdu.process_message(message)
         sid = message['session_id']
         time = message['created_at']
-        sessions_store_mock.assert_called_once_with(sid, time, None)
+        mappings = {'image_rgb': message['image_rgb']}
+        sessions_store_mock.assert_called_once_with(sid, time, mappings)
