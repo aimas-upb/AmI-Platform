@@ -1,15 +1,18 @@
 import json
 
+from core import PDU
 from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
-from pipeline.ami_lab_pdu import AmILabPDU
+from lib.session_tracker import SessionTracker
 
-class Dashboard(AmILabPDU):
+
+class Dashboard(PDU):
     QUEUE = 'dashboard'
 
     def __init__(self, **kwargs):
         super(Dashboard, self).__init__(**kwargs)
         self.dashboard_cache = DashboardCache()
+        self.session_tracker = SessionTracker()
 
     def process_message(self, message):
         push_to_redis = self.get_pushing_function(message)
@@ -24,7 +27,7 @@ class Dashboard(AmILabPDU):
         if message.get('session_id', None):
             sid = message['session_id']
             time = message['created_at']
-            self.add_to_session_store(sid, time, None)
+            self.session_tracker.track_event(sid, time, None)
 
     def get_pushing_function(self, message):
         if(message['sensor_type'] == "arduino"):
