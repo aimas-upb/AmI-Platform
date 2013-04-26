@@ -2,6 +2,7 @@
 .project
 .pydevproject
 .settings
+.cproject
 bin
 *.pyc
 *~
@@ -17,8 +18,16 @@ acquisition/kinect/NiUserTracker.opensdf
 acquisition/kinect/NiUserTracker.sdf
 acquisition/kinect/ipch
 
+# Ignore Arduino C++ acquisition program binaries
+acquisition/arduino/Arduino-AmI-Lab/Release
+acquisition/arduino/Arduino-AmI-Lab/Debug
+acquisition/arduino/Arduino-AmI-Lab/Logs
+acquisition/arduino/arduino_core/Release
+acquisition/arduino/arduino_core/Debug
+
 # Skeleton export files
 acquisition/export-*.csv
 
 # Settings file
 core/settings.py
+dashboard/conf/general.user.js

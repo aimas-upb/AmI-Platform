@@ -24,8 +24,9 @@ def betaface_recognition(image_dict):
                                 int(image_dict['head_image']['height']))
         temp_path = random_file_name('jpg')
         logger.info("Generated random path to save image: %s" % temp_path)
-
+	image = image.rotate(180)
         image.save(temp_path)
+	
         logger.info("Saved image to disk at path %s" % temp_path)
 
         matches = api.recognize_faces(temp_path, 'amilab.ro')

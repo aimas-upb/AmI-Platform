@@ -12,10 +12,17 @@ class Dashboard(PDU):
         self.dashboard_cache = DashboardCache()
 
     def process_message(self, message):
-        self.dashboard_cache.put(sensor_id=message['sensor_id'],
+        push_to_redis = self.get_pushing_function(message)
+        push_to_redis(sensor_id=message['sensor_id'],
                                  sensor_type=message['sensor_type'],
                                  measurement_type=message['type'],
                                  measurement=json.dumps(message))
+
+    def get_pushing_function(self, message):
+        if(message['sensor_type'] == "arduino"):
+            return self.dashboard_cache.lpush
+        else:
+            return self.dashboard_cache.put
 
 if __name__ == "__main__":
     setup_logging()
