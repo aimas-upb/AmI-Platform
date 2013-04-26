@@ -4,13 +4,14 @@ import time
 from unittest import TestCase
 
 from mock import patch
-from nose.tools import eq_
+from nose.tools import eq_, ok_
 from PIL import Image
 
 from lib import log
 from lib.sessions_store import SessionsStore
 from messages import MEASUREMENTS_MESSAGE_IMAGE_RGB
 from pipeline.head_crop import HeadCrop
+from lib.image import base64_to_image, image_to_base64
 
 
 class TestHeadCrop(TestCase):
@@ -94,7 +95,7 @@ class TestHeadCrop(TestCase):
         # due to the fact that it's a parallel PDU. Suggestion: let's implement
         # a "debug" mode for parallel PDUs without a worker pool.
         return
-    
+
         pdu = HeadCrop()
         pdu.process_message(self._skeleton_message())
         pdu.process_message(self._image_message())
@@ -131,10 +132,22 @@ class TestHeadCrop(TestCase):
 
     @patch.object(SessionsStore, "set")
     def test_send_message_to_redis_when_cropped_head(self, sessions_store_mock):
+        from pipeline import head_crop
+        orig_fn = head_crop.crop_head
+        head_crop.crop_head = one_by_one_image 
         pdu = HeadCrop()
-        message = MEASUREMENTS_MESSAGE_IMAGE_RGB
-        pdu.process_message(message)
-        sid = message['session_id']
-        time = message['created_at']
-        mappings = {'head': pdu.heavy_preprocess}
-        sessions_store_mock.assert_called_once_with(sid, time, mappings)
+        pdu.process_message(self._skeleton_message())
+        image_message = MEASUREMENTS_MESSAGE_IMAGE_RGB
+        pdu.process_message(image_message)
+        time.sleep(1.0)
+
+        pdu.process_message(image_message)
+        sid = image_message['session_id']
+        t = image_message['created_at']
+        info = {'head': one_by_one_image(None)}
+
+        sessions_store_mock.assert_called_once_with(sid, t, info)
+        head_crop.crop_head = orig_fn
+
+def one_by_one_image(msg):
+    return image_to_base64(Image.frombuffer('RGB', (1, 1), base64.b64decode('AAAA')))
