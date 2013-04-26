@@ -95,36 +95,44 @@ class RoomPositionTest(TestCase):
                             'beta':  beta, 
                             'gamma': 0.0},
                            {'X':0000, 'Y':0000, 'Z':1732.0508076},
-                           0, 0, 0, True)
+                           0, 0, 0)
 
     def run_test_with(self, send_to, sensor_pos, torso_pos, 
-                      expected_x, expected_y, expected_z,
-                      add_player_id = False):
+                      expected_x, expected_y, expected_z):
         
         send_to.reset_mock()
+        
+        rp = RoomPosition()
+        
+        skeleton_3D = {}
+        for j in rp.JOINTS:
+            skeleton_3D[j] = torso_pos 
         message = { 'sensor_type': 'kinect',
                    'type': 'skeleton',
                    'sensor_position': sensor_pos,
-                   'skeleton_3D': {'torso': torso_pos},
+                   'skeleton_3D': skeleton_3D,
                    'sensor_id': '10',
                    'created_at': 1}
         
         expected = {'sensor_id': '10', 'created_at': 1}
         
-        if add_player_id:
-            message['player'] = 'xxx'
-            expected['player'] = 'xxx'
-        
-        rp = RoomPosition()
         rp.process_message(message)
-        eq_(send_to.call_count, 1)
+        eq_(send_to.call_count, 2) #one for subject_position and one for skeleton_in_room
         send_to.assert_any_call('subject-position',PositionMatcher(expected_x,
                                                                    expected_y,
                                                                    expected_z,
                                                                    expected))
+        
+class AnyOf:
+    
+    def __init__(self, values):
+        self.values = values
+        
+    def __eq__(self, other):
+        return other in self.values    
 
 class PositionMatcher:
-    
+        
     def __init__(self, x, y, z, kwargs):
         self.x = x
         self.y = y
@@ -132,11 +140,21 @@ class PositionMatcher:
         self.args = kwargs
     
     def __eq__(self, other):
-        pos = other['subject_position']
+        if other['type'] == 'subject_position':
+            pos = other
+            self.all_eq(pos) and self.check_kwargs(pos)                
+        elif other['type'] == 'skeleton_in_room':
+            for pos in other['skeleton_3D'].itervalues():
+                if not self.all_eq(pos):
+                    return False
+            return self.check_kwargs(other)
+        
+        return False
+            
+    def all_eq(self, pos):
         return _feq(self.x, pos['X']) \
             and _feq(self.y, pos['Y']) \
-            and _feq(self.z, pos['Z']) \
-            and self.check_kwargs(pos) 
+            and _feq(self.z, pos['Z'])  
             
     
     def check_kwargs(self, pos):
