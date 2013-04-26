@@ -1,3 +1,4 @@
+from core import settings
 from core import PDU
 from lib import sessions_store
 
@@ -10,8 +11,8 @@ class AmILabPDU(PDU):
     
     def __init__(self, **kwargs):
         super(AmILabPDU, self).__init__(**kwargs)
-        self.session_store = sessions_store.SessionsStore()
-        
+        self.session_store = sessions_store.SessionsStore(settings.REDIS_RAW_SESSIONS_DB)
+                
     def add_to_session_store(self, sid, time, mappings):
         """ 
         Adds some data to a session. It also sends a notification to trajectories pdu via the message queue
