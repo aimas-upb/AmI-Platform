@@ -28,7 +28,7 @@ class Dashboard(PDU):
             sid = message['session_id']
             time = message['created_at']
             mappings = {'image_rgb': message['image_rgb']}
-            self.add_to_session_store(sid, time, mappings)
+            self.session_tracker.track_event(sid, time, mappings)
 
     def get_pushing_function(self, message):
         if(message['sensor_type'] == "arduino"):
