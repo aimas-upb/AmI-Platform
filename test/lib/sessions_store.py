@@ -17,15 +17,14 @@ class SessionsStoreTest(TestCase):
         
     def setUp(self):
         super(SessionsStoreTest, self).setUp()
-        settings.REDIS_SESSIONS_DB = 'sessions_store_test'
         settings.REDIS_SERVER = 'localhost'
         
         r = redis.StrictRedis(host = settings.REDIS_SERVER,
                               port = settings.REDIS_PORT,
-                              db = settings.REDIS_SESSIONS_DB)
+                              db = 'sessions_store_test')
         
         r.flushdb()
-        self.store = SessionsStore()
+        self.store = SessionsStore('sessions_store_test')
         
     def test_all(self):
         
