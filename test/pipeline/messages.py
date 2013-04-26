@@ -154,3 +154,22 @@ MEASUREMENTS_MESSAGE_SKELETON = {
         "gamma" : 0
     }
 }
+
+MEASUREMENTS_MESSAGE_IMAGE_RGB = {
+    "sensor_id": "daq-04",
+    "session_id": "daq-04_1_0123456789ABCDEF",
+    "inserted_at": "1366974705000",
+    "image_rgb": {"width": 1280,
+                  "image": "ABCDE",
+                  "height": 1024},
+    "sensor_type": "kinect",
+    "context": "default",
+    "type": "image_rgb",
+    "created_at": 1366974699,
+    "sensor_position": {"beta": 0.3665,
+                        "alpha": -1.5708,
+                        "gamma": 0,
+                        "X": 9340,
+                        "Y": 2299,
+                        "Z": 1009},
+}
