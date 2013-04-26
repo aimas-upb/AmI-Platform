@@ -56,6 +56,7 @@ class MongoWriter(PDU):
             # required by the TTL collections feature. If we save this
             # as a plain unix timestamp, it won't get used correctly.
             message['inserted_at'] = datetime.now()
+            message['created_at'] = message['created_at'] / 1000
             self.collection.save(message, safe = True)
 
             # After saving the message successfully, mark it as saved
