@@ -13,16 +13,16 @@ class SessionsStore(object):
                                              db=settings.REDIS_DASHBOARD_DB)
                 
 
-    def set(self, sid, time, prop, value):
+    def set(self, sid, time, mappings):
         """
         Set the value of a property for the measurment sid/time.
         The 'time' property is added to the measurement automatically"
         """
+        time = _snap_time(time)
         self.redis.sadd('sessions', sid)
         self.redis.sadd('stimes:' + sid, time)
-        self.redis.hset(_hash_name(sid, time), prop, value);
-        self.redis.hset('m:' + sid + ':' + str(time), 'time', time);
-        
+        mappings['time'] = time
+        self.redis.hmset(_hash_name(sid, time), mappings);
     
     def get_all_sessions(self):
         "Returns the list of all active sessions"
@@ -53,7 +53,9 @@ class SessionsStore(object):
                 ret[properties[i]] = values[i]
             return ret
         
-   
+def _snap_time(time):
+    return (time / 10) * 10
+           
 def _hash_name(sid, time):
     return 'm:' + sid + ':' + str(time)
     

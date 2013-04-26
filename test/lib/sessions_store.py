@@ -30,15 +30,15 @@ class SessionsStoreTest(TestCase):
     def test_all(self):
         
         
-        self.store.set('ts1', 1, 'p1', '1-1-p1')
-        self.store.set('ts1', 2, 'p1', '1-2-p1')
-        self.store.set('ts1', 1, 'p3', '1-1-p3')
+        self.store.set('ts1', 10, {'p1': '1-1-p1'})
+        self.store.set('ts1', 20, {'p1': '1-2-p1'})
+        self.store.set('ts1', 10, {'p3': '1-1-p3'})
         
-        self.store.set('ts1', 3, 'p4', '1-3-p4')
+        self.store.set('ts1', 30, {'p4': '1-3-p4'})
         
         
-        self.store.set('ts2', 2, 'p1', '2-2-p1')
-        self.store.set('ts2', 2, 'p1', '2-2-p1-b')
+        self.store.set('ts2', 20, {'p1': '2-2-p1'})
+        self.store.set('ts2', 20, {'p1': '2-2-p1-b'})
         
         sessions = self.store.get_all_sessions()
         
@@ -56,13 +56,13 @@ class SessionsStoreTest(TestCase):
         
         s1times = self.store.get_session_times('ts1')        
         eq_(3, len(s1times), "Expecting 3 times")
-        ok_(set([1,2,3]) == set(s1times), "Times must match")
+        ok_(set([10,20,30]) == set(s1times), "Times must match")
         
         s2props = self.store.get_session_measurements('ts2', ['time'])
         s2times = [int(x['time']) for x in s2props]
         
         eq_(1, len(s2times), "Expecting 1 times")        
-        ok_(set([2]) == set(s2times), "Times must match")
+        ok_(set([20]) == set(s2times), "Times must match")
         
         
         
