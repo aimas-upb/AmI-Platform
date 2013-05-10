@@ -7,8 +7,13 @@ App.urls = {
         'controller': 'TraceController',
         'layout': 'templates/dashboard_trace.hjs'
     },
+	'arduino_measurements': {
+		'controller': 'ArduinoController',
+		'layout': 'templates/dashboard_arduino.hjs'
+	},
     '': {
         'controller': 'DashboardController',
         'layout': 'templates/dashboard_page.hjs'
     },
+	
 };

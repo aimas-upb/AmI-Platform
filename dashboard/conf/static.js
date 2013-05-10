@@ -25,7 +25,8 @@ App.static_libs = ['core/libs/json2.js',
                    'core/libs/underscore.string.js',
                    'core/libs/moment-1.6.2.js',
                    'core/libs/jsuri-1.1.1.js',
-                   'core/libs/stacktrace-0.4.js'];
+                   'core/libs/stacktrace-0.4.js',
+				   'core/libs/d3.v3.js'];
 App.static_libs_bundle_name = 'static_bundle.js';
 
 // IE7 JS bundle
