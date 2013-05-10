@@ -4,14 +4,14 @@ import time
 from unittest import TestCase
 
 from mock import patch
-from nose.tools import eq_, ok_
+from nose.tools import eq_
 from PIL import Image
 
 from lib import log
 from lib.sessions_store import SessionsStore
 from messages import MEASUREMENTS_MESSAGE_IMAGE_RGB
 from pipeline.head_crop import HeadCrop
-from lib.image import base64_to_image, image_to_base64
+from lib.image import image_to_base64
 
 
 class TestHeadCrop(TestCase):
