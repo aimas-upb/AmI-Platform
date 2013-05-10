@@ -1,8 +1,9 @@
 import json
 import logging
 
-from bottle import route, run
+from bottle import route, run, static_file
 
+from core import settings
 from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
 
@@ -10,6 +11,11 @@ logger = logging.getLogger(__name__)
 dashboard_cache = DashboardCache()
 
 POSITIONS_LIMIT = 100
+
+if getattr(settings, 'SERVE_DASHBOARD_VIA_API', False):
+    @route('/static/<filepath:path>')
+    def static_serve(filepath):
+        return static_file(filepath, root=getattr(settings, 'STATIC_FILES_DIR', '.'))
 
 @route('/latest_kinect_rgb/:sensor_id', method='GET')
 def get_latest_kinect_rgb(sensor_id = 'daq-01'):
