@@ -19,6 +19,7 @@ class PDU(object):
 
     TIME_TO_SLEEP_ON_BUSY = 0.05
     MAX_BUSY_SLEEPS = 10
+    JSON_DUMPS_STRING_LIMIT = 1000
 
     def __init__(self, **kwargs):
         """ Set-up connections to Mongo and Kestrel by default on each PDU. """
@@ -166,3 +167,32 @@ class PDU(object):
                                  (flow, time_since_last_stats))
                     self._processed_messages = 0
                     self._last_stats = time.time()
+
+    def _json_dumps(self, dictionary):
+        """ Custom version of json.dumps which truncates long string fields. """
+        return json.dumps(self._truncate_strs(dictionary))
+
+    def _truncate_strs(self, dictionary):
+        """ Given a dictionary, explore it using depth first search (DFS)
+        and truncate the values of keys which are "too long".
+
+        """
+        # Edge case - dictionary is in fact not a dictionary, but a string
+        if type(dictionary) != dict:
+            result = str(dictionary)
+            if len(result) > self.JSON_DUMPS_STRING_LIMIT:
+                result = result[0:self.JSON_DUMPS_STRING_LIMIT] + '... (truncated)'
+            return result
+
+        result = {}
+        for k, v in dictionary.iteritems():
+            # If value is a dictionary, recursively truncate big strings
+            if type(v) == dict:
+                result[k] = self._truncate_strs(v)
+            # If it's a large string, truncate it
+            elif (type(v) == str or type(v) == unicode) and len(v) > self.JSON_DUMPS_STRING_LIMIT:
+                result[k] = v[0:self.JSON_DUMPS_STRING_LIMIT] + '... (truncated)'
+            # Otherwise, copy any type of thing
+            else:
+                result[k] = v
+        return result
