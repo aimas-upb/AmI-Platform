@@ -173,3 +173,18 @@ MEASUREMENTS_MESSAGE_IMAGE_RGB = {
                         "Y": 2299,
                         "Z": 1009},
 }
+
+MATCHES_MOCK = {
+                'diana@amilab.ro': 0.879,
+                'andrei@amilab.ro': 0.354
+                }
+
+FACE_RECOGNITION_SAMPLE_MESSAGE = {
+    'head_image': {
+                   'image': 'A' * (640 * 480 * 3 * 4/3),
+                   'width':640,
+                   'height': 480,
+                   },
+    'session_id': 'daq-04_1_0123456789ABCDEF',
+    'created_at': 1366974699,
+    }
