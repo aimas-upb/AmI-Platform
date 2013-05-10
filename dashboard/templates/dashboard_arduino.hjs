@@ -1,0 +1,1 @@
+<div class="mozaic-widget" data-widget="arduino" data-params="{{last_arduino_measurement}}" style="display: inline-block;"></div>
