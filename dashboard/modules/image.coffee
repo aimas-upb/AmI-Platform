@@ -101,6 +101,7 @@ define ['cs!widget'], (Widget) ->
                 return
 
             temp_context_2d = @temp_canvas.getContext('2d')
+            temp_context_2d.clearRect(0, 0, @temp_canvas.width, @temp_canvas.height)
             @drawImage(temp_context_2d)
 
             # Scale down to lower res
