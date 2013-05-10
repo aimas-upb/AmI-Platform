@@ -29,6 +29,8 @@ class Dashboard(PDU):
             time = message['created_at']
             mappings = {'image_rgb': message['image_rgb']}
             self.session_tracker.track_event(sid, time, mappings)
+            self.log('Save RGB image in redis for session_id: %s, created_at: '
+                     '%s' % (sid, time))
 
     def get_pushing_function(self, message):
         if(message['sensor_type'] == "arduino"):
