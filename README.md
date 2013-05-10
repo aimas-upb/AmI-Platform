@@ -18,7 +18,7 @@ AMI_SENSOR_ID - defaults to "anonymous"
 
 2. Queues
 ============
-
+```python
 ‘measurements’ (DataAcquisition → Router)
 	{
 		'context': 'default', 		// context’s name - used by Mr. Vladutu for
@@ -120,6 +120,7 @@ AMI_SENSOR_ID - defaults to "anonymous"
 	{
 		'text': 'Hello, Andrei!'
 	}
+```
 
 
 
