@@ -6,10 +6,10 @@ from core import settings
 
 logger = logging.getLogger(__name__)
 
-class SessionsStore(object):
+class SessionStore(object):
     """
-        Small layer over a Redis databases holding chronologically ordered
-        tuples groupbed by the session_id field.
+        Small layer over a Redis database holding chronologically ordered
+        tuples grouped by the session_id field.
 
         These tuples represent the activity of a user in relation to a sensor
         in time. We are assuming that the sensor is tracking the user through
@@ -24,51 +24,46 @@ class SessionsStore(object):
         information from multiple tracking sessions.
     """
 
-    def __init__(self, db_name):
+    def __init__(self):
         self.redis = redis.StrictRedis(host=settings.REDIS_SERVER,
                                        port=settings.REDIS_PORT,
-                                       db=db_name)
+                                       db=settings.REDIS_SESSION_DB)
 
-    def set(self, sid, time, mappings):
+    def set(self, sid, time, info):
         """
             Set the value of a property for the measurment sid/time.
             The 'time' property is added to the measurement automatically"
         """
         time = _snap_time(time)
-        self.redis.sadd('sessions', sid)
-        self.redis.sadd('stimes:' + sid, time)
-        mappings['time'] = time
-        self.redis.hmset(_hash_name(sid, time), mappings);
+        # sessions is a set of session ids
+        self.redis.hset('sessions', sid, time)
+        # stimes is a sorted set of timestamps for a given session
+        self.redis.zadd('stimes:%s' % sid, time, str(time))
+        info['time'] = time
+        self.redis.hmset(_hash_name(sid, time), info);
 
     def get_all_sessions(self):
         """ Returns the list of all active sessions """
-        return self.redis.smembers('sessions')
+        return self.redis.hkeys('sessions')
 
     def get_session_times(self, sid):
-        """ Returns the list of times within a session. """
-        return [int(x) for x in self.redis.smembers('stimes:' + sid)]
+        """ Returns the list of times within a session, sorted ascending. """
+        return [int(x) for x in self.redis.zrange('stimes:%s' % sid, 0, -1)]
 
     def get_session_measurements(self, sid, properties = []):
         """ Returns the values of the specified properties for all
         measurements of this session as list of dicts. """
-        times = self.redis.smembers('stimes:' + sid)
-        ret = []
-        for t in times:
-            ret.append(self.get_session_measurement(sid, t, properties))
-
-        return ret
+        return [self.get_session_measurement(sid, t, properties)
+                for t in self.get_session_times(sid)]
 
     def get_session_measurement(self, sid, t, properties = []):
         """ Returns the value of the specified properties of
         session at time t as a dict. """
-        if properties == []:
+        if not properties:
             return self.redis.hgetall(_hash_name(sid, t))
         else:
             values = self.redis.hmget(_hash_name(sid, t), properties)
-            ret = {}
-            for i in range(len(properties)):
-                ret[properties[i]] = values[i]
-            return ret
+            return dict(zip(properties, values))
 
 def _snap_time(time):
     return (time / 10) * 10
