@@ -36,10 +36,6 @@ class PDU(object):
         self.logger.log(level, message)
 
     @property
-    def input_queue_system(self):
-        return self._input_queue_system
-
-    @property
     def mongo_connection(self):
         return self._mongo_connection
 
@@ -106,7 +102,7 @@ class PDU(object):
                     continue
 
                 # Step 1 - get message from message queue
-                message = self.input_queue_system.get(self.QUEUE, timeout = 1)
+                message = self.queue_system.get(self.QUEUE, timeout = 1)
                 if not message:
                     """self.log("Could not get message from queue %s Retrying ..."
                              % self.QUEUE)"""
