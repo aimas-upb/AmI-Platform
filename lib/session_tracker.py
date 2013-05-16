@@ -20,7 +20,7 @@ class SessionTracker(object):
             "info": info,
         }
 
-        self.kestrel_connection.send_to("session-processor", message)
+        self.kestrel_connection.send_to("session_processor", message)
         self.sessions_store.set(sid, time, info)
         logger.info("Track session:%s, time:%s, info: %s in Redis." %
                     (sid, time, info.keys()))
