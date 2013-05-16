@@ -9,35 +9,18 @@ from PIL import Image
 
 from lib import log
 from lib.session_store import SessionStore
-from messages import MEASUREMENTS_MESSAGE_IMAGE_RGB
+from test.pipeline.messages import MEASUREMENTS_MESSAGE_IMAGE_RGB
 from pipeline.head_crop import HeadCrop
 from lib.image import image_to_base64
+from message_factory import image_message,skeleton_message
 
 
-class TestHeadCrop(TestCase):
+class HeadCropFaceRecognitionTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestHeadCrop, cls).setUpClass()
+        super(HeadCropFaceRecognitionTest, cls).setUpClass()
         log.setup_logging(level=logging.DEBUG)
-
-    def _image_message(self):
-        return {
-            'sensor_type': 'kinect',
-            'type': 'image_rgb',
-            'image_rgb': {
-                'image': 'A' * (640 * 480 * 3 * 4/3),
-                'width': 640,
-                'height': 480
-            }
-        }
-
-    def _skeleton_message(self):
-        return {
-            'sensor_type': 'kinect',
-            'type': 'skeleton',
-            'skeleton_2D': {'head': {1.0, 2.0}, 'neck': {3.0, 4.0}}
-        }
 
     @patch.object(HeadCrop, 'send_to')
     # Because we don't have image + skeleton, face detection should
@@ -48,7 +31,7 @@ class TestHeadCrop(TestCase):
         return
 
         pdu = HeadCrop()
-        pdu.process_message(self._image_message())
+        pdu.process_message(image_message())
         face_detect.assert_called_once_with()
         eq_(skeleton.call_count, 0, "crop_head should only be called if it has "
                                    "a corresponding image and skeleton")
@@ -62,7 +45,7 @@ class TestHeadCrop(TestCase):
         return
 
         pdu = HeadCrop()
-        pdu.process_message(self._skeleton_message())
+        pdu.process_message(skeleton_message())
         eq_(skeleton.call_count, 0, "crop_head should only be called if it has "
                                    "a corresponding image and skeleton")
         eq_(send_to.call_count, 0, "send_to should only be called if it has "
@@ -78,9 +61,9 @@ class TestHeadCrop(TestCase):
         return
 
         pdu = HeadCrop()
-        pdu.process_message(self._skeleton_message())
+        pdu.process_message(skeleton_message())
         time.sleep(pdu.MAX_TIME)
-        pdu.process_message(self._image_message())
+        pdu.process_message(image_message())
         face_detect.assert_called_once_with()
         eq_(skeleton.call_count, 0, "crop_head should only be called if it has "
                                    "a corresponding image and skeleton")
@@ -97,8 +80,8 @@ class TestHeadCrop(TestCase):
         return
 
         pdu = HeadCrop()
-        pdu.process_message(self._skeleton_message())
-        pdu.process_message(self._image_message())
+        pdu.process_message(skeleton_message())
+        pdu.process_message(image_message())
         time.sleep(1.0)
         eq_(face_detect.call_count, 0, "face_detect should only be called if it has "
                                    "a corresponding image and skeleton")
@@ -136,7 +119,7 @@ class TestHeadCrop(TestCase):
         orig_fn = head_crop.crop_head
         head_crop.crop_head = one_by_one_image
         pdu = HeadCrop()
-        pdu.process_message(self._skeleton_message())
+        pdu.process_message(skeleton_message())
         image_message = MEASUREMENTS_MESSAGE_IMAGE_RGB
         pdu.process_message(image_message)
         time.sleep(1.0)
