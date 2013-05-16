@@ -1,10 +1,5 @@
-test1
 Agent-based sensor data platform for AmI
 
 ======= SERVICES ==========
 Add a new service:
 > fab new_service:ami-module-name
-testing2
-testing3
-testing4
-testing5
