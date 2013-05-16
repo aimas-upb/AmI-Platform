@@ -26,8 +26,6 @@
 #include <time.h>
 #include <string>
 #include <sstream>
-#include <sys/time.h>
-#include <time.h>
 
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/ostream_iterator.hpp>
@@ -35,6 +33,8 @@
 
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+
+
 
 #include "SceneDrawer.h"
 #include "context.h"
@@ -62,57 +62,6 @@ extern xn::DepthGenerator g_DepthGenerator;
 #define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 10 //ms
 #define MIN_DELAY_BETWEEN_RGB_MEASUREMENT 1000
 #define MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT 1000
-
-// TODO(diana): move these methods in utils/
-char* gen_random(const int len)
-{
-    int i;
-    char* s = (char*)malloc(len * sizeof(char));
-    static const char alphanum[] = "0123456789"\
-                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"\
-                                   "abcdefghijklmnopqrstuvwxyz";
-    for (i=0; i<len; i++)
-        s[i] = alphanum[rand() % (sizeof(alphanum)-1)];
-    s[len] = 0;
-    return s;
-}
-
-char* getSessionID(int player) 
-{
-    const int HASH_LEN = 16;
-    const int MAX_PLAYER_LEN = 3;
-
-    char* playerID = (char*)malloc(MAX_PLAYER_LEN * sizeof(char));
-    snprintf(playerID, MAX_PLAYER_LEN, "%d", player);
-    char* sensorID = getSensorID();
-
-    int len = strlen(sensorID) + strlen(playerID) + HASH_LEN  + strlen("__0");
-    char *sessionID = (char*) malloc(len * sizeof(char));
-
-    snprintf(sessionID, len, "%s_%s_%s", sensorID, playerID, gen_random(HASH_LEN));
-    return sessionID;
-
-}
-
-int getFirstTrackedPlayer()
-{
-    int player = -1;
-
-    XnUserID aUsers[15];
-    XnUInt16 nUsers = 15;
-    g_UserGenerator.GetUsers(aUsers, nUsers);
-
-    for (int i = 0; i < nUsers; ++i)
-    {
-        if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
-        {
-            player = aUsers[i];
-            break;
-        }
-    }
-    return player;
-}
-
 
 class DataThrottle {
 public:
@@ -452,11 +401,8 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
 
     char *context = get_context();
 
-	struct timeval tim;
-	gettimeofday(&tim, NULL);
-
-	printf("Created at: %ld\n", tim.tv_sec*1000 + tim.tv_usec/1000);
-
+    timespec t;
+     clock_gettime(CLOCK_REALTIME, &t);
     snprintf((char*)buf, 10000,
         "{\"created_at\": %ld,"
         "\"context\": \"%s\","
@@ -464,24 +410,22 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
         "\"sensor_id\": \"%s\","
         "\"sensor_position\": %s,"
         "\"player\": \"%d\", "
-        "\"session_id\": \"%s\", "
         "\"type\": \"skeleton\", "
         "\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
         "\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 
-        tim.tv_sec*1000 + tim.tv_usec/1000,
+        t.tv_sec,
         get_context(),
-        getSensorID(),
-        getSensorPosition(),
-        player,
-        getSessionID(player),
-        head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
-        left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
-        left_foot, right_foot,
+         getSensorID(),
+         getSensorPosition(),
+         player, //player_name,
+         head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
+         left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
+         left_foot, right_foot,
 
-        head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
-        right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
-        right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
+         head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
+         right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
+         right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
 
     worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
 
@@ -564,52 +508,27 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
 
     printf("SaveImage: width = %d, height = %d\n", width, height);
 
-    struct timeval tim;
-	gettimeofday(&tim, NULL);
-    
-	printf("Created at: %ld\n", tim.tv_sec*1000 + tim.tv_usec/1000);
-    
-    int player = getFirstTrackedPlayer();
-    if (player > -1)
-    {
-    	snprintf(buf, buf_size,
-        	"{\"created_at\": %ld,"
-        	"\"context\": \"%s\","
-        	"\"sensor_type\": \"kinect\","
-        	"\"sensor_id\": \"%s\","
-        	"\"sensor_position\": %s,"
-                "\"session_id\": %s,"
-        	"\"type\": \"%s\","
-        	"\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
-        	tim.tv_sec*1000 + tim.tv_usec/1000,
-        	context,
-        	getSensorID(),
-        	getSensorPosition(),
-		getSessionID(player),
-        	sensor_type,
-        	sensor_type,
-        	encoded.c_str(), width, height);
-    }
-    else
-    {
-	snprintf(buf, buf_size,
-                "{\"created_at\": %ld,"
-                "\"context\": \"%s\","
-                "\"sensor_type\": \"kinect\","
-                "\"sensor_id\": \"%s\","
-                "\"sensor_position\": %s,"
-                "\"type\": \"%s\","
-                "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
-                tim.tv_sec*1000 + tim.tv_usec/1000,
-                context,
-                getSensorID(),
-                getSensorPosition(),
-                sensor_type,
-                sensor_type,
-                encoded.c_str(), width, height);
-    }
-  
-    printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
+    timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
+
+    snprintf(buf, buf_size,
+        "{\"created_at\": %ld,"
+        "\"context\": \"%s\","
+        "\"sensor_type\": \"kinect\","
+        "\"sensor_id\": \"%s\","
+        "\"sensor_position\": %s,"
+        "\"type\": \"%s\","
+        "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
+        t.tv_sec,
+        context,
+        getSensorID(),
+        getSensorPosition(),
+        sensor_type,
+        sensor_type,
+        encoded.c_str(), width, height);
+
+        printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
+
 
     worker.AddMessage(new Send(buf), &SendCompleted, throttle);
 
@@ -752,6 +671,44 @@ float* getDepthHistogram(const xn::DepthMetaData& dmd)
     return pDepthHist;
 }
 
+void transformRgbImageToTexture(
+		const xn::ImageMetaData& imd,
+		const xn::SceneMetaData& smd,
+		unsigned char* pDestImage) {
+
+	XnUInt16 g_nXRes = imd.XRes();
+	XnUInt16 g_nYRes = imd.YRes();
+	unsigned int nX, nY;
+	unsigned int nIndex = 0;
+	const unsigned char* pData = imd.Data();
+
+	int texWidth;
+	texWidth = getClosestPowerOfTwo(imd.XRes());
+
+	// Prepare the texture map
+	for (nY=0; nY<g_nYRes; nY++)
+	{
+		for (nX=0; nX < g_nXRes; nX++, nIndex++)
+		{
+			pDestImage[0] = 0;
+			pDestImage[1] = 0;
+			pDestImage[2] = 0;
+
+			pDestImage[0] = *pData;
+			pData ++;
+			pDestImage[1] = *pData;
+			pData ++;
+			pDestImage[2] = *pData;
+			pData ++;
+
+			pDestImage+=3;
+		}
+
+		pDestImage += (texWidth - g_nXRes) *3;
+	}
+
+}
+
 /*
  * Transforms the depth image into a texture and also colors people detected
  * by the kinect. In order to do this, it gets from the scene meta data
@@ -801,6 +758,10 @@ void transformDepthImageIntoTexture(const xn::DepthMetaData& dmd,
                 pDestImage[0] = nHistValue * Colors[nColorID][0];
                 pDestImage[1] = nHistValue * Colors[nColorID][1];
                 pDestImage[2] = nHistValue * Colors[nColorID][2];
+            } else {
+            	pDestImage[0] = 255;
+            	pDestImage[1] = 0;
+            	pDestImage[2] = 0;
             }
 
             pDepth++;
@@ -832,17 +793,17 @@ void drawTrackedUsers() {
     }
 }
 
-void drawDepthMap(GLuint depthTexID,
-                  const xn::DepthMetaData& dmd,
+void drawMap(GLuint depthTexID,
+                  const xn::MapMetaData& md,
                   unsigned char* pDepthTexBuf) {
-    int texWidth =  getClosestPowerOfTwo(dmd.XRes());
-    int texHeight = getClosestPowerOfTwo(dmd.YRes());
+    int texWidth =  getClosestPowerOfTwo(md.XRes());
+    int texHeight = getClosestPowerOfTwo(md.YRes());
     GLfloat texcoords[8];
     float texXpos;
     float texYpos;
 
-    texXpos =(float)dmd.XRes()/texWidth;
-    texYpos  =(float)dmd.YRes()/texHeight;
+    texXpos =(float)md.XRes()/texWidth;
+    texYpos  =(float)md.YRes()/texHeight;
     memset(texcoords, 0, 8*sizeof(float));
     texcoords[0] = texXpos;
     texcoords[1] = texYpos;
@@ -856,7 +817,7 @@ void drawDepthMap(GLuint depthTexID,
     // Display the OpenGL texture map
     glColor4f(0.75,0.75,0.75,1);
     glEnable(GL_TEXTURE_2D);
-    DrawTexture(dmd.XRes(),dmd.YRes(),0,0, texcoords);
+    DrawTexture(md.XRes(),md.YRes(),0,0, texcoords);
     glDisable(GL_TEXTURE_2D);
 }
 
@@ -873,26 +834,36 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
     if(!bInitialized)
     {
         depthTexID = initTexture((void**)&pDepthTexBuf,
-                                 getClosestPowerOfTwo(dmd.XRes()),
-                                 getClosestPowerOfTwo(dmd.YRes())) ;
+                                 getClosestPowerOfTwo(imd.XRes()),
+                                 getClosestPowerOfTwo(imd.YRes())) ;
         bInitialized = true;
     }
 
-    transformDepthImageIntoTexture(dmd, smd, pDepthTexBuf);
-
     if (rgb_throttle.CanSend()) {
         SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
-	rgb_throttle.MarkSend();
+		rgb_throttle.MarkSend();
     }
     if (depth_throttle.CanSend()) {
         SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
-	depth_throttle.MarkSend();
+		depth_throttle.MarkSend();
     }
 
-    drawDepthMap(depthTexID, dmd, pDepthTexBuf);
+    glPushMatrix();
+//  glOrtho(0, imd.XRes(), 0, , -1.0, 1.0);
+    glLoadIdentity();
+
+//    glOrtho(0, dmd.XRes(), dmd.YRes(), 0, -1.0, 1.0);
+//    transformDepthImageIntoTexture(dmd, smd, pDepthTexBuf);
+//    drawMap(depthTexID, smd, pDepthTexBuf);
+
+    glOrtho(0, imd.XRes(), imd.YRes(), 0, -1.0, 1.0);
+    transformRgbImageToTexture(imd, smd, pDepthTexBuf);
+    drawMap(depthTexID, imd, pDepthTexBuf);
+
+    glPopMatrix();
+
     drawTrackedUsers();
 
     frames += 1;
     printf("Drawn %d frames so far\n", frames);
 }
-

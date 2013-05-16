@@ -103,6 +103,8 @@ void XN_CALLBACK_TYPE UserCalibration_CalibrationComplete(xn::SkeletonCapability
     }
 }
 
+XnPoint3D* click2D = NULL;
+
 // this function is called each frame
 void glutDisplay (void)
 {
@@ -117,14 +119,6 @@ void glutDisplay (void)
     glPushMatrix();
     glLoadIdentity();
 
-    g_DepthGenerator.GetMetaData(depthMD);
-    g_ImageGenerator.GetMetaData(imageMD);
-
-#ifndef USE_GLES
-    glOrtho(0, depthMD.XRes(), depthMD.YRes(), 0, -1.0, 1.0);
-#else
-    glOrthof(0, depthMD.XRes(), depthMD.YRes(), 0, -1.0, 1.0);
-#endif
 
     glDisable(GL_TEXTURE_2D);
 
@@ -136,6 +130,35 @@ void glutDisplay (void)
     g_UserGenerator.GetUserPixels(0, sceneMD);
     g_ImageGenerator.GetMetaData(imageMD);
 
+#ifndef USE_GLES
+    glOrtho(0, depthMD.XRes(), depthMD.YRes(), 0, -1.0, 1.0);
+#else
+    glOrthof(0, depthMD.XRes(), depthMD.YRes(), 0, -1.0, 1.0);
+#endif
+
+    if (click2D != NULL) {
+    	int width = glutGet(GLUT_WINDOW_WIDTH);
+    	int height = glutGet(GLUT_WINDOW_HEIGHT);
+
+    	double x = click2D->X / width * depthMD.XRes();
+    	double y = click2D->Y / height * depthMD.YRes();
+
+
+    	const XnDepthPixel* pDepth = depthMD.Data();
+    	pDepth += (int) (y) * depthMD.XRes() + (int) x;
+    	XnPoint3D projective = {x, y, *pDepth};
+    	XnPoint3D realword;
+    	printf("bubu2 %lf %lf, %d\n", x, y, *pDepth);
+
+    	g_DepthGenerator.ConvertProjectiveToRealWorld(1, &projective, &realword);
+
+
+
+    	printf("bubu1 %f %f %f\n", realword.X, realword.Y, realword.Z);
+
+    	delete click2D;
+    	click2D = NULL;
+    }
     // Draw the input fetched from the Kinect
     DrawKinectInput(depthMD, sceneMD, imageMD);
 
@@ -164,6 +187,21 @@ void glutKeyboard (unsigned char key, int /*x*/, int /*y*/)
         break;
     }
 }
+
+
+void glutMouse (int button, int state, int x, int y)
+{
+	if (state == GLUT_UP)
+		return;
+
+	printf("bubu %d %d\n", x, y);
+	if (click2D == NULL) {
+		XnPoint3D v = {x, y, 0};
+		click2D = new XnPoint3D(v);
+	}
+}
+
+
 void glInit (int * pargc, char ** argv)
 {
     glutInit(pargc, argv);
@@ -171,9 +209,10 @@ void glInit (int * pargc, char ** argv)
     glutInitWindowSize(GL_WIN_SIZE_X, GL_WIN_SIZE_Y);
     glutCreateWindow ("User Tracker Viewer");
     //glutFullScreen();
-    glutSetCursor(GLUT_CURSOR_NONE);
+//    glutSetCursor(GLUT_CURSOR_);
 
     glutKeyboardFunc(glutKeyboard);
+    glutMouseFunc(glutMouse);
     glutDisplayFunc(glutDisplay);
     glutIdleFunc(glutIdle);
 
