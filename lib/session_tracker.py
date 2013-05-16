@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class SessionTracker(object):
 
     def __init__(self):
-        self.session_store = SessionStore(settings.REDIS_RAW_SESSIONS_DB)
+        self.session_store = SessionStore()
         self.kestrel_connection = KestrelConnection()
 
     def track_event(self, sid, time, info):

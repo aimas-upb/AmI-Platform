@@ -30,7 +30,7 @@ class TestFaceRecognition(TestCase):
         time.sleep(MAX_WAIT)
 
         sid = FACE_RECOGNITION_SAMPLE_MESSAGE['session_id']
-        t = FACE_RECOGNITION_SAMPLE_MESSAGE['created_at']
+        t = 0
         max_probability = max(MATCHES_MOCK.values())
         person_name = MATCHES_MOCK.keys()[MATCHES_MOCK.values(
             ).index(max_probability)]
