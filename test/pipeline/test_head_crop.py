@@ -89,7 +89,7 @@ class TestHeadCrop(TestCase):
 
     @patch.object(HeadCrop, 'send_to')
     @patch('pipeline.head_crop._crop_head_using_face_detection', return_value = None)
-    @patch('pipeline.head_crop._crop_head_using_skeleton', return_value = Image.frombuffer('RGB', (1, 1), base64.b64decode('AAAA')))
+    @patch('pipeline.head_crop._crop_head_using_skeleton', return_value = Image.frombuffer('RGB', (1, 1), base64.b64decode('AAAA'), 'raw', 'RGB', 0, 1))
     def test_one_image_and_one_skeleton_close_enough(self, skeleton, face_detect, send_to):
         # TODO(andrei): seems to me like this doesn't get run properly
         # due to the fact that it's a parallel PDU. Suggestion: let's implement
@@ -150,4 +150,4 @@ class TestHeadCrop(TestCase):
         head_crop.crop_head = orig_fn
 
 def one_by_one_image(msg):
-    return image_to_base64(Image.frombuffer('RGB', (1, 1), base64.b64decode('AAAA')))
+    return image_to_base64(Image.frombuffer('RGB', (1, 1), base64.b64decode('AAAA'), 'raw', 'RGB', 0, 1))
