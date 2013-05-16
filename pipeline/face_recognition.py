@@ -86,7 +86,7 @@ class FaceRecognition(ParallelPDU):
         self.send_to('room', message_to_room)
         if 'session_id' in image_dict.keys():
             self.session_tracker.track_event(image_dict['session_id'],
-                                             image_dict['created_at'],
+                                             0, # set the person name globally on the session
                                              {'person_name': person_name})
 
         # Send cropped image to UpgradeFaceSamples only if detection confidence
