@@ -1,3 +1,2 @@
-<a href class="save-image">Open Image in Tab</a> <br/>
-
-<canvas width="640" height="512"></canvas>
+<canvas width="640" height="512" class="c1"></canvas>
+<canvas width="640" height="512" class="c2" style="display:none;"></canvas>

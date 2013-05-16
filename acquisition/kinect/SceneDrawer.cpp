@@ -578,7 +578,7 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
         	"\"sensor_type\": \"kinect\","
         	"\"sensor_id\": \"%s\","
         	"\"sensor_position\": %s,"
-                "\"session_id\": %s,"
+                "\"session_id\": \"%s\","
         	"\"type\": \"%s\","
         	"\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
         	tim.tv_sec*1000 + tim.tv_usec/1000,
