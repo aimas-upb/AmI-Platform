@@ -3,12 +3,12 @@ import math
 
 import cv
 
-from pipeline.ami_lab_pdu import AmILabPDU
+from core import PDU
 from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
+from lib.session_tracker import SessionTracker
 
-
-class RoomPosition(AmILabPDU):
+class RoomPosition(PDU):
     ''' PDU that reads skeleton messages from kinect and translates the position 
         of the torso (from kinect coordinates) to room coordinates using the
         sensor position value that is sent by kinect.
@@ -37,6 +37,7 @@ class RoomPosition(AmILabPDU):
 
     def __init__(self, **kwargs):
         super(RoomPosition, self).__init__(**kwargs)
+        self.session_tracker = SessionTracker()
         self.dashboard_cache = DashboardCache()
 
     def process_message(self, message):
@@ -113,9 +114,8 @@ class RoomPosition(AmILabPDU):
         if message.get('session_id', None):
             sid = message['session_id']
             time = message['created_at']
-            self.add_to_session_store(sid, time, skeleton_in_room_message)
-            self.add_to_session_store(sid, time, position_message)
-        
+            self.session_tracker.track_event(sid, time, skeleton_in_room_message)
+            self.session_tracker.track_event(sid, time, position_message)
         
         # Send subject position to Redis
         self.dashboard_cache.lpush(sensor_id=message['sensor_id'],

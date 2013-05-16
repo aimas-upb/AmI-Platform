@@ -6,6 +6,7 @@ from core import ParallelPDU
 from lib.image import base64_to_image
 from lib.files import random_file_name
 from lib.log import setup_logging
+from lib.session_tracker import SessionTracker
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +25,9 @@ def betaface_recognition(image_dict):
                                 int(image_dict['head_image']['height']))
         temp_path = random_file_name('jpg')
         logger.info("Generated random path to save image: %s" % temp_path)
-	image = image.rotate(180)
+        image = image.rotate(180)
         image.save(temp_path)
-	
+
         logger.info("Saved image to disk at path %s" % temp_path)
 
         matches = api.recognize_faces(temp_path, 'amilab.ro')
@@ -55,6 +56,7 @@ class FaceRecognition(ParallelPDU):
     def __init__(self, **kwargs):
         kwargs['heavy_preprocess'] = betaface_recognition
         super(FaceRecognition, self).__init__(**kwargs)
+        self.session_tracker = SessionTracker()
 
     def light_postprocess(self, matches, image_dict):
         self.logger.info("Received matches from BetaFace: %r" % matches)
@@ -82,6 +84,10 @@ class FaceRecognition(ParallelPDU):
         message_to_room = {'event_type': 'person_appeared',
                            'person_name': person_name}
         self.send_to('room', message_to_room)
+        if 'session_id' in image_dict.keys():
+            self.session_tracker.track_event(image_dict['session_id'],
+                                             0, # set the person name globally on the session
+                                             {'person_name': person_name})
 
         # Send cropped image to UpgradeFaceSamples only if detection confidence
         # is really really high. Otherwise it's not worth it and we will
