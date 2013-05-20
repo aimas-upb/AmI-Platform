@@ -41,7 +41,7 @@ class RoomPosition(PDU):
         self.dashboard_cache = DashboardCache()
 
     def process_message(self, message):
-        if message['type'] is not 'skeleton':
+        if message['type'] !=  'skeleton':
             return
         
         sensor_position = message['sensor_position']
