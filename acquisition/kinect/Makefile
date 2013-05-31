@@ -26,6 +26,7 @@ endif
 
 USED_LIBS += OpenNI
 USED_LIBS += opencv_core
+USED_LIBS += opencv_imgproc
 USED_LIBS += opencv_highgui
 
 DEFINES += USE_MEMCACHE

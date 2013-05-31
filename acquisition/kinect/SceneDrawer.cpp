@@ -526,6 +526,8 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
  * Kestrel, a message-queue system used to communicate with the rest of the
  * system.
  */
+
+#import <fstream>
 static void SaveImage(char *img, int width, int height, const char* player_name, const char* sensor_type, DataThrottle* throttle) {
 #if USE_MEMCACHE
     size_t outlen, outlen2;
@@ -536,9 +538,19 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
     compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
     compression_params.push_back(95);
 
-    cv::Mat mat(height, width, CV_8UC3, img);
+    cv::Mat rgb(height, width, CV_8UC3, img);
+    cv::Mat mat(height, width, CV_8UC3);
+    cv::cvtColor(rgb, mat, CV_RGB2BGR);
+
     vector<unsigned char> c_buf;
     cv::imencode(".jpg", mat, c_buf, compression_params);
+
+    std::ofstream file;
+    file.open("image.jpg");
+
+    std::copy(c_buf.begin(), c_buf.end(),  boost::archive::iterators::ostream_iterator<char>(file));
+    file.close();
+
     std::basic_stringstream<unsigned char> os;
 
     using namespace boost::archive::iterators;
