@@ -374,7 +374,7 @@ int main(int argc, char **argv)
 #if USE_MEMCACHE
     initializeKestrelConnection();
 #endif
-
+    g_DepthGenerator.GetAlternativeViewPointCap().SetViewPoint(g_ImageGenerator);
     openglMainLoop(argc, argv);
 
     return 0;
