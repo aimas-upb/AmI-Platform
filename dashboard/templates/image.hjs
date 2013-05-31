@@ -1,2 +1,3 @@
-<canvas width="640" height="512" class="c1"></canvas>
-<canvas width="640" height="512" class="c2" style="display:none;"></canvas>
+<div style="height: 20px; width: 640px;"></div>
+<img src="{{image_data}}" style="width: 640px; height: 480px;"></img>
+<div class="time">{{measured_at}}</div>

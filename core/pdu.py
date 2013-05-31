@@ -5,9 +5,10 @@ import time
 import threading
 import traceback
 
-import kestrel
 import pymongo
 
+from utils import json_dumps
+from kestrel_connection import KestrelConnection
 import settings
 
 """
@@ -17,15 +18,14 @@ class PDU(object):
 
     PRINT_STATS_INTERVAL = 30 # Print flow stats every X seconds
     MESSAGE_SAMPLING_RATIO = 10
-    JSON_DUMPS_STRING_LIMIT = 50
+
     TIME_TO_SLEEP_ON_BUSY = 0.05
     MAX_BUSY_SLEEPS = 10
+    JSON_DUMPS_STRING_LIMIT = 1000
 
     def __init__(self, **kwargs):
         """ Set-up connections to Mongo and Kestrel by default on each PDU. """
-        self._input_queue_system = kwargs.get('queue_system', None) or kestrel.Client(settings.KESTREL_SERVERS)
-        self._output_queue_system = kwargs.get('queue_system', None) or kestrel.Client(getattr(settings, 'KESTREL_SERVERS_OUTPUT',
-                                                                                               settings.KESTREL_SERVERS))
+        self.queue_system = kwargs.get('queue_system', None) or KestrelConnection()
         self._mongo_connection = pymongo.Connection(settings.MONGO_SERVER)
         self._last_stats = time.time()
         self._processed_messages = 0
@@ -37,14 +37,6 @@ class PDU(object):
     def log(self, message, level = logging.INFO):
         """ Log a message to stdout. Includes class name & current time. """
         self.logger.log(level, message)
-
-    @property
-    def input_queue_system(self):
-        return self._input_queue_system
-
-    @property
-    def output_queue_system(self):
-        return self._output_queue_system
 
     @property
     def mongo_connection(self):
@@ -59,28 +51,7 @@ class PDU(object):
     def send_to(self, queue, message):
         """ Send a message to another queue. """
         self.log("Enqueueing message to %s" % queue, level = logging.INFO)
-        self.output_queue_system.add(queue, json.dumps(message))
-
-    def _truncate_strs(self, dictionary):
-        # Edge case - dictionary is in fact not a dictionary, but a string
-        if type(dictionary) != dict:
-            result = str(dictionary)
-            if len(result) > self.JSON_DUMPS_STRING_LIMIT:
-                result = result[0:self.JSON_DUMPS_STRING_LIMIT] + '... (truncated)'
-            return result
-
-        result = {}
-        for k, v in dictionary.iteritems():
-            # If value is a dictionary, recursively truncate big strings
-            if type(v) == dict:
-                result[k] = self._truncate_strs(v)
-            # If it's a large string, truncate it
-            elif (type(v) == str or type(v) == unicode) and len(v) > self.JSON_DUMPS_STRING_LIMIT:
-                result[k] = v[0:self.JSON_DUMPS_STRING_LIMIT] + '... (truncated)'
-            # Otherwise, copy any type of thing
-            else:
-                result[k] = v
-        return result
+        self.queue_system.add(queue, json.dumps(message))
 
     def _start_running(self):
         """ Mark the current PDU as running. """
@@ -103,11 +74,6 @@ class PDU(object):
 
     def stop(self):
         self._stop_running()
-
-    def _json_dumps(self, dictionary):
-        """ A custom version of json.dumps which truncates string fields
-            with length too large. """
-        return json.dumps(self._truncate_strs(dictionary))
 
     def busy(self):
         """ Make this return True and fetching of messages from the queue
@@ -139,7 +105,7 @@ class PDU(object):
                     continue
 
                 # Step 1 - get message from message queue
-                message = self.input_queue_system.get(self.QUEUE, timeout = 1)
+                message = self.queue_system.get(self.QUEUE, timeout = 1)
                 if not message:
                     """self.log("Could not get message from queue %s Retrying ..."
                              % self.QUEUE)"""
@@ -151,7 +117,7 @@ class PDU(object):
                     doc = json.loads(message)
                 except:
                     self.log("Did not get valid JSON from queue %s" % self.QUEUE)
-                    self.log("Invalid message: %s" % message[0:self.JSON_DUMPS_STRING_LIMIT])
+                    self.log("Invalid message: %s" % json_dumps(message))
                     continue
 
                 # Step 3 - validate message
@@ -160,11 +126,11 @@ class PDU(object):
                     is_valid = self.validate_message(copy_of_doc)
                     if not is_valid:
                         self.log("Invalid message from queue %s" % self.QUEUE)
-                        self.log("Message: %s" % self._json_dumps(copy_of_doc))
+                        self.log("Message: %s" % json_dumps(copy_of_doc))
                         continue
                 except:
                     self.log("Error while validating message %s from queue %s" %
-                             self._json_dumps(doc), self.QUEUE)
+                             json_dumps(doc), self.QUEUE)
                     traceback.print_exc()
                     continue
 
@@ -176,13 +142,13 @@ class PDU(object):
                     self.process_message(copy_of_doc)
                 except:
                     self.log("Error while processing message %s from queue %s" %
-                             (self._json_dumps(doc), self.QUEUE))
+                             (json_dumps(doc), self.QUEUE))
                     traceback.print_exc()
                     continue
 
                 ratio = self.MESSAGE_SAMPLING_RATIO
                 if self.debug_mode and self._processed_messages % ratio == 0:
-                    self.log("Sampled message: %s" % self._json_dumps(doc))
+                    self.log("Sampled message: %s" % json_dumps(doc))
 
                 # Only increment # of processed messages if there was an actual
                 # processing. If we do this in the "finally" block, it will
