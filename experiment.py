@@ -38,14 +38,33 @@ parser.add_argument('--filters',
                     default='{}',
                     help='Key-value filters for measurements')
 parser.add_argument('operation',
-                    help='Operation to perform (start/stop)')
+                    help='Operation to perform (start/stop/delete/play/list)')
 parser.add_argument('name',
+                    nargs='?',
+                    default = None,
                     help='Experiment name')
 
 args = parser.parse_args()
 
-if args.operation not in ['start', 'stop', 'delete', 'play']:
+if args.operation not in ['start', 'stop', 'delete', 'play', 'list']:
     logger.error("Invalid operation: %s" % args.operation)
+
+elif args.operation in ['start', 'stop', 'delete', 'play'] and args.name is None:
+    logger.error("Operation: %s needs the name of the experiment" % args.operation)
+    
+elif args.operation == 'list':
+        # See if there is an existing Experiment with that name
+    connect('experiments', host=settings.MONGO_SERVER)
+    experiments = sorted(Experiment.objects, lambda x,y: y.active - x.active)
+    
+    if len(experiments) == 0:
+        print "No active experiments"
+    else:
+        print "Experiments:" 
+        print "%20s %20s %20s" % ("name", "file", "active")
+        print "--------------------------------------------------------------"        
+        for e in experiments:
+            print "%20s %20s %20s" % (e.name, e.file, e.active)
 
 elif args.operation == 'start':
     # See if there is an existing Experiment with that name
