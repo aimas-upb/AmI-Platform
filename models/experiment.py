@@ -17,8 +17,12 @@ class Experiment(BaseModel):
     def matches(self, measurement):
         """ See if this experiment matches a given measurement. """
         for k, v in self.filters.iteritems():
-            if measurement.get(k) != v:
+            if isinstance(v, list): 
+                if not measurement.get(k) in v:
+                    return False                
+            elif measurement.get(k) != v:
                 return False
+            
         return True
 
     @staticmethod
