@@ -26,7 +26,7 @@ class TestHeadCrop(TestCase):
             'sensor_type': 'kinect',
             'type': 'image_rgb',
             'image_rgb': {
-                'image': 'A' * (640 * 480 * 3 * 4/3),
+                'image': 'A' * (640 * 480 * 3 * 4 / 3),
                 'width': 640,
                 'height': 480
             }
@@ -42,8 +42,8 @@ class TestHeadCrop(TestCase):
     @patch.object(HeadCrop, 'send_to')
     # Because we don't have image + skeleton, face detection should
     # be called, and make sure it doesn't return anything useful
-    @patch('pipeline.head_crop._crop_head_using_face_detection', return_value = None)
-    @patch('pipeline.head_crop._crop_head_using_skeleton', return_value = None)
+    @patch('pipeline.head_crop._crop_head_using_face_detection', return_value=None)
+    @patch('pipeline.head_crop._crop_head_using_skeleton', return_value=None)
     def test_sole_image_without_face_doesnt_sent_to_recognition(self, skeleton, face_detect, send_to):
         return
 
@@ -56,8 +56,8 @@ class TestHeadCrop(TestCase):
                                    "a corresponding image and skeleton")
 
     @patch.object(HeadCrop, 'send_to')
-    @patch('pipeline.head_crop._crop_head_using_face_detection', return_value = None)
-    @patch('pipeline.head_crop._crop_head_using_skeleton', return_value = None)
+    @patch('pipeline.head_crop._crop_head_using_face_detection', return_value=None)
+    @patch('pipeline.head_crop._crop_head_using_skeleton', return_value=None)
     def test_sole_skeleton_doesnt_send_to_recognition(self, skeleton, face_detect, send_to):
         return
 
@@ -70,10 +70,9 @@ class TestHeadCrop(TestCase):
         eq_(face_detect.call_count, 0, "face_detect should only be called if it has "
                                    "a corresponding image and skeleton")
 
-
     @patch.object(HeadCrop, 'send_to')
-    @patch('pipeline.head_crop._crop_head_using_face_detection', return_value = None)
-    @patch('pipeline.head_crop._crop_head_using_skeleton', return_value = None)
+    @patch('pipeline.head_crop._crop_head_using_face_detection', return_value=None)
+    @patch('pipeline.head_crop._crop_head_using_skeleton', return_value=None)
     def test_one_image_and_one_skeleton_not_close_enough(self, skeleton, face_detect, send_to):
         return
 
@@ -88,8 +87,8 @@ class TestHeadCrop(TestCase):
                                    "a corresponding image and skeleton")
 
     @patch.object(HeadCrop, 'send_to')
-    @patch('pipeline.head_crop._crop_head_using_face_detection', return_value = None)
-    @patch('pipeline.head_crop._crop_head_using_skeleton', return_value = Image.frombuffer('RGB', (1, 1), base64.b64decode('AAAA'), 'raw', 'RGB', 0, 1))
+    @patch('pipeline.head_crop._crop_head_using_face_detection', return_value=None)
+    @patch('pipeline.head_crop._crop_head_using_skeleton', return_value=Image.frombuffer('RGB', (1, 1), base64.b64decode('AAAA'), 'raw', 'RGB', 0, 1))
     def test_one_image_and_one_skeleton_close_enough(self, skeleton, face_detect, send_to):
         # TODO(andrei): seems to me like this doesn't get run properly
         # due to the fact that it's a parallel PDU. Suggestion: let's implement
@@ -120,10 +119,10 @@ class TestHeadCrop(TestCase):
         from lib.opencv import crop_face_from_image
         from os import listdir
         image_folder = "/home/ami/AmI-Platform/headcrop_dataset"
-        images = [ image for image in listdir(image_folder) if not image.endswith('_result.jpg')]
+        images = [image for image in listdir(image_folder) if not image.endswith('_result.jpg')]
 
         for image_file in images:
-            image = Image.open("%s/%s" % (image_folder,image_file))
+            image = Image.open("%s/%s" % (image_folder, image_file))
             logging.debug("processing image %s" % image_file)
             cropped_head = crop_face_from_image(image)
             if cropped_head is not None:
@@ -148,6 +147,7 @@ class TestHeadCrop(TestCase):
 
         session_store_mock.assert_called_once_with(sid, t, info)
         head_crop.crop_head = orig_fn
+
 
 def one_by_one_image(msg):
     return image_to_base64(Image.frombuffer('RGB', (1, 1), base64.b64decode('AAAA'), 'raw', 'RGB', 0, 1))

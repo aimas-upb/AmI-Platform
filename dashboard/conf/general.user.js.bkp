@@ -1,0 +1,8 @@
+var App = App || {};
+
+App.user = {
+    FRONTAPI_URL: 'http://ami.local',
+    FRONTEND_URL: 'http://ami.local',
+    STATIC_URL: 'http://ami.local',
+    LOG_LEVEL: 1
+};
