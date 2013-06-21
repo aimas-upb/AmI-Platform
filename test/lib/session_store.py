@@ -52,7 +52,7 @@ class SessionsStoreTest(TestCase):
 
         s1times = self.store.get_session_times('ts1')
         eq_(3, len(s1times), "Expecting 3 times")
-        eq_([10,20,30], s1times, "Times must match")
+        eq_([30,20,10], s1times, "Times must match")
 
         s2props = self.store.get_session_measurements('ts2', ['time'])
         s2times = [int(x['time']) for x in s2props]

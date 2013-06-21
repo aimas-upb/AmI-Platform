@@ -48,7 +48,7 @@ class SessionStore(object):
 
     def get_session_times(self, sid):
         """ Returns the list of times within a session, sorted ascending. """
-        return [int(x) for x in self.redis.zrange('stimes:%s' % sid, 0, -1)]
+        return [int(x) for x in self.redis.zrevrange('stimes:%s' % sid, 0, -1)]
 
     def get_session_measurements(self, sid, properties = []):
         """ Returns the values of the specified properties for all
