@@ -29,26 +29,33 @@ class SessionStore(object):
                                        port=settings.REDIS_PORT,
                                        db=settings.REDIS_SESSION_DB)
 
-    def set(self, sid, time, info):
+    def set(self, sid, timestamp, info):
         """
             Set the value of a property for the measurment sid/time.
             The 'time' property is added to the measurement automatically"
         """
-        time = _snap_time(time)
-        # sessions is a set of session ids
-        self.redis.hset('sessions', sid, time)
+        timestamp = _round_down(timestamp)
+        self._update_session_max_timestamp(sid, timestamp)
+
         # stimes is a sorted set of timestamps for a given session
-        self.redis.zadd('stimes:%s' % sid, time, str(time))
-        info['time'] = time
-        self.redis.hmset(_hash_name(sid, time), info);
+        self.redis.zadd('stimes:%s' % sid, timestamp, str(timestamp))
+        info['time'] = timestamp
+        self.redis.hmset(_hash_name(sid, timestamp), info);
 
     def get_all_sessions(self):
         """ Returns the list of all active sessions """
         return self.redis.hkeys('sessions')
 
+    def get_all_sessions_with_last_update(self):
+        """ Returns a dictionary containing session ids as keys and
+        last update timestamps as values. """
+        return dict((sid, float(timestamp))
+                    for sid, timestamp in
+                    self.redis.hgetall('sessions').iteritems())
+
     def get_session_times(self, sid):
         """ Returns the list of times within a session, sorted ascending. """
-        return [int(x) for x in self.redis.zrange('stimes:%s' % sid, 0, -1)]
+        return [int(x) for x in self.redis.zrevrange('stimes:%s' % sid, 0, -1)]
 
     def get_session_measurements(self, sid, properties = []):
         """ Returns the values of the specified properties for all
@@ -65,7 +72,25 @@ class SessionStore(object):
             values = self.redis.hmget(_hash_name(sid, t), properties)
             return dict(zip(properties, values))
 
-def _snap_time(time):
+    def _update_session_max_timestamp(self, sid, timestamp):
+        # "sessions" is a session_id -> max(measurement_timestamp) mapping
+        # that works like a hearbeat table, allowing us to clean-up old
+        # sessions that are no longer needed
+        max_timestamp = self.redis.hget('sessions', sid)
+        if max_timestamp is None:
+            new_timestamp = timestamp
+        else:
+            try:
+                max_timestamp = int(max_timestamp)
+                new_timestamp = max(timestamp, max_timestamp)
+            except:
+                # If we have crap in the session store, default to
+                # having current timestamp as the new max
+                new_timestamp = timestamp
+
+        self.redis.hset('sessions', sid, new_timestamp)
+
+def _round_down(time):
     return (time / 10) * 10
 
 def _hash_name(sid, time):

@@ -20,11 +20,13 @@ class SessionsStoreTest(TestCase):
         super(SessionsStoreTest, self).setUp()
         settings.REDIS_SERVER = 'localhost'
 
-        r = redis.StrictRedis(host = settings.REDIS_SERVER,
-                              port = settings.REDIS_PORT,
-                              db = settings.REDIS_SESSION_DB)
 
-        r.flushdb()
+        self.redis = redis.StrictRedis(host = settings.REDIS_SERVER,
+                                       port = settings.REDIS_PORT,
+                                       db = settings.REDIS_SESSION_DB)
+
+        self.redis.flushdb()
+
         self.store = SessionStore()
 
     def test_all(self):
@@ -50,7 +52,7 @@ class SessionsStoreTest(TestCase):
 
         s1times = self.store.get_session_times('ts1')
         eq_(3, len(s1times), "Expecting 3 times")
-        eq_([10,20,30], s1times, "Times must match")
+        eq_([30,20,10], s1times, "Times must match")
 
         s2props = self.store.get_session_measurements('ts2', ['time'])
         s2times = [int(x['time']) for x in s2props]
@@ -58,8 +60,17 @@ class SessionsStoreTest(TestCase):
         eq_(1, len(s2times), "Expecting 1 times")
         ok_(set([20]) == set(s2times), "Times must match")
 
+    def test_session_store_always_keeps_max_timestamp_for_measurements(self):
+        """ Given that measurements may come in async with timestamps a little
+        'out of order' because of that, test that no matter what happens, the
+        session store will store only the max timestamp for each session. """
 
+        self.store.set('session1', 20, {'a': 'b'})
+        self.store.set('session1', 10, {'c': 'd'})
 
+        last_timestamp = int(self.redis.hget('sessions', 'session1'))
+        eq_(last_timestamp, 20, "Session processor should always keep the "
+            "maximal timestamp for out-of-order measurements")
 
 
 
