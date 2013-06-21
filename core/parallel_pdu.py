@@ -127,6 +127,7 @@ class ParallelPDU(PDU):
         return result
 
     def process_message(self, message):
+        print 'de dragul tau'
         """ Message processing will be done in 2 steps:
 
             - give the message a unique ID and enqueue this for processing

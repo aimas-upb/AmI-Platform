@@ -1,0 +1,4 @@
+check process ami-session_processor
+	with pidfile /var/run/ami-session_processor.pid
+	start = "/usr/sbin/service ami-session_processor start"
+	stop = "/usr/sbin/service ami-session_processor stop"

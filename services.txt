@@ -12,3 +12,4 @@ ami-measurements-player
 ami-recorder
 ami-room-position
 ami-dashboard
+ami-session_processor

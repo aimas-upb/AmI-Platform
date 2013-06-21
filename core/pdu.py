@@ -6,6 +6,8 @@ import threading
 import traceback
 
 import pymongo
+
+from utils import json_dumps
 from kestrel_connection import KestrelConnection
 import settings
 
@@ -115,7 +117,7 @@ class PDU(object):
                     doc = json.loads(message)
                 except:
                     self.log("Did not get valid JSON from queue %s" % self.QUEUE)
-                    self.log("Invalid message: %s" % message[0:self.JSON_DUMPS_STRING_LIMIT])
+                    self.log("Invalid message: %s" % json_dumps(message))
                     continue
 
                 # Step 3 - validate message
@@ -124,11 +126,11 @@ class PDU(object):
                     is_valid = self.validate_message(copy_of_doc)
                     if not is_valid:
                         self.log("Invalid message from queue %s" % self.QUEUE)
-                        self.log("Message: %s" % self._json_dumps(copy_of_doc))
+                        self.log("Message: %s" % json_dumps(copy_of_doc))
                         continue
                 except:
                     self.log("Error while validating message %s from queue %s" %
-                             self._json_dumps(doc), self.QUEUE)
+                             json_dumps(doc), self.QUEUE)
                     traceback.print_exc()
                     continue
 
@@ -140,13 +142,13 @@ class PDU(object):
                     self.process_message(copy_of_doc)
                 except:
                     self.log("Error while processing message %s from queue %s" %
-                             (self._json_dumps(doc), self.QUEUE))
+                             (json_dumps(doc), self.QUEUE))
                     traceback.print_exc()
                     continue
 
                 ratio = self.MESSAGE_SAMPLING_RATIO
                 if self.debug_mode and self._processed_messages % ratio == 0:
-                    self.log("Sampled message: %s" % self._json_dumps(doc))
+                    self.log("Sampled message: %s" % json_dumps(doc))
 
                 # Only increment # of processed messages if there was an actual
                 # processing. If we do this in the "finally" block, it will
@@ -167,32 +169,3 @@ class PDU(object):
                                  (flow, time_since_last_stats))
                     self._processed_messages = 0
                     self._last_stats = time.time()
-
-    def _json_dumps(self, dictionary):
-        """ Custom version of json.dumps which truncates long string fields. """
-        return json.dumps(self._truncate_strs(dictionary))
-
-    def _truncate_strs(self, dictionary):
-        """ Given a dictionary, explore it using depth first search (DFS)
-        and truncate the values of keys which are "too long".
-
-        """
-        # Edge case - dictionary is in fact not a dictionary, but a string
-        if type(dictionary) != dict:
-            result = str(dictionary)
-            if len(result) > self.JSON_DUMPS_STRING_LIMIT:
-                result = result[0:self.JSON_DUMPS_STRING_LIMIT] + '... (truncated)'
-            return result
-
-        result = {}
-        for k, v in dictionary.iteritems():
-            # If value is a dictionary, recursively truncate big strings
-            if type(v) == dict:
-                result[k] = self._truncate_strs(v)
-            # If it's a large string, truncate it
-            elif (type(v) == str or type(v) == unicode) and len(v) > self.JSON_DUMPS_STRING_LIMIT:
-                result[k] = v[0:self.JSON_DUMPS_STRING_LIMIT] + '... (truncated)'
-            # Otherwise, copy any type of thing
-            else:
-                result[k] = v
-        return result
