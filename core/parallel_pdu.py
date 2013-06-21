@@ -6,10 +6,11 @@ from pdu import PDU
 
 logger = logging.getLogger(__name__)
 
+
 def run_and_return(f, param, k, v):
     """ Runs function f(param) and returns a dictionary containing {k:v}
         and the result of the function run. """
-        
+
     # Make sure that exceptions of the function to run don't disappoint us
     # and crash our worker pool workers.
     try:
@@ -19,10 +20,11 @@ def run_and_return(f, param, k, v):
         traceback.print_exc()
         logger.error("Exception while executing %r" % f)
         f_result = None
-        
+
     to_return = {'result': f_result}
     to_return[k] = v
     return to_return
+
 
 class ParallelPDU(PDU):
     """ PDU which can process messages in parallel. In order to
@@ -79,7 +81,7 @@ class ParallelPDU(PDU):
         self.messages = {}
 
         self.unfinished_tasks = AtomicInt()
-        
+
         self.last_busy_result = False
 
     def light_postprocess(self, preprocess_result, message):
@@ -120,14 +122,13 @@ class ParallelPDU(PDU):
         """
         unfinished_tasks = self.unfinished_tasks.get()
         result = unfinished_tasks > self.UNFINISHED_TASKS_THRESHOLD
-        if result and not self.last_busy_result:            
+        if result and not self.last_busy_result:
             self.log("Busy with %d unfinished tasks!" % unfinished_tasks)
-        
+
         self.last_busy_result = result
         return result
 
     def process_message(self, message):
-        print 'de dragul tau'
         """ Message processing will be done in 2 steps:
 
             - give the message a unique ID and enqueue this for processing
@@ -151,4 +152,4 @@ class ParallelPDU(PDU):
         self.pool.apply_async(run_and_return,
                               [self.heavy_preprocess, message,\
                                'message_no', self.message_no],
-                              callback = self._internal_light_postprocess)
+                               callback=self._internal_light_postprocess)
