@@ -46,6 +46,11 @@ class SessionStore(object):
         """ Returns the list of all active sessions """
         return self.redis.hkeys('sessions')
 
+    def get_all_sessions_with_last_update(self):
+        """ Returns a dictionary containing session ids as keys and
+        last update timestamps as values. """
+        return self.redis.hgetall('sessions')
+
     def get_session_times(self, sid):
         """ Returns the list of times within a session, sorted ascending. """
         return [int(x) for x in self.redis.zrevrange('stimes:%s' % sid, 0, -1)]
