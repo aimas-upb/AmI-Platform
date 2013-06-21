@@ -8,6 +8,7 @@ from pybetaface.api import BetaFaceAPI
 from core import PDU
 from lib.log import setup_logging
 
+
 class UpgradeFaceSamples(PDU):
     QUEUE = 'upgrade-face-samples'
 
@@ -33,12 +34,12 @@ class UpgradeFaceSamples(PDU):
         width = int(head_image['width'])
         height = int(head_image['height'])
 
-        # save image to file
+        # Save image to file
         path = "/tmp/%s.jpg" % uuid.uuid4()
         self.save_image_to_file(image, width, height, path)
         self.logger.info("Saved face sample to file %s" % path)
 
-        # upload image to BetaFace API
+        # Upload image to BetaFace API
         self.api.upload_face(path, person_name)
         self.logger.info("Fed face sample %s as an example for %s" %\
                          (path, person_name))
