@@ -49,7 +49,9 @@ class SessionStore(object):
     def get_all_sessions_with_last_update(self):
         """ Returns a dictionary containing session ids as keys and
         last update timestamps as values. """
-        return self.redis.hgetall('sessions')
+        return dict((sid, float(timestamp))
+                    for sid, timestamp in
+                    self.redis.hgetall('sessions').iteritems())
 
     def get_session_times(self, sid):
         """ Returns the list of times within a session, sorted ascending. """
