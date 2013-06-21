@@ -1,6 +1,5 @@
 import logging
 
-from core import settings
 from core.kestrel_connection import KestrelConnection
 from lib.session_store import SessionStore
 
