@@ -1,4 +1,6 @@
 import logging
+import random
+import time
 
 import redis
 
@@ -23,6 +25,7 @@ class SessionStore(object):
         This is a data structure that we will use later on in order to aggregate
         information from multiple tracking sessions.
     """
+    STALE_SESSION_THRESHOLD_MS = 60 * 60 * 1000 # 1 hour
 
     def __init__(self):
         self.redis = redis.StrictRedis(host=settings.REDIS_SERVER,
@@ -40,7 +43,9 @@ class SessionStore(object):
         # stimes is a sorted set of timestamps for a given session
         self.redis.zadd('stimes:%s' % sid, timestamp, str(timestamp))
         info['time'] = timestamp
-        self.redis.hmset(_hash_name(sid, timestamp), info);
+        self.redis.hmset(_hash_name(sid, timestamp), info)
+
+        self._try_cleanup_some_stale_sessions()
 
     def get_all_sessions(self):
         """ Returns the list of all active sessions """
@@ -62,6 +67,32 @@ class SessionStore(object):
         measurements of this session as list of dicts. """
         return [self.get_session_measurement(sid, t, properties)
                 for t in self.get_session_times(sid)]
+
+    def remove_session(self, sid):
+        """ Remove a session completely. """
+
+        # Remove session_id -> last_updated_at mappings
+        self.redis.hdel('sessions', sid)
+
+        session_times = self.get_session_times(sid)
+
+        # Remove list of sorted session timestamps
+        self.redis.delete('stimes:%s' % sid)
+
+        # Delete entries for each session timestamp
+        keys = [_hash_name(sid, timestamp) for timestamp in session_times]
+        self.redis.delete(*keys)
+
+    def stale_sessions(self):
+        """ Return the sessions which are stale (e.g. whose last_update) is
+        less than STALE_SESSION_THRESHOLD miliseconds ago. """
+        sessions = self.get_all_sessions_with_last_update()
+        stale_sessions = []
+        threshold = int(time.time() * 1000 - self.STALE_SESSION_THRESHOLD_MS)
+        for session_id, last_updated_at in sessions.iteritems():
+            if last_updated_at < threshold:
+                stale_sessions.append(session_id)
+        return stale_sessions
 
     def get_session_measurement(self, sid, t, properties = []):
         """ Returns the value of the specified properties of
@@ -89,6 +120,18 @@ class SessionStore(object):
                 new_timestamp = timestamp
 
         self.redis.hset('sessions', sid, new_timestamp)
+
+    def _try_cleanup_some_stale_sessions(self):
+
+        # With a probability of 5%, clean up 100 old sessions
+        if random.random() > 0.05:
+            return
+
+        stale_sessions = self.stale_sessions()
+        to_clean = min(len(stale_sessions), 100)
+        random_stale_sessions = random.sample(stale_sessions, to_clean)
+        for stale_session in random_stale_sessions:
+            self.remove_session(stale_session)
 
 def _round_down(time):
     return (time / 10) * 10
