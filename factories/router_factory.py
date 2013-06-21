@@ -30,10 +30,10 @@ def RouterFactory(message_type):
                       'sensor_position': utils.get_random_sensor_position()
                       }
 
-    if type == 'image_rgb':
+    if message_type == 'image_rgb':
         router_message.update({'image_rgb': utils.get_random_image(IMAGE_WIDTH,
                                                                    IMAGE_HEIGHT)})
-    elif type == 'skeleton':
+    elif message_type == 'skeleton':
         router_message.update({'image_rgb': utils.get_random_skeleton()})
 
     return router_message
