@@ -43,8 +43,6 @@ def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
         return {}
 
 @route('/session_list', method='GET')
-@query_param('start', int, default = 0)
-@query_param('end', int, default = None)
 def get_session_list(start, end):
     try:
         sessions = session_store.get_all_sessions();
