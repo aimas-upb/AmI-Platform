@@ -48,10 +48,10 @@ def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
 def get_session_list(start, end):
     try:
         sessions = session_store.get_all_sessions();
-        return {'sessions': sessions[start:end]}    
+        return {'sessions': sessions[start:end]}
     except:
         logger.exception("Failed to get sessions from Redis")
-        return {}
+        return {'sessions': []}
 
 @route('/latest_subject_positions/:sensor_id', method='GET')
 def get_latest_subject_positions(sensor_id = 'daq-01'):
