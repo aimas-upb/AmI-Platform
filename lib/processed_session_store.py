@@ -7,6 +7,9 @@ import random
 import string
 import time
 
+import redis
+
+from core import settings
 from session_store import SessionStore
 
 logger = logging.getLogger(__name__)
@@ -32,6 +35,11 @@ class ProcessedSessionStore(SessionStore):
     TIME_MATCHING_THRESHOLD_MS = 500
     POSITION_MATCHING_THRESHOLD_MS = 5000
     POSITION_MATCHING_THRESHOLD_MM = 200
+
+    def __init__(self):
+        self.redis = redis.StrictRedis(host=settings.REDIS_SERVER,
+                                       port=settings.REDIS_PORT,
+                                       db=settings.REDIS_PROCESSED_SESSION_DB)
 
     def new_session_id(self):
         """
