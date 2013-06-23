@@ -26,6 +26,8 @@ class SessionStore(object):
         information from multiple tracking sessions.
     """
     STALE_SESSION_THRESHOLD_MS = 60 * 60 * 1000 # 1 hour
+    CLEANUP_PROBABILITY = 0.05
+    MAX_SESSIONS_TO_CLEANUP = 100
 
     def __init__(self):
         self.redis = redis.StrictRedis(host=settings.REDIS_SERVER,
@@ -87,12 +89,12 @@ class SessionStore(object):
         """ Return the sessions which are stale (e.g. whose last_update) is
         less than STALE_SESSION_THRESHOLD miliseconds ago. """
         sessions = self.get_all_sessions_with_last_update()
-        stale_sessions = []
-        threshold = int(time.time() * 1000 - self.STALE_SESSION_THRESHOLD_MS)
+        result = []
+        threshold = int(time.time() * 1000) - self.STALE_SESSION_THRESHOLD_MS
         for session_id, last_updated_at in sessions.iteritems():
             if last_updated_at < threshold:
-                stale_sessions.append(session_id)
-        return stale_sessions
+                result.append(session_id)
+        return result
 
     def get_session_measurement(self, sid, t, properties = []):
         """ Returns the value of the specified properties of
@@ -124,11 +126,11 @@ class SessionStore(object):
     def _try_cleanup_some_stale_sessions(self):
 
         # With a probability of 5%, clean up 100 old sessions
-        if random.random() > 0.05:
+        if random.random() > self.CLEANUP_PROBABILITY:
             return
 
         stale_sessions = self.stale_sessions()
-        to_clean = min(len(stale_sessions), 100)
+        to_clean = min(len(stale_sessions), self.MAX_SESSIONS_TO_CLEANUP)
         random_stale_sessions = random.sample(stale_sessions, to_clean)
         for stale_session in random_stale_sessions:
             self.remove_session(stale_session)
