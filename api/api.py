@@ -3,7 +3,6 @@ import logging
 
 from bottle import route, run, static_file
 
-from decorators import query_param
 from core import settings
 from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
