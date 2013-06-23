@@ -56,7 +56,7 @@ class SessionStore(object):
     def get_all_sessions_with_last_update(self):
         """ Returns a dictionary containing session ids as keys and
         last update timestamps as values. """
-        return dict((sid, float(timestamp))
+        return dict((sid, int(timestamp))
                     for sid, timestamp in
                     self.redis.hgetall('sessions').iteritems())
 

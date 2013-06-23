@@ -1,23 +1,29 @@
 import json
 import logging
 
-from bottle import route, run, static_file
+from bottle import Bottle, run, static_file
 
 from core import settings
 from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
+from lib.session_store import SessionStore
+from lib.processed_session_store import ProcessedSessionStore
 
 logger = logging.getLogger(__name__)
+
+app = Bottle()
 dashboard_cache = DashboardCache()
+session_store = SessionStore()
+processed_session_store = ProcessedSessionStore()
 
 POSITIONS_LIMIT = 100
 
 if getattr(settings, 'SERVE_DASHBOARD_VIA_API', False):
-    @route('/static/<filepath:path>')
+    @app.route('/static/<filepath:path>')
     def static_serve(filepath):
         return static_file(filepath, root=getattr(settings, 'STATIC_FILES_DIR', '.'))
 
-@route('/latest_kinect_rgb/:sensor_id', method='GET')
+@app.route('/latest_kinect_rgb/:sensor_id', method='GET')
 def get_latest_kinect_rgb(sensor_id = 'daq-01'):
     try:
         result = dashboard_cache.get(sensor_id=sensor_id,
@@ -28,7 +34,7 @@ def get_latest_kinect_rgb(sensor_id = 'daq-01'):
         logger.exception("Failed to get latest kinect RGB from Redis")
         return {}
 
-@route('/latest_kinect_skeleton/:sensor_id', method='GET')
+@app.route('/latest_kinect_skeleton/:sensor_id', method='GET')
 def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
     try:
         result = dashboard_cache.get(sensor_id=sensor_id,
@@ -39,7 +45,21 @@ def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
         logger.exception("Failed to get latest kinect skeleton from Redis")
         return {}
 
-@route('/latest_subject_positions/:sensor_id', method='GET')
+@app.route('/sessions/:session_type', method='GET')
+def get_session_list(session_type):
+    try:
+        if session_type == 'raw':
+            store = session_store
+        elif session_type == 'processed':
+            store = processed_session_store
+        else:
+            raise Exception("Invalid session type %s" % session_type)
+        return {'sessions': store.get_all_sessions_with_last_update()}
+    except:
+        logger.exception("Failed to get sessions from Redis")
+        return {'sessions': {}}
+
+@app.route('/latest_subject_positions/:sensor_id', method='GET')
 def get_latest_subject_positions(sensor_id = 'daq-01'):
     try:
         result = dashboard_cache.lrange(sensor_id=sensor_id,
@@ -59,5 +79,6 @@ def get_latest_subject_positions(sensor_id = 'daq-01'):
                          "Redis")
         return {}
 
-setup_logging()
-run(host='0.0.0.0', port=8000)
+if __name__ == '__main__':
+    setup_logging()
+    run(app, host='0.0.0.0', port=8000)
