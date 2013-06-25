@@ -88,31 +88,32 @@ class HeadCrop(ParallelPDU):
     def __init__(self, **kwargs):
         kwargs['heavy_preprocess'] = crop_head
         super(HeadCrop, self).__init__(**kwargs)
-        self.last_image = None
-        self.last_image_at = None
-        self.last_skeleton = None
-        self.last_skeleton_at = None
+        self.last_image = {}
+        self.last_image_at = {}
+        self.last_skeleton = {}
+        self.last_skeleton_at = {}
         self.session_tracker = SessionTracker()
 
     def process_message(self, message):
+        sensor_id = message['sensor_id']
         # Step 1 - always update last_image/last_skeleton
         if message['type'] == 'image_rgb' and\
             message['sensor_type'] == 'kinect':
-                self.last_image = message['image_rgb']
-                if not 'encoder_name' in self.last_image:
-                    self.last_image['encoder_name'] = 'raw'
-                self.last_image_at = time.time()
+                self.last_image[sensor_id] = message['image_rgb']
+                if not 'encoder_name' in self.last_image[sensor_id]:
+                    self.last_image[sensor_id]['encoder_name'] = 'raw'
+                self.last_image_at[sensor_id] = time.time()
 
         elif message['type'] == 'skeleton' and\
             message['sensor_type'] == 'kinect':
-            self.last_skeleton = message['skeleton_2D']
-            self.last_skeleton_at = time.time()
+            self.last_skeleton[sensor_id] = message['skeleton_2D']
+            self.last_skeleton_at[sensor_id] = time.time()
 
         message['hack'] = {}
-        message['hack']['last_image'] = copy.copy(self.last_image)
-        message['hack']['last_image_at'] = self.last_image_at
-        message['hack']['last_skeleton'] = copy.copy(self.last_skeleton)
-        message['hack']['last_skeleton_at'] = self.last_skeleton_at
+        message['hack']['last_image'] = copy.copy(self.last_image.get(sensor_id))
+        message['hack']['last_image_at'] = self.last_image_at.get(sensor_id)
+        message['hack']['last_skeleton'] = copy.copy(self.last_skeleton.get(sensor_id))
+        message['hack']['last_skeleton_at'] = self.last_skeleton_at.get(sensor_id)
 
         super(HeadCrop, self).process_message(message)
 
