@@ -26,7 +26,7 @@ class SessionStore(object):
         information from multiple tracking sessions.
     """
     STALE_SESSION_THRESHOLD_MS = 60 * 60 * 1000 # 1 hour
-    CLEANUP_PROBABILITY = 0.05
+    CLEANUP_PROBABILITY = 0.0002 # 1/5000
     MAX_SESSIONS_TO_CLEANUP = 100
 
     def __init__(self):
