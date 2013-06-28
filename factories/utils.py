@@ -14,7 +14,15 @@ def get_random_hash(length):
 
 
 def get_random_skeleton():
-    return None
+    return {}
+
+
+def get_random_2D_skeleton():
+    return {}
+
+
+def get_random_3D_skeleton():
+    return {}
 
 
 def get_random_angle():

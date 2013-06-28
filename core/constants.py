@@ -1,3 +1,6 @@
+import os
+PROJECT_PATH = os.getcwd()
+
 SECONDS_IN_DAY = 24 * 60 * 60
 
 JOINTS = ["head", "neck", "left_shoulder", "left_hand", "left_knee",

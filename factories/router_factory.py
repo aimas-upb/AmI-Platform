@@ -65,9 +65,11 @@ def RouterFactory(message_type):
                       }
 
     if message_type == 'image_rgb':
-        router_message.update({'image_rgb': utils.get_random_image(IMAGE_WIDTH,
-                                                                   IMAGE_HEIGHT)})
+        router_message.update({'image_rgb': {'image': utils.get_random_image(IMAGE_WIDTH, IMAGE_HEIGHT),
+                                             'width': IMAGE_WIDTH,
+                                             'height': IMAGE_HEIGHT}})
     elif message_type == 'skeleton':
-        router_message.update({'image_rgb': utils.get_random_skeleton()})
+        router_message.update({'skeleton_2D': utils.get_random_2D_skeleton(),
+                               'skeleton_3D': utils.get_random_3D_skeleton()})
 
     return router_message

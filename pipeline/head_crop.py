@@ -10,7 +10,7 @@ from lib.opencv import crop_face_from_image
 from lib.session_tracker import SessionTracker
 
 logger = logging.getLogger(__name__)
-MAX_TIME = 1000
+MAX_TIME = 10
 
 
 def _crop_head_using_skeleton(last_image, last_skeleton):
@@ -96,8 +96,8 @@ class HeadCrop(ParallelPDU):
 
     def process_message(self, message):
         # Step 1 - always update last_image/last_skeleton
-        if message['type'] == 'image_rgb' and\
-            message['sensor_type'] == 'kinect':
+        if (message['type'] == 'image_rgb' and
+            message['sensor_type'] == 'kinect'):
                 self.last_image = message['image_rgb']
                 if not 'encoder_name' in self.last_image:
                     self.last_image['encoder_name'] = 'raw'
