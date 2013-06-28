@@ -28,6 +28,7 @@
 #include <sstream>
 #include <sys/time.h>
 #include <time.h>
+#include <map>
 
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/ostream_iterator.hpp>
@@ -58,6 +59,7 @@ using namespace std;
 
 extern xn::UserGenerator g_UserGenerator;
 extern xn::DepthGenerator g_DepthGenerator;
+extern map<XnUserID, string> g_session_ids;
 
 #define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 10 //ms
 #define MIN_DELAY_BETWEEN_RGB_MEASUREMENT 1000
@@ -75,23 +77,6 @@ char* gen_random(const int len)
         s[i] = alphanum[rand() % (sizeof(alphanum)-1)];
     s[len] = 0;
     return s;
-}
-
-char* getSessionID(int player) 
-{
-    const int HASH_LEN = 16;
-    const int MAX_PLAYER_LEN = 3;
-
-    char* playerID = (char*)malloc(MAX_PLAYER_LEN * sizeof(char));
-    snprintf(playerID, MAX_PLAYER_LEN, "%d", player);
-    char* sensorID = getSensorID();
-
-    int len = strlen(sensorID) + strlen(playerID) + HASH_LEN  + strlen("__0");
-    char *sessionID = (char*) malloc(len * sizeof(char));
-
-    snprintf(sessionID, len, "%s_%s_%s", sensorID, playerID, gen_random(HASH_LEN));
-    return sessionID;
-
 }
 
 int getFirstTrackedPlayer()
@@ -166,8 +151,8 @@ public:
 
     void Run() {
         static int send_count = 0;
-		static int send_size = 0;
-		memcached_return rc;
+        static int send_size = 0;
+        memcached_return rc;
         size_t len = strlen(buffer);
         rc = memcached_set(g_MemCache,
                 "measurements", strlen("measurements"),
@@ -179,7 +164,7 @@ public:
                    getKestrelServerIP(), getKestrelServerPort());
         } else {
             // Only print successful sends once in a while - avoid log pollution
-			send_count = send_count + 1;
+            send_count = send_count + 1;
             send_size = send_size + len;
             if (send_count % 10 == 0) {
                 printf("Sent %5.3f KB to Kestrel across the latest %d messages\n",
@@ -452,10 +437,10 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
 
     char *context = get_context();
 
-	struct timeval tim;
-	gettimeofday(&tim, NULL);
+    struct timeval tim;
+    gettimeofday(&tim, NULL);
 
-	printf("Created at: %ld\n", tim.tv_sec*1000 + tim.tv_usec/1000);
+    printf("Created at: %ld\n", tim.tv_sec*1000 + tim.tv_usec/1000);
 
     snprintf((char*)buf, 10000,
         "{\"created_at\": %ld,"
@@ -474,7 +459,7 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
         getSensorID(),
         getSensorPosition(),
         player,
-        getSessionID(player),
+        g_session_ids[player],
         head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
         left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
         left_foot, right_foot,
@@ -577,34 +562,34 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
     printf("SaveImage: width = %d, height = %d\n", width, height);
 
     struct timeval tim;
-	gettimeofday(&tim, NULL);
-    
-	printf("Created at: %ld\n", tim.tv_sec*1000 + tim.tv_usec/1000);
-    
+    gettimeofday(&tim, NULL);
+
+    printf("Created at: %ld\n", tim.tv_sec*1000 + tim.tv_usec/1000);
+
     int player = getFirstTrackedPlayer();
     if (player > -1)
     {
-    	snprintf(buf, buf_size,
-        	"{\"created_at\": %ld,"
-        	"\"context\": \"%s\","
-        	"\"sensor_type\": \"kinect\","
-        	"\"sensor_id\": \"%s\","
-        	"\"sensor_position\": %s,"
+        snprintf(buf, buf_size,
+            "{\"created_at\": %ld,"
+            "\"context\": \"%s\","
+            "\"sensor_type\": \"kinect\","
+            "\"sensor_id\": \"%s\","
+            "\"sensor_position\": %s,"
                 "\"session_id\": \"%s\","
-        	"\"type\": \"%s\","
-        	"\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
-        	tim.tv_sec*1000 + tim.tv_usec/1000,
-        	context,
-        	getSensorID(),
-        	getSensorPosition(),
-		getSessionID(player),
-        	sensor_type,
-        	sensor_type,
-        	encoded.c_str(), width, height);
+            "\"type\": \"%s\","
+            "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
+            tim.tv_sec*1000 + tim.tv_usec/1000,
+            context,
+            getSensorID(),
+            getSensorPosition(),
+            g_session_ids[player],
+            sensor_type,
+            sensor_type,
+            encoded.c_str(), width, height);
     }
     else
     {
-	snprintf(buf, buf_size,
+    snprintf(buf, buf_size,
                 "{\"created_at\": %ld,"
                 "\"context\": \"%s\","
                 "\"sensor_type\": \"kinect\","
@@ -620,7 +605,7 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
                 sensor_type,
                 encoded.c_str(), width, height);
     }
-  
+
     printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
 
     worker.AddMessage(new Send(buf), &SendCompleted, throttle);
@@ -838,7 +823,7 @@ void drawTrackedUsers() {
             if (skeleton_throttle.CanSend()) {
                  SaveSkeleton(aUsers[i], "player1", "kinect1");
                  skeleton_throttle.MarkSend();
-			}
+            }
             DrawSkeleton(aUsers[i]);
         }
     }
@@ -894,11 +879,11 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
 
     if (rgb_throttle.CanSend()) {
         SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
-	rgb_throttle.MarkSend();
+    rgb_throttle.MarkSend();
     }
     if (depth_throttle.CanSend()) {
         SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
-	depth_throttle.MarkSend();
+    depth_throttle.MarkSend();
     }
 
     drawDepthMap(depthTexID, dmd, pDepthTexBuf);
