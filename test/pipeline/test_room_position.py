@@ -23,27 +23,27 @@ class RoomPositionTest(TestCase):
                    'type': 'RGB'}
         rp = RoomPosition()
         rp.process_message(message)
-        eq_(track_event.call_count, 0, "track_event should only be called if it has "
-                                   " skeleton")
+        eq_(track_event.call_count, 0,
+            "track_event should only be called if it has skeleton")
 
     def test_all(self, track_event):
         ''' The sensor is at origin '''
-        self.run_test_with(track_event,
+        self._run_test_with(track_event,
                            {'X': 0, 'Y': 0, 'Z': 0,
                             'alpha': 0.0, 'beta': 0.0, 'gamma': 0.0},
                            {'X': 10, 'Y': 20, 'Z': 30},
                            10, 20, 30)
 
         ''' The sensor axes are aligned with room axes. It is just translated'''
-        self.run_test_with(track_event,
+        self._run_test_with(track_event,
                            {'X': 20, 'Y': 30, 'Z': 40,
-                            'alpha': 0.0, 'beta': 0.0,'gamma': 0.0},
-                           {'X':10, 'Y':20, 'Z':30},
+                            'alpha': 0.0, 'beta': 0.0, 'gamma': 0.0},
+                           {'X': 10, 'Y': 20, 'Z': 30},
                            30, 50, 70)
 
         ''' The sensor is placed in the oposite corner of the room, and turned
             180 degrees around vertical'''
-        self.run_test_with(track_event,
+        self._run_test_with(track_event,
                            {'X': 4000, 'Y': 3000, 'Z': 1000,
                             'alpha': math.pi,
                             'beta': 0.0,
@@ -53,7 +53,7 @@ class RoomPositionTest(TestCase):
 
         ''' The sensor is placed in the oposite corner of the room, and turned
             180 degrees around X'''
-        self.run_test_with(track_event,
+        self._run_test_with(track_event,
                            {'X': 4000, 'Y': 3000, 'Z': 1000,
                            'alpha': 0.0,
                            'beta': math.pi,
@@ -64,7 +64,7 @@ class RoomPositionTest(TestCase):
         ''' The sensor is placed in the oposite corner of the room, and turned
             180 degrees around Z
         '''
-        self.run_test_with(track_event,
+        self._run_test_with(track_event,
                             {'X': 4000, 'Y': 3000, 'Z': 1000,
                             'alpha': 0.0,
                             'beta': 0.0,
@@ -75,7 +75,7 @@ class RoomPositionTest(TestCase):
         ''' The sensor is placed on the oposite corner of the room, but
             on the floor and facing directly the origin of the room
         '''
-        self.run_test_with(track_event,
+        self._run_test_with(track_event,
                            {'X': 1000, 'Y': 0, 'Z': 1000,
                            'alpha': - 3 / 4. * math.pi,
                            'beta': 0,
@@ -83,11 +83,11 @@ class RoomPositionTest(TestCase):
                            {'X': 0, 'Y': 0, 'Z': 1414.21356},
                            0, 0, 0)
 
-        ''' The sensor is placed on the oposite corner of the room, facing 
+        ''' The sensor is placed on the oposite corner of the room, facing
             directly the origin of the room
          '''
         beta = math.atan(1 / math.sqrt(2))
-        self.run_test_with(track_event,
+        self._run_test_with(track_event,
                            {'X': 1000, 'Y': 1000, 'Z': 1000,
                             'alpha': 5.0 / 4 * math.pi,
                             'beta':  beta,
@@ -95,7 +95,7 @@ class RoomPositionTest(TestCase):
                            {'X': 0000, 'Y': 0000, 'Z': 1732.0508076},
                            0, 0, 0)
 
-    def run_test_with(self, track_event, sensor_pos, torso_pos,
+    def _run_test_with(self, track_event, sensor_pos, torso_pos,
                       expected_x, expected_y, expected_z):
 
         track_event.reset_mock()
