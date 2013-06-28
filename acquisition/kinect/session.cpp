@@ -1,7 +1,21 @@
 #include <stdlib.h>
 #include "session.h"
+#include "ami_environment.h"
 
-string generateSessionIdFromPlayerId(XnUserID playerId) {
+char* gen_random(const int len)
+{
+    int i;
+    char* s = (char*)malloc(len * sizeof(char));
+    static const char alphanum[] = "0123456789"\
+                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"\
+                                   "abcdefghijklmnopqrstuvwxyz";
+    for (i=0; i<len; i++)
+        s[i] = alphanum[rand() % (sizeof(alphanum)-1)];
+    s[len] = 0;
+    return s;
+}
+
+string generateSessionIdFromPlayerId(XnUserID player) {
     string result;
 
     const int HASH_LEN = 16;

@@ -65,20 +65,6 @@ extern map<XnUserID, string> g_session_ids;
 #define MIN_DELAY_BETWEEN_RGB_MEASUREMENT 1000
 #define MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT 1000
 
-// TODO(diana): move these methods in utils/
-char* gen_random(const int len)
-{
-    int i;
-    char* s = (char*)malloc(len * sizeof(char));
-    static const char alphanum[] = "0123456789"\
-                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"\
-                                   "abcdefghijklmnopqrstuvwxyz";
-    for (i=0; i<len; i++)
-        s[i] = alphanum[rand() % (sizeof(alphanum)-1)];
-    s[len] = 0;
-    return s;
-}
-
 int getFirstTrackedPlayer()
 {
     int player = -1;
