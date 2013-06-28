@@ -445,7 +445,7 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
         getSensorID(),
         getSensorPosition(),
         player,
-        g_session_ids[player],
+        g_session_ids[player].c_str(),
         head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
         left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
         left_foot, right_foot,
@@ -453,7 +453,7 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
         head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
         right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
         right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
-
+    
     worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
 
     free(head);
@@ -568,7 +568,7 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
             context,
             getSensorID(),
             getSensorPosition(),
-            g_session_ids[player],
+            g_session_ids[player].c_str(),
             sensor_type,
             sensor_type,
             encoded.c_str(), width, height);
