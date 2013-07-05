@@ -101,12 +101,12 @@ class HeadCrop(ParallelPDU):
                 self.last_image = message['image_rgb']
                 if not 'encoder_name' in self.last_image:
                     self.last_image['encoder_name'] = 'raw'
-                self.last_image_at = time.time()
+                self.last_image_at = message['created_at']
 
         elif message['type'] == 'skeleton' and\
             message['sensor_type'] == 'kinect':
             self.last_skeleton = message['skeleton_2D']
-            self.last_skeleton_at = time.time()
+            self.last_skeleton_at = message['created_at']
 
         message['hack'] = {}
         message['hack']['last_image'] = copy.copy(self.last_image)

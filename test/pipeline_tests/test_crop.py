@@ -4,6 +4,7 @@ from nose.plugins.attrib import attr
 from nose.tools import ok_
 
 from core import PipelineTest
+from core.constants import PROJECT_PATH
 from pipeline.router import Router
 from pipeline.head_crop import HeadCrop
 
@@ -15,7 +16,7 @@ class TestCrop(PipelineTest):
     """#110 - Test that I am in front of the camera and it crops my head."""
 
     PDUs = [Router, HeadCrop]
-    DATA_FILE = '/tmp/andrei.txt'
+    DATA_FILE = '%s/dumps/andrei.txt' % PROJECT_PATH
     NB_MIN_EXPECTED_FACES = 10
     DELAY_UNTIL_MESSAGES_PROPAGATE = 30
 

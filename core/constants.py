@@ -1,5 +1,5 @@
 import os
-PROJECT_PATH = os.getcwd()
+PROJECT_PATH = os.path.dirname(os.path.dirname(__file__))
 
 SECONDS_IN_DAY = 24 * 60 * 60
 

@@ -4,6 +4,7 @@ from nose.plugins.attrib import attr
 from nose.tools import ok_, eq_
 
 from core import PipelineTest
+from core.constants import PROJECT_PATH
 from pipeline.router import Router
 from pipeline.head_crop import HeadCrop
 from pipeline.face_recognition import FaceRecognition
@@ -17,7 +18,7 @@ class TestAirConditioningWillBeTurnedOnForAndrei(PipelineTest):
     test that the air conditioning is indeed turned on. """
 
     PDUs = [Router, HeadCrop, FaceRecognition, Room]
-    DATA_FILE = '/tmp/andrei2.txt'
+    DATA_FILE = '%s/dumps/andrei.txt' % PROJECT_PATH
 
     def setUp(self):
         super(TestAirConditioningWillBeTurnedOnForAndrei, self).setUp()
@@ -30,7 +31,6 @@ class TestAirConditioningWillBeTurnedOnForAndrei(PipelineTest):
     def check_results(self):
         """ We check that room gave the command to IPPower to turn on one port
         of it (assuming that it's the port of the air conditioning system)."""
-
         ip_power = self.queue_contents('ip-power')
 
         ok_(len(ip_power) > 0, "Andrei's presence should trigger at least "

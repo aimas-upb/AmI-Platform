@@ -35,7 +35,7 @@ class UpgradeFaceSamples(PDU):
         height = int(head_image['height'])
 
         # Save image to file
-        path = "/tmp/%s.jpg" % uuid.uuid4()
+        path = "/tmp/UFS_%s_%s.jpg" % (person_name, uuid.uuid4())
         self.save_image_to_file(image, width, height, path)
         self.logger.info("Saved face sample to file %s" % path)
 

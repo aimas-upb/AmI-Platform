@@ -13,13 +13,14 @@ from webtest import TestApp
 
 from api import api
 from core import settings
+from factories import RouterFactory
 from lib import log
 from lib.dashboard_cache import DashboardCache
 from lib.session_store import SessionStore
 from lib.processed_session_store import ProcessedSessionStore
-from test.pipeline.messages import MEASUREMENTS_MESSAGE_SKELETON
 
 STATUS_OK = 200
+
 
 class ApiTest(TestCase):
 
@@ -31,15 +32,15 @@ class ApiTest(TestCase):
 
     def setUp(self):
         # Clean-up databases
-        redis.StrictRedis(host = settings.REDIS_SERVER,
-                          port = settings.REDIS_PORT,
-                          db = settings.REDIS_SESSION_DB).flushdb()
-        redis.StrictRedis(host = settings.REDIS_SERVER,
-                          port = settings.REDIS_PORT,
-                          db = settings.REDIS_PROCESSED_SESSION_DB).flushdb()
+        redis.StrictRedis(host=settings.REDIS_SERVER,
+                          port=settings.REDIS_PORT,
+                          db=settings.REDIS_SESSION_DB).flushdb()
+        redis.StrictRedis(host=settings.REDIS_SERVER,
+                          port=settings.REDIS_PORT,
+                          db=settings.REDIS_PROCESSED_SESSION_DB).flushdb()
 
     def _skeleton_message(self):
-        return MEASUREMENTS_MESSAGE_SKELETON
+        return RouterFactory('skeleton')
 
     def test_latest_subject_positions(self):
         # Keep this import here in order to avoid OpenCV imports
@@ -85,7 +86,7 @@ class ApiTest(TestCase):
             "There should be exactly the same sessions in the HTTP response")
         for session_id in created_sessions.iterkeys():
             ok_(abs(created_sessions[session_id]-
-                   returned_sessions[session_id]) < 100, # 100 ms
+                   returned_sessions[session_id]) < 100,  # 100 ms
                 "Last updated at should be equal for created "
                 "and returned session")
 
