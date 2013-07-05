@@ -88,6 +88,54 @@ class ApiTest(TestCase):
                    returned_sessions[session_id]) < 100, # 100 ms
                 "Last updated at should be equal for created "
                 "and returned session")
+    
+    def test_raw_measurement(self):
+        self._test_measurements('raw')
+        
+    def test_processed_measurement(self):
+        self._test_measurements('processed')
+    
+    def _test_measurements(self, endpoint_name):
+        if endpoint_name == 'raw':
+            store = SessionStore()
+        elif endpoint_name == 'processed':
+            store = ProcessedSessionStore()
+    
+        # Create a HTTP-ish client over the WSGI app exposed by Bottle
+        app = TestApp(api.app)
+    
+        # Populate Redis with sessions
+        created_sessions = self._create_sessions(store)
+        for sid in created_sessions.keys():
+            measurements = self._populate_session(store, sid)
+            for t in measurements.keys():
+                # Request the sessions via API
+                response = app.get('/measurements/%s?sid=%s&time=%s' % (endpoint_name, sid, t))
+                returned_measurements = json.loads(response.body)['measurements']
+        
+                # Can't use self.assertDictEqual() because of str vs. utf8 str
+                # and because timestamps are "approximately" equal - see
+                # _round_down(time) in session_store.
+                eq_(set(measurements[t].keys()), set(returned_measurements.keys()),
+                    "There should be exactly the same measurements in the HTTP response")
+                
+                for key in measurements[t].iterkeys():
+                    eq_(measurements[t][key], returned_measurements[key],
+                        "Values should be equal in measurement")
+
+    def _populate_session(self, store, sid):
+        measurements = {}
+        N = random.randint(1,3)
+        t = int(time.time() * 100) * 10
+        for _ in xrange(N):
+            key = ''.join([random.choice(string.hexdigits)
+                           for _ in xrange(16)])
+            value = ''.join([random.choice(string.hexdigits)
+                           for _ in xrange(16)])
+            t = t + random.randint(10, 100) * 10
+            measurements[t] = {key:value, 'time': str(t)}
+            store.set(sid, t, {key:value})
+        return measurements            
 
     def _create_sessions(self, store):
         """ Create some sessions in a given store, and return a dictionary

@@ -8,6 +8,7 @@ from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
 from lib.session_store import SessionStore
 from lib.processed_session_store import ProcessedSessionStore
+from decorators import query_param
 
 logger = logging.getLogger(__name__)
 
@@ -48,12 +49,7 @@ def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
 @app.route('/sessions/:session_type', method='GET')
 def get_session_list(session_type):
     try:
-        if session_type == 'raw':
-            store = session_store
-        elif session_type == 'processed':
-            store = processed_session_store
-        else:
-            raise Exception("Invalid session type %s" % session_type)
+        store = _get_session_store(session_type)
         return {'sessions': store.get_all_sessions_with_last_update()}
     except:
         logger.exception("Failed to get sessions from Redis")
@@ -78,6 +74,25 @@ def get_latest_subject_positions(sensor_id = 'daq-01'):
         logger.exception("Failed to get list of latest subject positions from "
                          "Redis")
         return {}
+    
+@app.route('/measurements/:session_type', method='GET')
+@query_param('sid', str)
+@query_param('time', int)
+def get_measurement_properties(session_type, sid, time):
+    store = _get_session_store(session_type)    
+    try:        
+        return {'measurements': store.get_session_measurement(sid, time)}
+    except:
+        return {'measurements': {}}
+    pass
+    
+def _get_session_store(session_type):
+    if session_type == 'raw':
+        return session_store
+    elif session_type == 'processed':
+        return processed_session_store
+    else:
+        raise Exception("Invalid session type %s" % session_type)
 
 if __name__ == '__main__':
     setup_logging()
