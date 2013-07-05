@@ -4,11 +4,11 @@ import logging
 from bottle import Bottle, run, static_file
 
 from core import settings
+from decorators import query_param
 from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
 from lib.session_store import SessionStore
 from lib.processed_session_store import ProcessedSessionStore
-from decorators import query_param
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
 def get_session_list(session_type):
     try:
         store = _get_session_store(session_type)
-        return {'sessions': store.get_all_sessions_with_last_update()}
+        return {'sessions': store.get_all_sessions_with_measurements()}
     except:
         logger.exception("Failed to get sessions from Redis")
         return {'sessions': {}}

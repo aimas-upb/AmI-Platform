@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 import logging
 import random
@@ -83,12 +84,50 @@ class ApiTest(TestCase):
         # _round_down(time) in session_store.
         eq_(set(created_sessions.keys()), set(returned_sessions.keys()),
             "There should be exactly the same sessions in the HTTP response")
+
         for session_id in created_sessions.iterkeys():
-            ok_(abs(created_sessions[session_id]-
-                   returned_sessions[session_id]) < 100, # 100 ms
-                "Last updated at should be equal for created "
-                "and returned session")
-    
+            # Get created measurements sorted descending by time
+            created_measurements = sorted(created_sessions[session_id],
+                                          key=lambda x: x['time'],
+                                          reverse=True)
+            returned_measurements = returned_sessions[session_id]
+
+            eq_(len(created_measurements), len(returned_measurements),
+                "Sessions returned through the API should contain the correct "
+                "number of measurements attached to each other")
+
+            for (m1, m2) in zip(created_measurements, returned_measurements):
+                msg = "Returned sessions should have correct coordinates & time"
+                ok_(abs(float(m1['X']) - float(m2['X'])) < 0.01, msg)
+                ok_(abs(float(m1['Y']) - float(m2['Y'])) < 0.01, msg)
+                ok_(abs(float(m1['Z']) - float(m2['Z'])) < 0.01, msg)
+                eq_(int(m1['time']), int(m2['time']), msg)
+
+    def _create_sessions(self, store):
+        """ Create some sessions in a given store, and return a dictionary
+        mapping their ids to their last update. """
+
+        N = random.randint(5, 10)
+        sessions = defaultdict(list)
+        unique_times = set()
+
+        for _ in xrange(N):
+            sid = ''.join([random.choice(string.hexdigits)
+                           for _ in xrange(16)])
+            for _ in xrange(random.randint(5, 10)):
+                t = int(time.time() * 1000) - random.randint(10000, 1000000)
+                while t in unique_times:
+                    t = int(time.time() * 1000) - random.randint(100, 1000)
+                unique_times.add(t)
+                X = 500 + random.random() * 100
+                Y = 500 + random.random() * 100
+                Z = 500 + random.random() * 100
+                measurement = {'X': X, 'Y': Y, 'Z': Z, 'time': t}
+                sessions[sid].append(measurement)
+                store.set(sid, t, measurement)
+
+        return sessions
+
     def test_raw_measurement(self):
         self._test_measurements('raw')
         
@@ -135,20 +174,4 @@ class ApiTest(TestCase):
             t = t + random.randint(10, 100) * 10
             measurements[t] = {key:value, 'time': str(t)}
             store.set(sid, t, {key:value})
-        return measurements            
-
-    def _create_sessions(self, store):
-        """ Create some sessions in a given store, and return a dictionary
-        mapping their ids to their last update. """
-
-        N = random.randint(5, 10)
-        sessions = {}
-
-        for _ in xrange(N):
-            sid = ''.join([random.choice(string.hexdigits)
-                           for _ in xrange(16)])
-            t = int(time.time() * 1000) - random.randint(100, 1000)
-            store.set(sid, t, {})
-            sessions[sid] = t
-
-        return sessions
+        return measurements   
