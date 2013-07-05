@@ -4,6 +4,7 @@ import logging
 from bottle import Bottle, run, static_file
 
 from core import settings
+from decorators import query_param
 from lib.dashboard_cache import DashboardCache
 from lib.log import setup_logging
 from lib.session_store import SessionStore
@@ -54,7 +55,7 @@ def get_session_list(session_type):
             store = processed_session_store
         else:
             raise Exception("Invalid session type %s" % session_type)
-        return {'sessions': store.get_all_sessions_with_last_update()}
+        return {'sessions': store.get_session_measurements()}
     except:
         logger.exception("Failed to get sessions from Redis")
         return {'sessions': {}}
