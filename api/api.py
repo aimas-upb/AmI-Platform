@@ -55,7 +55,7 @@ def get_session_list(session_type):
             store = processed_session_store
         else:
             raise Exception("Invalid session type %s" % session_type)
-        return {'sessions': store.get_session_measurements()}
+        return {'sessions': store.get_all_sessions_with_measurements()}
     except:
         logger.exception("Failed to get sessions from Redis")
         return {'sessions': {}}

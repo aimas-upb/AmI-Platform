@@ -98,7 +98,7 @@ class SessionStore(object):
                         add_to_result = False
 
             if add_to_result:
-                result.add(measurement)
+                result.append(measurement)
 
                 # Make sure to limit the number of results if this is desired
                 if (N is not None) and len(result) == N:
