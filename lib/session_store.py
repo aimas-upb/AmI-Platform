@@ -26,7 +26,7 @@ class SessionStore(object):
         This is a data structure that we will use later on in order to aggregate
         information from multiple tracking sessions.
     """
-    STALE_SESSION_THRESHOLD_MS = 60 * 60 * 1000 # 1 hour
+    STALE_SESSION_THRESHOLD_MS = 30 * 60 * 1000 # 30 minutes
     CLEANUP_PROBABILITY = 0.05 # 5% chance of cleaning up old sessions randomly
     MAX_SESSIONS_TO_CLEANUP = 100
 
@@ -45,11 +45,14 @@ class SessionStore(object):
 
         # stimes is a sorted set of timestamps for a given session
         self.redis.zadd('stimes:%s' % sid, timestamp, str(timestamp))
+        # expire wants input in seconds
+        self.redis.expire('stimes:%s' % sid,
+                          self.STALE_SESSION_THRESHOLD_MS / 1000)
+
         info['time'] = timestamp
-        info_json = {}
-        for k, v in info.iteritems():
-            info_json[k] = json.dumps(v)
-        self.redis.hmset(_hash_name(sid, timestamp), info_json)
+        self.redis.hmset(_hash_name(sid, timestamp), _pack_dict_values(info))
+        self.redis.expire(_hash_name(sid, timestamp),
+                          self.STALE_SESSION_THRESHOLD_MS / 1000)
 
         self._try_cleanup_some_stale_sessions()
 
@@ -116,17 +119,12 @@ class SessionStore(object):
     def remove_session(self, sid):
         """ Remove a session completely. """
 
-        # Remove session_id -> last_updated_at mappings
+        # Remove session_id -> last_updated_at mappings.
+        #
+        # The rest is done automatically by using the native Redis expiry
+        # mechanism. We tried to delete all the sessions here but it worked
+        # poorly.
         self.redis.hdel('sessions', sid)
-
-        session_times = self.get_session_times(sid)
-
-        # Remove list of sorted session timestamps
-        self.redis.delete('stimes:%s' % sid)
-
-        # Delete entries for each session timestamp
-        keys = [_hash_name(sid, timestamp) for timestamp in session_times]
-        self.redis.delete(*keys)
 
     def stale_sessions(self):
         """ Return the sessions which are stale (e.g. whose last_update) is
@@ -198,3 +196,8 @@ def _unpack_dict_values(info):
             result[k] = v
     return result
 
+def _pack_dict_values(info):
+    result = {}
+    for k, v in info.iteritems():
+        result[k] = json.dumps(v)
+    return result
