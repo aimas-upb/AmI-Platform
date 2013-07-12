@@ -46,7 +46,6 @@ define ['cs!widget'], (Widget) ->
             temp_context_2d.fillRect(1, 1, @canvas.width-2, @canvas.height-2)
 
             for k,v of params.model.get('sessions')
-                console.error("Drawing sid=#{k}")
                 if @positionShape is 'CIRCLE'
                     @drawTraceWithCircles(temp_context_2d, v, k)
                 else
