@@ -69,7 +69,8 @@ class SessionStore(object):
 
     def get_all_sessions_with_measurements(self,
                                            N=100,
-                                           keys=['subject_position', 'time']):
+                                           keys=['subject_position', 'time'],
+                                           max_sessions=None):
         """ Retrieve all the sessions with their last N measurements which have
         keys specified as a parameter. If there are less than N measurements
         with this property, all of them will be returned.
@@ -79,8 +80,11 @@ class SessionStore(object):
         with returning stale sessions, because we have an automatic algorithm
         for that (see _try_cleanup_some_stale_sessions).
         """
+        sessions = self.get_all_sessions()
+        if max_sessions is not None:
+            sessions = sessions[:max_sessions]
         return {sid: self.get_session_measurements(sid, keys, N, True)
-                for sid in self.get_all_sessions()}
+                for sid in sessions}
 
     def get_session_times(self, sid):
         """ Returns the list of times within a session, sorted descending. """

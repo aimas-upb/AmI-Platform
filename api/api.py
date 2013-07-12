@@ -51,7 +51,8 @@ def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
 def get_session_list(session_type, N):
     try:
         store = _get_session_store(session_type)
-        return {'sessions': store.get_all_sessions_with_measurements(N=N)}
+        return {'sessions': store.get_all_sessions_with_measurements(N=N,
+                                                                     max_sessions=100)}
     except:
         logger.exception("Failed to get sessions from Redis")
         return {'sessions': {}}
