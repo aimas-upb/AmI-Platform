@@ -92,11 +92,8 @@ class SessionStore(object):
         measurements of this session as list of dicts. """
 
         result = []
-        idx = 0
         for t in self.get_session_times(sid):
             measurement = self.get_session_measurement(sid, t, properties)
-            idx = idx + 1
-            print "getting measurement %d (results = %d)" % (idx, len(result))
             add_to_result = True
 
             # If we should ignore measurements who don't have all the
