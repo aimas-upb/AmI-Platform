@@ -90,10 +90,6 @@ class SessionsStoreTest(TestCase):
         sid = random.choice(result['stale'])
         self.store.remove_session(sid)
 
-        # Check that there are no keys left for that session
-        eq_(len(self.redis.keys('*%s*' % sid)), 0,
-            "There should be no key containing the sid!")
-
         # Check that the session doesn't appear anymore in the
         # sid -> last_updated_at mapping
         sessions_updated_at = self.store.get_all_sessions_with_last_update()
