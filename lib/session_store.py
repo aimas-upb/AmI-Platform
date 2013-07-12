@@ -1,3 +1,4 @@
+import json
 import logging
 import random
 import time
@@ -49,7 +50,7 @@ class SessionStore(object):
                           self.STALE_SESSION_THRESHOLD_MS / 1000)
 
         info['time'] = timestamp
-        self.redis.hmset(_hash_name(sid, timestamp), info)
+        self.redis.hmset(_hash_name(sid, timestamp), _pack_dict_values(info))
         self.redis.expire(_hash_name(sid, timestamp),
                           self.STALE_SESSION_THRESHOLD_MS / 1000)
 
@@ -68,7 +69,7 @@ class SessionStore(object):
 
     def get_all_sessions_with_measurements(self,
                                            N=100,
-                                           keys=['X', 'Y', 'Z', 'time']):
+                                           keys=['subject_position', 'time']):
         """ Retrieve all the sessions with their last N measurements which have
         keys specified as a parameter. If there are less than N measurements
         with this property, all of them will be returned.
@@ -91,8 +92,11 @@ class SessionStore(object):
         measurements of this session as list of dicts. """
 
         result = []
+        idx = 0
         for t in self.get_session_times(sid):
             measurement = self.get_session_measurement(sid, t, properties)
+            idx = idx + 1
+            print "getting measurement %d (results = %d)" % (idx, len(result))
             add_to_result = True
 
             # If we should ignore measurements who don't have all the
@@ -134,6 +138,11 @@ class SessionStore(object):
         return result
 
     def get_session_measurement(self, sid, t, properties = []):
+        return _unpack_dict_values(self._get_session_measurement(sid,
+                                                                 t,
+                                                                 properties))
+
+    def _get_session_measurement(self, sid, t, properties = []):
         """ Returns the value of the specified properties of
         session at time t as a dict. """
         if not properties:
@@ -178,4 +187,17 @@ def _round_down(time):
 def _hash_name(sid, time):
     return 'm:' + sid + ':' + str(time)
 
+def _unpack_dict_values(info):
+    result = {}
+    for k, v in info.iteritems():
+        try:
+            result[k] = json.loads(v)
+        except:
+            result[k] = v
+    return result
 
+def _pack_dict_values(info):
+    result = {}
+    for k, v in info.iteritems():
+        result[k] = json.dumps(v)
+    return result
