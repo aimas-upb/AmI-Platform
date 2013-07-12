@@ -1,0 +1,2 @@
+<div class="mozaic-widget" data-widget="session_store" data-params="{{processed_session_store_params}}"/>
+<div class="mozaic-widget" data-widget="session_store" data-params="{{raw_session_store_params}}"/>
