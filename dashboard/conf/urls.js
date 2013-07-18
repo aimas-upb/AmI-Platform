@@ -10,5 +10,9 @@ App.urls = {
     '': {
         'controller': 'DashboardController',
         'layout': 'templates/dashboard_page.hjs'
+    },    
+    'measurements/:session_type/:sid/:time': {
+        'controller': 'MeasurementsController',
+        'layout': 'templates/measurements_controller.hjs'
     },
 };

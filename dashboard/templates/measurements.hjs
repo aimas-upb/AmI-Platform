@@ -1,0 +1,7 @@
+<div>Time: {{time}} </div>
+{{#if subject_position}}
+	<div class="mozaic-widget" data-widget="subject_position" data-params="{{subject_position}}" style="display: inline-block;"></div>
+{{/if}}
+{{#if head}}
+	<div class="mozaic-widget" data-widget="head" data-params="{{head}}" style="display: inline-block;"></div>
+{{/if}}

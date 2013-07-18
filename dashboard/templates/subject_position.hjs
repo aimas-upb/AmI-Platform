@@ -1,0 +1,8 @@
+<div>Subject position</div>
+<div>
+	<ul>
+		<li>{{X}}</li>
+		<li>{{Y}}</li>
+		<li>{{Z}}</li>
+	</ul>
+</div>

@@ -1,3 +1,4 @@
+import json
 import logging
 import random
 import time
@@ -45,7 +46,11 @@ class SessionStore(object):
         # stimes is a sorted set of timestamps for a given session
         self.redis.zadd('stimes:%s' % sid, timestamp, str(timestamp))
         info['time'] = timestamp
-        self.redis.hmset(_hash_name(sid, timestamp), info)
+        info_json = {}        
+        for k in info.keys():
+            info_json[k] = json.dumps(info[k])
+        
+        self.redis.hmset(_hash_name(sid, timestamp), info_json)
 
         self._try_cleanup_some_stale_sessions()
 
@@ -136,10 +141,10 @@ class SessionStore(object):
         """ Returns the value of the specified properties of
         session at time t as a dict. """
         if not properties:
-            return self.redis.hgetall(_hash_name(sid, t))
+            return _dict_from_js(self.redis.hgetall(_hash_name(sid, t)))
         else:
             values = self.redis.hmget(_hash_name(sid, t), properties)
-            return dict(zip(properties, values))
+            return _dict_from_js(dict(zip(properties, values)))
 
     def _update_session_max_timestamp(self, sid, timestamp):
         # "sessions" is a session_id -> max(measurement_timestamp) mapping
@@ -177,4 +182,9 @@ def _round_down(time):
 def _hash_name(sid, time):
     return 'm:' + sid + ':' + str(time)
 
+def _dict_from_js(dict_js):
+    dic = {}
+    for k in dict_js.keys():
+        dic[k] = None if dict_js[k] is None else json.loads(dict_js[k])
 
+    return dic

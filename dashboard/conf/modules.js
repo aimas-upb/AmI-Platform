@@ -5,8 +5,12 @@ App.main_modules = App.main_modules || {};
 App.the_modules = {
 	'widget/image': 'modules/image',
 	'widget/trace': 'modules/trace',
+	'widget/subject_position': 'modules/subject_position',
+	'widget/head': 'modules/head',
+	'widget/measurements': 'modules/measurements',
 	'widget/DashboardController': 'modules/dashboard_controller',
 	'widget/TraceController': 'modules/trace_controller',
+	'widget/MeasurementsController': 'modules/measurements_controller',
 };
 
 // This is actually how we check if this is being ran

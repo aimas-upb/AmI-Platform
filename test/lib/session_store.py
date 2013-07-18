@@ -31,6 +31,7 @@ class SessionsStoreTest(TestCase):
 
         self.redis.flushdb()
 
+        SessionStore.CLEANUP_PROBABILITY = 0
         self.store = SessionStore()
 
     def test_all(self):
@@ -63,17 +64,26 @@ class SessionsStoreTest(TestCase):
 
         eq_(1, len(s2times), "Expecting 1 times")
         ok_(set([20]) == set(s2times), "Times must match")
+        
+    def test_keeps_type(self):
+        self.store.set("session1", 30, {'p': {'x':1, 'y':{1:2}, 'z':[1,2,3]}})
+        m = self.store.get_session_measurement("session1", 30, 'p')
+        value = m['p']
+        eq_(type(value), dict, "Expected dict")
+        eq_(set(value.keys()), set(['x','y','z']))
+        eq_(1, value['x'])
+        eq_([1,2,3], value['z'])        
 
     def test_session_store_always_keeps_max_timestamp_for_measurements(self):
         """ Given that measurements may come in async with timestamps a little
         'out of order' because of that, test that no matter what happens, the
         session store will store only the max timestamp for each session. """
 
-        self.store.set('session1', 20, {'a': 'b'})
+        self.store.set('session1', 200, {'a': 'b'})
         self.store.set('session1', 10, {'c': 'd'})
 
-        last_timestamp = int(self.redis.hget('sessions', 'session1'))
-        eq_(last_timestamp, 20, "Session processor should always keep the "
+        last_timestamp = int(self.redis.hget('sessions', 'session1') or 0)
+        eq_(last_timestamp, 200, "Session processor should always keep the "
             "maximal timestamp for out-of-order measurements")
 
     def test_stale_sessions_works_correctly(self):
@@ -110,6 +120,7 @@ class SessionsStoreTest(TestCase):
         fresh_sid = random.choice(result['fresh'])
 
         # Small enough probability so that clean-up is triggered
+        SessionStore.CLEANUP_PROBABILITY = 0.05        
         p = max(SessionStore.CLEANUP_PROBABILITY - 0.01, 0)
         with patch('random.random', return_value=p) as random_mock:
             with patch.object(SessionStore, 'remove_session') as remove_session_mock:

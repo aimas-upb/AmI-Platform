@@ -1,0 +1,2 @@
+<div>Head image</div>
+<div><img src="data:image/jpeg;base64,{{image_data}}" /></div>
