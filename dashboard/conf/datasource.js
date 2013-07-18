@@ -25,5 +25,11 @@ App.DataSourceConfig = {
                 url: App.general.FRONTEND_URL + '/measurements/{{session_type}}?sid={{sid}}&time={{time}}',
                 collection: 'raw_data'
             },
+            '/sessions': {
+                type: 'api',
+                url: App.general.FRONTEND_URL + '/sessions/{{type}}?N=100',
+                refresh: 'periodic',
+                refresh_interval: 10000
+            },
         },
 };

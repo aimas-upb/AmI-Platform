@@ -47,11 +47,12 @@ def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
         return {}
 
 @app.route('/sessions/:session_type', method='GET')
-@query_param('N', int, default = 1)
+@query_param('N', int, default=100)
 def get_session_list(session_type, N):
     try:
         store = _get_session_store(session_type)
-        return {'sessions': store.get_all_sessions_with_measurements(N = N, keys=['time','head', 'subject_position'])}
+        return {'sessions': store.get_all_sessions_with_measurements(N=N,
+                                                                     max_sessions=100)}
     except:
         logger.exception("Failed to get sessions from Redis")
         return {'sessions': {}}
@@ -75,18 +76,18 @@ def get_latest_subject_positions(sensor_id = 'daq-01'):
         logger.exception("Failed to get list of latest subject positions from "
                          "Redis")
         return {}
-    
+
 @app.route('/measurements/:session_type', method='GET')
 @query_param('sid', str)
 @query_param('time', int)
 def get_measurement_properties(session_type, sid, time):
-    store = _get_session_store(session_type)    
-    try:        
+    store = _get_session_store(session_type)
+    try:
         return {'measurements': store.get_session_measurement(sid, time)}
     except:
         return {'measurements': {}}
     pass
-    
+
 def _get_session_store(session_type):
     if session_type == 'raw':
         return session_store

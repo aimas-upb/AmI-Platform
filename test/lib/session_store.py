@@ -100,10 +100,6 @@ class SessionsStoreTest(TestCase):
         sid = random.choice(result['stale'])
         self.store.remove_session(sid)
 
-        # Check that there are no keys left for that session
-        eq_(len(self.redis.keys('*%s*' % sid)), 0,
-            "There should be no key containing the sid!")
-
         # Check that the session doesn't appear anymore in the
         # sid -> last_updated_at mapping
         sessions_updated_at = self.store.get_all_sessions_with_last_update()
@@ -143,6 +139,14 @@ class SessionsStoreTest(TestCase):
                 eq_(set(removed_sids), set(stale_sids),
                     "All stale sessions should have been removed")
 
+    def test_keeps_type_for_deeply_nested_property(self):
+        self.store.set("session1", 30, {'p': {'x':1, 'y':{1:2}, 'z':[1,2,3]}})
+        m = self.store.get_session_measurement("session1", 30, 'p')
+        value = m['p']
+        eq_(type(value), dict, "Expected dict")
+        eq_(set(value.keys()), set(['x','y','z']))
+        eq_(1, value['x'])
+        eq_([1,2,3], value['z'])
 
     @patch('random.random', return_value=SessionStore.CLEANUP_PROBABILITY + 0.1)
     # We need to patch random.random() so that SessionStore.set() does
