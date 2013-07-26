@@ -68,7 +68,19 @@ function includeStaticFilesInBundles() {
 
 function includeStaticFilesInBundles_Production() {
     includeJsFile(App.conf_files_bundle_name);
-    includeCssFile(getStaticUrl() + App.static_css_bundle_name);
+    // Include different CSS files for mobile devices
+    // #4964 - Disable CSS bundling on production (temporarily)
+    if (isMobileDevice()) {
+        for (var i = 0; i < App.static_touch_css.length; i++) {
+            includeCssFile(getStaticUrl() + App.static_touch_css[i]);
+        }
+        // includeCssFile(getStaticUrl() + App.static_touch_css_bundle_name);
+    } else {
+        for (var i = 0; i < App.static_css.length; i++) {
+            includeCssFile(getStaticUrl() + App.static_css[i]);
+        }
+        // includeCssFile(getStaticUrl() + App.static_css_bundle_name);
+    }
     includeJsFile(getStaticUrl() + App.static_libs_bundle_name);
     includeJsFileIE(getStaticUrl() + App.static_ie7_libs_bundle_name, 7);
 }
@@ -77,8 +89,15 @@ function includeStaticFilesInBundles_Development() {
     for (var i = 0; i < App.conf_files.length; i++) {
         includeJsFile(App.conf_files[i]);
     }
-    for (var i = 0; i < App.static_css.length; i++) {
-        includeCssFile(getStaticUrl() + App.static_css[i]);
+    // Include different CSS files for mobile devices
+    if (isMobileDevice()) {
+        for (var i = 0; i < App.static_touch_css.length; i++) {
+            includeCssFile(getStaticUrl() + App.static_touch_css[i]);
+        }
+    } else {
+        for (var i = 0; i < App.static_css.length; i++) {
+            includeCssFile(getStaticUrl() + App.static_css[i]);
+        }
     }
     for (var i = 0; i < App.static_libs.length; i++) {
         includeJsFile(getStaticUrl() + App.static_libs[i]);
@@ -86,10 +105,8 @@ function includeStaticFilesInBundles_Development() {
     for (var i = 0; i < App.static_ie7_libs.length; i++) {
         includeJsFileIE(getStaticUrl() + App.static_ie7_libs[i], 7);
     }
-
     if (App.general.USE_MOCKS) {
         includeJsFile(getStaticUrl() + 'tests/libs/jquery.mockjax.js');
-        includeJsFile(getStaticUrl() + 'mocks.js');
     }
 }
 
@@ -105,8 +122,17 @@ function includeStaticFilesInBundles_Development() {
  *       (#custom-css).
  */
 function includeBranding() {
-   document.write("<link rel='stylesheet' id='custom-css' " +
-                  "href='/assets/custom.css'/>");
+
+    if (App.EXTRA_BRANDING) {
+        var id = "'custom-css' ";
+        for(var i = 0; i < App.EXTRA_BRANDING.length;i++) {
+            if (i > 0) {
+                id = "'custom-css-" + i + "' ";
+            }
+            document.write("<link rel='stylesheet' id=" + id +
+                        "href= '" + App.EXTRA_BRANDING[i] + "'/>");
+        }
+    }
 }
 
 /*
@@ -160,8 +186,8 @@ function overrideGeneralConfigWithUserConfig() {
  * Replace nested config variables. Example:
  *
  *     App.general = {
- *         FRONTEND_URL: 'http://127.0.0.1:8000',
- *         LOGIN_PAGE: '{{FRONTEND_URL}}/front/login',
+ *         FRONTAPI_URL: 'http://127.0.0.1:8000',
+ *         LOGIN_PAGE: '{{FRONTAPI_URL}}/front/login',
  *         ...
  */
 function replaceReferencesFromConfigVariables() {
@@ -170,7 +196,7 @@ function replaceReferencesFromConfigVariables() {
         if (typeof(App.general[prop]) != 'string') {
             continue;
         }
-        App.general[prop] = App.general[prop].replace(/{{(.+?)}}/, function(match, name) {
+        App.general[prop] = App.general[prop].replace(/{{(.+?)}}/g, function(match, name) {
             if (typeof(App.general[name]) != 'undefined') {
                 return App.general[name];
             } else {
@@ -179,6 +205,16 @@ function replaceReferencesFromConfigVariables() {
         });
     }
 };
+
+/**
+ * Check if current user is browsing from a mobile devices (normally with touch
+ * capabilities)
+ * XXX user agent sniffing is not an ideal technique since it can change at any
+ * time and also new devices can appear, but does the job for an MVP situation
+ */
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(navigator.userAgent)
+}
 
 overrideGeneralConfigWithUserConfig();
 replaceReferencesFromConfigVariables();
