@@ -1,5 +1,5 @@
 define ['cs!standard_logger'], (StandardLogger) ->
-
+    
     class SentryLogger extends StandardLogger
         ###
             Logs exceptions to Sentry, using the Raven.js library

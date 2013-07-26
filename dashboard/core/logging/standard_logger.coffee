@@ -11,7 +11,7 @@ define [], ->
             ERROR: 1
             WARN: 2
             INFO: 3
-
+        
         constructor: (logLevel) ->
             # The log level of a logger instance can be set when creating it,
             # otherwise it defaults to only logging warn or error messages
@@ -42,7 +42,7 @@ define [], ->
 
                 In this standard implementation the error message will simply
                 be logged at ERROR level. Exceptions should be left uncaught in
-                dev environment in order to intercept their stack trace
+                dev environment in order to intercept their stack trace 
             ###
             # Allow extra params to be passed along an exception
             @_log(@constructor.LOG_LEVEL.ERROR, e.toString(), params...)

@@ -1,5 +1,5 @@
 define [], () ->
-
+    
     wrap: (fn, contextAttributes = {}) ->
         ###
             Wrap a function inside an exception-safe escapsulated scope, in
