@@ -37,6 +37,7 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
                 @param (object) options Extra options for injecting the widgets,
                                         here are the available ones:
                     - (string) id The id attribute
+                    - (string) type of DOM element to inject
                     - (string) classes Extra set of classes
                     - (object) data Extra set of data attributes (the `widget`
                                     and `params` keys are reserved for the widget
@@ -119,9 +120,46 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
                     node.attr("data-#{k}", v)
             return node
 
+        onWidgetRender: (widgetName, parentWidget, onRender) ->
+            ###
+                Run a callback after a specific widget type rendered, that has
+                not been injected manually from a test but rather consequently,
+                from inside a parent widget injected manually.
+
+                The 1st parameter can be left null if looking for more than one
+                type of widget and all widgets will be sent to the onRender
+                callback once rendered. The name of the widget will be sent as
+                a second parameter to the callback for ease of use.
+
+                The 2nd parameter allows us to specify the parent widget
+                instance, in order to make sure we're not intercepting a
+                different widget of the same type loading somewhere else.
+
+                This method subscribes to /new_widget_rendered pubsub events
+                and keeps listening until the onRender callback returns true,
+                this way allowing the user to listen to one or more widgets of
+                a type to load before testing something.
+            ###
+            pipe = loader.get_module('pubsub')
+            f = (widget_id, widget_name) =>
+                widget = loader.widgets[widget_id]
+                return if widgetName and widget_name isnt widgetName
+                return if parentWidget and
+                          not parentWidget.view?.$el.has(widget.view.$el).length
+
+                # This handler can be removed automatically by returning true
+                # from inside the callback function
+                if onRender(widget, widget_name)
+                    pipe.unsubscribe('/new_widget_rendered', f)
+
+            pipe.subscribe('/new_widget_rendered', f)
+            # return event handler so it can be removed by hand as well, from
+            # the place this was registered
+            return f
+
         injectWidget: (el, widget_name, params, extra_classes = null, clean = null, el_type = null, modal = false, prepend = false, before = false, after = false) ->
             ###
-                !!! DEPRECATED !!!
+                @deprecated
 
                 Utils.inject should be used in favor of this one,
                 but it cannot yet be removed in order to provide backwards
@@ -188,6 +226,47 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
             for prop of obj
                 if obj.hasOwnProperty(prop) and obj[prop] == val
                     return prop
+
+        pathIsExpandable: (path, separator = '/') ->
+            ###
+                Returns true if a given XPath-like expression is expandable.
+                This means that the path will match all the children of the
+                given path.
+            ###
+            return _.str.endsWith(path, '*')
+
+        expandPath: (path, obj, separator = '/') ->
+            ###
+                Expands a given XPath-like expression into 0 or more expressions
+                that match both the path containing wildcards and the
+                underlying object.
+            ###
+
+            # Non-expandable paths are expanded into themselves
+            if not Utils.pathIsExpandable(path)
+                return [path]
+
+            # Otherwise, append to the parent path all children
+            parent_path = _.str.rtrim(path, ['/*', '*'])
+
+            # If path is * then return paths to obj keys
+            if parent_path is ''
+                subset = obj
+            else
+                subset = Utils.getNestedAttr(obj, parent_path)
+
+            # If you try to expand a leaf then the path to
+            # leaf is returned as response
+            return [parent_path] unless _.isObject(subset)
+
+            # Build all the paths
+            paths = _.map _.keys(subset), (key) ->
+                path =_.str.join '/' , parent_path, key
+                # Remove the leading slashes that can occur when you get
+                # all paths from root
+                _.str.ltrim(path, '/')
+
+            return paths
 
         getNestedAttr: (obj, path, separator = '/') ->
             ###
@@ -347,7 +426,7 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
             if !$.isFunction(Module)
                 throw "Trying to instantiate something uninstantiable: " + Module
                 return
-            if App.general.THROW_UNCAUGHT_EXCEPTIONS
+            if App.general.PASS_THROUGH_EXCEPTIONS
                 result = new Module(params...)
             else
                 try
@@ -403,6 +482,40 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
                 return value.apply(model, params)
             value
 
+        wrapMethod: (obj, methodName, options = {}) ->
+            ###
+                Add a before or after hook on a function belonging to a
+                specified object, preserving its scope (which means it works
+                even for methods without a fat arrow)
+            ###
+            originalMethod = obj[methodName]
+
+            # Replace the original method with a wrapper function that
+            # intercepts any calls to the original one and passes them on,
+            # while honoring the given before/after callbacks
+            obj[methodName] = ->
+                # Send the intercepted arguments to the callbacks as well, just
+                # in case we might want to use that information
+                options.before(arguments...) if _.isFunction(options.before)
+                returnValue = originalMethod.apply(obj, arguments)
+                options.after(arguments...) if _.isFunction(options.after)
+
+                # Restore original method automatically after first call
+                # (it it hasn't been already restored by hand)
+                if options.restore and _.isFunction(obj[methodName].restore)
+                    obj[methodName].restore()
+
+                # Make sure we preserve the return value
+                return returnValue
+
+            # Create a restore method attached to the wrapped method that
+            # can be called from anywhere, at any time
+            obj[methodName].restore = ->
+                obj[methodName] = originalMethod
+
+            # Return the wrapper method
+            return obj[methodName]
+
         _buildDomElementByWidgetOptions: (options) ->
             ###
                 Build DOM element based on the format of widget options
@@ -410,12 +523,14 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
             ###
             type = options.type or 'div'
             id = options.id
-            classes = 'uberwidget'
+            classes = 'mozaic-widget'
             classes = "#{classes} #{options.classes}" if options.classes
             data = options.data or {}
             data.widget = options.name
             data.params = options.params or {}
             node = @buildDomElement(type, id, classes, data)
+
+        getControllerContainer: -> $('#controller-container')
 
     # Extend Utils with other utils functions (see utils/ dir) in order
     # to keep the same Utils.method() interface.

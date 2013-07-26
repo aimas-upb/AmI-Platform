@@ -16,7 +16,7 @@ define [], () ->
 
         constructor: ->
             @_callbacks = {}
-            @_callbacks['all'] = {}
+            @_callbacks['all'] = []
 
         initialize: ->
             logger.info "Initializing PubSub"
@@ -53,15 +53,28 @@ define [], () ->
             rest = slice.call(arguments, 1)
             events = events.split(eventSplitter)
 
-            if not (calls = @_callbacks)
-                return
+            calls = @_callbacks
+            return unless calls
 
-            for event in events
-                if calls[event]
-                    for node in calls[event]
-                        node.callback.apply(node.context or @, rest)
-                for node in calls['all']
-                    node.callback.apply(node.context or @, rest)
+            publishEventsOneByOne = (restOfEvents) =>
+
+                event = restOfEvents.shift()
+                return unless event
+
+                triggerCallback = (calls) ->
+                    if _.isArray(calls) and calls.length > 0
+                        node = calls[0]
+                        setTimeout ->
+                            node.callback.apply(node.context or this, rest)
+                        , 0
+                        triggerCallback(_.rest(calls))
+
+                triggerCallback(calls[event]) if calls[event]
+                triggerCallback(calls['all'])
+
+                publishEventsOneByOne(restOfEvents)
+
+            publishEventsOneByOne(events)
 
         unsubscribe: (events, callback, context) ->
             ###

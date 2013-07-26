@@ -5,6 +5,11 @@ define ['cs!widget/base_form', 'cs!channels_utils', 'cs!mozaic_backbone_form'], 
         template_name: 'templates/update_form.hjs'
         render_stringified: true
 
+        # Submit button label for new/edit states, they can be overriden in
+        # subclasses and optionally used in the template at will
+        create_label: 'Create'
+        update_label: 'Update'
+
         get_subscribed_channel_events: (params) =>
             ###
                 Handle any incoming notification on the model's channel.
@@ -91,13 +96,16 @@ define ['cs!widget/base_form', 'cs!channels_utils', 'cs!mozaic_backbone_form'], 
             if not errors?
                 # Update the model with the form's model attributes
                 # but don't trigger any events
-                @model.set(@form.model.attributes, { silent: true })
+                @model.set(@getFormModelAttributes(), { silent: true })
                 # Try to create/update the model on the server
                 @syncModel('update')
             else
                 # Let the user correct the validation errors by
                 # enabling the form
                 @enableForm()
+
+        getFormModelAttributes: ->
+            return @form.model.attributes
 
         getFormSchemaName: ->
             ###
@@ -125,6 +133,11 @@ define ['cs!widget/base_form', 'cs!channels_utils', 'cs!mozaic_backbone_form'], 
             # template fields (instead of letting BBF do it's magic)
             @form = new MozaicBackboneForm ({ model: clone, schema: clone.getSchema(@getFormSchemaName()), holder: @view.el })
 
+            # Make this form available inside editors and anywhere else where
+            # the Backbone form would pass its reference, by attaching a
+            # reference to this form widget on the Backbone form itself
+            @form.formWidget = this
+
         renderForm: =>
             ###
                 Renders a Backbone Form bound to this widget's model
@@ -135,6 +148,12 @@ define ['cs!widget/base_form', 'cs!channels_utils', 'cs!mozaic_backbone_form'], 
             @afterRender(@form.model)
             $(@view.el).find(".form").append(@form.el)
 
+        renderLayout: (params) ->
+            # {{button_label}} needs to be used as the submit button's value
+            # in the template for the labels to come into effect
+            params.button_label = if @model.id then @update_label else @create_label
+            super(arguments...)
+
         beforeRender: =>
             # allows modification of underlying model before rendering
 
@@ -143,5 +162,10 @@ define ['cs!widget/base_form', 'cs!channels_utils', 'cs!mozaic_backbone_form'], 
             # ex: use to mark as selected an <option> in a <selected> form field
 
         afterFormCommit: (model) =>
+
+        destroy: =>
+            super()
+            # Remove cross-reference between Backbone form and form widget
+            delete @form.formWidget if @form
 
     return UpdateForm
