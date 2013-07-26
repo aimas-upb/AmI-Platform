@@ -20,7 +20,8 @@ define [], () ->
 
             # Support a default value for when the editor has not yet
             # initialized
-            @default_value = @schema.default_value or null
+            @default_value = @schema.default_value
+            @default_value ?= null
             # Default widget params can be specified in the model schema
             # as well, as a starting point
             @widget_params = @schema.widget_params or {}
@@ -60,12 +61,14 @@ define [], () ->
             ###
             @pipe = loader.get_module('pubsub')
             @pipe.subscribe('/new_widget', @newWidget)
+            @subscribed_to_widget_rendering = false
 
             # Compile and render widget container template
             template = Handlebars.compile(@template)
-            @$el.html template
+            @$el.html template(
                 widget_name: @widget_name
                 widget_params: JSON.stringify(@widget_params)
+            )
             return this
 
         newWidget: (message) =>
@@ -86,13 +89,78 @@ define [], () ->
                 # Create a back-reference to editor in widget
                 @widget.editor = this
                 # Call initializeWithForm method on editor, if one is
-                # implemented
+                # implemented. Delay this call until renderLayout() has
+                # been called at least once, because most widget editors
+                # do setValue() in initializeWithForm, which implicitly
+                # requires the DOM to be ready.
                 if _.isFunction(@widget.initializeWithForm)
-                    @widget.initializeWithForm(@form)
+                    if @widget.DELAYED_INITIALIZE_WITH_FORM? and @widget.DELAYED_INITIALIZE_WITH_FORM
+                        @pipe.subscribe('/new_widget_rendered', @editorWidgetHasRendered)
+                    else
+                        @widget.initializeWithForm(@form)
+
+        editorWidgetHasRendered: (widget_id, widget_name) =>
+            ###
+                Callback for running initialize-like method of widget editor,
+                that is called whenever the proxy widget and the editor itself
+                are setup and cross-referenced correctly.
+
+                Since most editor widgets also use the DOM in initializeWithForm,
+                we make sure that the DOM is right there by waiting for at least
+                one renderLayout() to occur.
+            ###
+            @widget.initializeWithForm(@form)
+            @pipe.unsubscribe('/new_widget_rendered', @editorWidgetHasRendered)
 
         getValue: () ->
-            return @widget?.getValue() or @default_value
+            return if @widget? then @widget.getValue() else @default_value
 
         setValue: (value) ->
             @value = value
             @widget?.setValue(@value)
+
+            # Keep form model up to date with editor values
+            if @schema.sync_form_model and not @formHasValue(value)
+                @form.model.set(@key, @getValue(), silent: true)
+                # After we update the editor's corresponding model value, go
+                # through all the other from editors (but this one), and update
+                # their value with the one in the model. This is useful because
+                # changing a model attribute might change other ones as well,
+                # thus having more logic inside the models.
+                for key, field of @form.fields
+                    continue if key is @key
+                    editor = field.editor
+                    modelValue = @form.model.get(key)
+                    # Since the Underscore check is strict we need to make sure
+                    # null and undefined values are loosely compared, so the
+                    # modalValue need to be null if missing. This avoids a lot
+                    # of pointless assignments and hook triggerings
+                    modelValue = null unless modelValue?
+                    unless _.isEqual(modelValue, editor.getValue())
+                        editor.setValue(modelValue)
+
+            @notifyModelChanged(value)
+
+        notifyModelChanged: (value) ->
+            ###
+                Check for form hooks that listen to model changes and trigger
+                them if defined
+            ###
+            if _.isFunction(@form.formWidget?.modelChanged)
+                @form.formWidget.modelChanged(@key, value)
+
+        formHasValue: (value) ->
+            ###
+               Check if the editor value is equal with the current one inside
+               the form.
+               Match null and undefined as equal though, since they both
+               represent missing values
+            ###
+            formValue = @form.model.get(@key)
+            # Strict comparison (===)
+            return true if value is formValue
+            # If they're not strictly equal and one of the is defined, then
+            # they're not equal
+            return false if value? or formValue?
+            # At this point they're both null/undefined
+            return true

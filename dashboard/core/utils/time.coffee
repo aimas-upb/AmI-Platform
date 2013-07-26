@@ -11,7 +11,13 @@ define [], () ->
                 Returns today as Date object representing beginning of day
             ###
             now = new Date()
-            return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+            return Utils.day(now)
+
+        day: (date) ->
+            ###
+                Returns Date object representing beginning of day
+            ###
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 
         timeago: (elem, interval, callback) ->
             ###
@@ -30,12 +36,14 @@ define [], () ->
                 interval*1000
             )
 
-        # Get local timestamp (epoch time) from a date of the accepted formats
-        # for Date(). E.g. for utc_date = "2012-07-25 17:00", the utc_ts would be
-        # 1343235600. Check out here http://www.epochconverter.com
-        #
-        # Returns number of milliseconds in Epoch Time.
         getUTCTimestampFromDate: (date, format = null) ->
+            ###
+                Get local timestamp (epoch time) from a date of the accepted formats
+                for Date(). E.g. for utc_date = "2012-07-25 17:00", the utc_ts would be
+                1343235600. Check out here http://www.epochconverter.com
+
+                Returns number of milliseconds in Epoch Time.
+            ###
             if $.isArray(format)
                 format = format[0]
             moment.utc(date, format).unix() * 1000
@@ -76,4 +84,17 @@ define [], () ->
         getMinutes: ->
             {value: nr, label: @padNumber(nr)} for nr in [0...60]
 
+        getTimestampFromDate: (date) ->
+            return Math.round(new Date(date).getTime() / 1000)
+
+        getDateFromTimestamp: (timestamp, format = 'MM/DD/YYYY') ->
+            return moment(timestamp * 1000).format(format)
+
+        getDateFromUTCTimestamp: (timestamp, format = 'MM/DD/YYYY') ->
+            return moment.utc(timestamp * 1000).format(format)
+
+        getDateFormat: (date, format = 'MM/DD/YYYY') ->
+            return moment(date).format(format)
+
     return time
+
