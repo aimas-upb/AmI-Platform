@@ -3,6 +3,7 @@ var App = App || {};
 App.main_modules = App.main_modules || {};
 
 App.the_modules = {
+    'constants': 'modules/constants',
     'widget/image': 'modules/image',
     'widget/trace': 'modules/trace',
     'widget/session_store': 'modules/session_store',

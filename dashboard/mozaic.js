@@ -1,6 +1,6 @@
 require([
     'cs!utils/mozaic',
-    'cs!core/constants',
+    'cs!constants',
     'cs!core/utils',
     'cs!' + App.general.LOGGER_MODULE
 ], function(MozaicLib, Constants, Utils, Logger) {
