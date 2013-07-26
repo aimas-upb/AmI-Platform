@@ -23,6 +23,8 @@
 // Includes
 //---------------------------------------------------------------------------
 #include <stdlib.h>
+#include <map>
+#include <string>
 
 #include <XnOpenNI.h>
 #include <XnCodecIDs.h>
@@ -35,6 +37,9 @@
 
 #include "base64.h"
 #include "ami_environment.h"
+#include "session.h"
+
+using namespace std;
 
 //---------------------------------------------------------------------------
 // Globals
@@ -45,6 +50,9 @@ xn::DepthGenerator g_DepthGenerator;
 xn::UserGenerator g_UserGenerator;
 xn::ImageGenerator g_ImageGenerator;
 xn::Player g_Player;
+// One generated session ID per active user
+map<XnUserID, string> g_session_ids;
+
 #if USE_MEMCACHE
 memcached_st* g_MemCache;
 #endif
@@ -85,6 +93,15 @@ void CleanupExit()
 void XN_CALLBACK_TYPE User_NewUser(xn::UserGenerator& /*generator*/, XnUserID nId, void* /*pCookie*/)
 {
     g_UserGenerator.GetSkeletonCap().RequestCalibration(nId, TRUE);
+    // Generate a session id for each newly detected user
+    g_session_ids[nId] = generateSessionIdFromPlayerId(nId);
+}
+
+// Callback: New user was detected
+void XN_CALLBACK_TYPE User_LostUser(xn::UserGenerator& /*generator*/, XnUserID nId, void* /*pCookie*/)
+{
+    // Revoke generated session id for each user
+    g_session_ids.erase(nId);
 }
 
 // Callback: Finished calibration
@@ -220,18 +237,18 @@ void initFromContextFile() {
     }
 
     nRetVal = g_Context.InitFromXmlFile(getKinectXMLConfig(), g_scriptNode, &errors);
-	if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
-	{
-		XnChar strError[1024];
-		errors.ToString(strError, 1024);
-		printf("%s\n", strError);
-		exit(1);
-	}
-	else if (nRetVal != XN_STATUS_OK)
-	{
-		printf("Open failed: %s\n", xnGetStatusString(nRetVal));
-		exit(1);
-	}
+    if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
+    {
+        XnChar strError[1024];
+        errors.ToString(strError, 1024);
+        printf("%s\n", strError);
+        exit(1);
+    }
+    else if (nRetVal != XN_STATUS_OK)
+    {
+        printf("Open failed: %s\n", xnGetStatusString(nRetVal));
+        exit(1);
+    }
 
     if (g_Context.FindExistingNode(XN_NODE_TYPE_DEPTH, g_DepthGenerator) != XN_STATUS_OK) {
         printf("XML file should contain a depth generator\n");
@@ -257,9 +274,9 @@ void initFromContextFile() {
 void registerUserCallbacks() {
     XnStatus nRetVal = XN_STATUS_OK;
     XnCallbackHandle hCalibrationComplete, hCalibrationInProgress, hCalibrationStart, hUserCallbacks;
-    
-    nRetVal = g_UserGenerator.RegisterUserCallbacks(User_NewUser, NULL, NULL, hUserCallbacks);
-CHECK_RC(nRetVal, "Register to user callbacks");
+
+    nRetVal = g_UserGenerator.RegisterUserCallbacks(User_NewUser, User_LostUser, NULL, hUserCallbacks);
+    CHECK_RC(nRetVal, "Register to user callbacks");
 
     g_UserGenerator.GetSkeletonCap().SetSkeletonProfile(XN_SKEL_PROFILE_ALL);
 

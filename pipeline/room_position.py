@@ -92,18 +92,7 @@ class RoomPosition(PDU):
                     'Z': pos[2, i],
                 }
         
-        skeleton_in_room_message = {
-            'type': 'skeleton_in_room',
-            'sensor_id': message['sensor_id'],
-            'created_at': message['created_at'],
-            'skeleton_3D': skeleton_in_room
-        }
-                
         position_message = {
-            'type': 'subject_position',
-            'sensor_id': message['sensor_id'],
-            'created_at': message['created_at'],
-            #this is torso pos
             'X': pos[0,0],
             'Y': pos[1,0],
             'Z': pos[2,0],
@@ -114,14 +103,17 @@ class RoomPosition(PDU):
         if message.get('session_id', None):
             sid = message['session_id']
             time = message['created_at']
-            self.session_tracker.track_event(sid, time, skeleton_in_room_message)
-            self.session_tracker.track_event(sid, time, position_message)
+            self.session_tracker.track_event(sid, time, {'skeleton_in_room': skeleton_in_room})
+            self.session_tracker.track_event(sid, time, {'subject_position': position_message})
+        
+        dashboard_message = {'created_at': message['created_at'], 'sensor_id': message['sensor_id']}
+        dashboard_message.update(position_message)
         
         # Send subject position to Redis
         self.dashboard_cache.lpush(sensor_id=message['sensor_id'],
             sensor_type=message['sensor_type'],
-            measurement_type=position_message['type'],
-            measurement=json.dumps(position_message))
+            measurement_type='subject_position',
+            measurement=json.dumps(dashboard_message))
                 
         return None
 

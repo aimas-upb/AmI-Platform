@@ -29,5 +29,5 @@ acquisition/arduino/arduino_core/Debug
 acquisition/export-*.csv
 
 # Settings file
-core/settings.py
+core/settings_local.py
 dashboard/conf/general.user.js

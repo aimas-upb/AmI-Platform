@@ -1,9 +1,8 @@
-# Layout-based controller
-
 define ['cs!layout', 'cs!mozaic_module'], (Layout, Module) ->
     injectControllerInterval = null
 
     class ApplicationController extends Module
+        # Layout-based controller
 
         constructor: (page_template) ->
             super()
@@ -46,10 +45,6 @@ define ['cs!layout', 'cs!mozaic_module'], (Layout, Module) ->
                                    new_controller_config.controller)
 
         new_controller: (new_controller_config, url_params) =>
-            #before doing any loading, intercept uncaught errors
-            window.onerror = (errorMsg, url, lineNumber) ->
-                logger.error "#{url}, line ##{lineNumber}, error: #{errorMsg}"
-
             loader.load_modules ['cs!pubsub'], =>
                 loader.load_modules ['cs!widget_starter'], =>
                     loader.load_modules @bootstrapModules(), =>

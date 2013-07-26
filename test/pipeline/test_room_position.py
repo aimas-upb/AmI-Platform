@@ -113,7 +113,8 @@ class RoomPositionTest(TestCase):
                    'created_at': 1,
                    'session_id': 'test:room-position'}
 
-        expected = {'sensor_id': '10', 'created_at': 1}
+        #expected = {'sensor_id': '10', 'created_at': 1}
+        expected = {}
 
         rp.process_message(message)
         eq_(track_event.call_count, 2)  # one for subject_position and one for skeleton_in_room
@@ -141,15 +142,16 @@ class PositionMatcher:
         self.z = z
         self.args = kwargs
 
-    def __eq__(self, other):
-        if other['type'] == 'subject_position':
-            pos = other
+    def __eq__(self, info):
+        if 'subject_position' in info:
+            pos = info['subject_position']
             self.all_eq(pos) and self.check_kwargs(pos)
-        elif other['type'] == 'skeleton_in_room':
-            for pos in other['skeleton_3D'].itervalues():
+
+        elif 'skeleton_in_room' in info:
+            for pos in info['skeleton_in_room'].itervalues():
                 if not self.all_eq(pos):
                     return False
-            return self.check_kwargs(other)
+            return self.check_kwargs(info)
 
         return False
 

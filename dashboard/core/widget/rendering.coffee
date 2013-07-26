@@ -49,10 +49,10 @@ define ['cs!layout'], (Layout) ->
             # it will crash.
             @_parseDomElements()
 
-            if @never_rendered
-                @never_rendered = false
-                pipe = loader.get_module('pubsub')
-                pipe.publish('/new_widget_rendered', @params['widget_id'], @params['name'])
+            # We can manually trigger the /widget_rendered signal
+            # using @widgetRenderedOnDemand method where needed
+            unless (@rendered_signal_sent or @widgetRenderedOnDemand)
+                @triggerWidgetRendered()
 
             ###
                 Execute postRender widget method after the widget
@@ -64,3 +64,8 @@ define ['cs!layout'], (Layout) ->
             # To check out the results, in the console, do: loader.get_module('profiler').getFullReport();
             if App.general.ENABLE_PROFILING
                 @profiler.stop @params.name
+
+        triggerWidgetRendered: ->
+                pipe = loader.get_module('pubsub')
+                pipe.publish('/new_widget_rendered', @params['widget_id'], @params['name'])
+                @rendered_signal_sent = true

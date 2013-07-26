@@ -32,7 +32,7 @@ class ProcessedSessionStore(SessionStore):
                 yet how this plays with real-time processing)
     """
 
-    TIME_MATCHING_THRESHOLD_MS = 500
+    TIME_MATCHING_THRESHOLD_MS = 2500
     POSITION_MATCHING_THRESHOLD_MS = 5000
     POSITION_MATCHING_THRESHOLD_MM = 200
 

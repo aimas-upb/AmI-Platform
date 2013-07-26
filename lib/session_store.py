@@ -1,3 +1,4 @@
+import json
 import logging
 import random
 import time
@@ -25,8 +26,8 @@ class SessionStore(object):
         This is a data structure that we will use later on in order to aggregate
         information from multiple tracking sessions.
     """
-    STALE_SESSION_THRESHOLD_MS = 60 * 60 * 1000 # 1 hour
-    CLEANUP_PROBABILITY = 0.05
+    STALE_SESSION_THRESHOLD_MS = 30 * 60 * 1000 # 30 minutes
+    CLEANUP_PROBABILITY = 0.05 # 5% chance of cleaning up old sessions randomly
     MAX_SESSIONS_TO_CLEANUP = 100
 
     def __init__(self):
@@ -44,8 +45,14 @@ class SessionStore(object):
 
         # stimes is a sorted set of timestamps for a given session
         self.redis.zadd('stimes:%s' % sid, timestamp, str(timestamp))
+        # expire wants input in seconds
+        self.redis.expire('stimes:%s' % sid,
+                          self.STALE_SESSION_THRESHOLD_MS / 1000)
+
         info['time'] = timestamp
-        self.redis.hmset(_hash_name(sid, timestamp), info)
+        self.redis.hmset(_hash_name(sid, timestamp), _pack_dict_values(info))
+        self.redis.expire(_hash_name(sid, timestamp),
+                          self.STALE_SESSION_THRESHOLD_MS / 1000)
 
         self._try_cleanup_some_stale_sessions()
 
@@ -60,30 +67,65 @@ class SessionStore(object):
                     for sid, timestamp in
                     self.redis.hgetall('sessions').iteritems())
 
+    def get_all_sessions_with_measurements(self,
+                                           N=100,
+                                           keys=['subject_position', 'time'],
+                                           max_sessions=None):
+        """ Retrieve all the sessions with their last N measurements which have
+        keys specified as a parameter. If there are less than N measurements
+        with this property, all of them will be returned.
+
+        Also, returned measurements will be sorted decreasing by timestamp -
+        first measurement will be most recent. We don't need to worry ourselves
+        with returning stale sessions, because we have an automatic algorithm
+        for that (see _try_cleanup_some_stale_sessions).
+        """
+        sessions = self.get_all_sessions()
+        if max_sessions is not None:
+            sessions = sessions[:max_sessions]
+        return {sid: self.get_session_measurements(sid, keys, N, True)
+                for sid in sessions}
+
     def get_session_times(self, sid):
-        """ Returns the list of times within a session, sorted ascending. """
+        """ Returns the list of times within a session, sorted descending. """
         return [int(x) for x in self.redis.zrevrange('stimes:%s' % sid, 0, -1)]
 
-    def get_session_measurements(self, sid, properties = []):
+    def get_session_measurements(self, sid, properties=[],
+                                 N=None, ignore_if_missing=False):
         """ Returns the values of the specified properties for all
         measurements of this session as list of dicts. """
-        return [self.get_session_measurement(sid, t, properties)
-                for t in self.get_session_times(sid)]
+
+        result = []
+        for t in self.get_session_times(sid):
+            measurement = self.get_session_measurement(sid, t, properties)
+            add_to_result = True
+
+            # If we should ignore measurements who don't have all the
+            # mentioned properties, check the current measurement - if it has
+            # everything we need or not.
+            if ignore_if_missing:
+                for prop in properties:
+                    if (prop not in measurement) or measurement[prop] is None:
+                        add_to_result = False
+
+            if add_to_result:
+                result.append(measurement)
+
+                # Make sure to limit the number of results if this is desired
+                if (N is not None) and len(result) == N:
+                    break
+
+        return result
 
     def remove_session(self, sid):
         """ Remove a session completely. """
 
-        # Remove session_id -> last_updated_at mappings
+        # Remove session_id -> last_updated_at mappings.
+        #
+        # The rest is done automatically by using the native Redis expiry
+        # mechanism. We tried to delete all the sessions here but it worked
+        # poorly.
         self.redis.hdel('sessions', sid)
-
-        session_times = self.get_session_times(sid)
-
-        # Remove list of sorted session timestamps
-        self.redis.delete('stimes:%s' % sid)
-
-        # Delete entries for each session timestamp
-        keys = [_hash_name(sid, timestamp) for timestamp in session_times]
-        self.redis.delete(*keys)
 
     def stale_sessions(self):
         """ Return the sessions which are stale (e.g. whose last_update) is
@@ -97,6 +139,11 @@ class SessionStore(object):
         return result
 
     def get_session_measurement(self, sid, t, properties = []):
+        return _unpack_dict_values(self._get_session_measurement(sid,
+                                                                 t,
+                                                                 properties))
+
+    def _get_session_measurement(self, sid, t, properties = []):
         """ Returns the value of the specified properties of
         session at time t as a dict. """
         if not properties:
@@ -141,4 +188,17 @@ def _round_down(time):
 def _hash_name(sid, time):
     return 'm:' + sid + ':' + str(time)
 
+def _unpack_dict_values(info):
+    result = {}
+    for k, v in info.iteritems():
+        try:
+            result[k] = json.loads(v)
+        except:
+            result[k] = v
+    return result
 
+def _pack_dict_values(info):
+    result = {}
+    for k, v in info.iteritems():
+        result[k] = json.dumps(v)
+    return result
