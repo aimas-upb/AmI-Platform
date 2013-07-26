@@ -3,7 +3,7 @@ var App = App || {};
 // URLs that are available in our app
 App.urls = {
     '': {
-        'controller': 'SessionsController',
+        'controller': 'DashboardController',
         'layout': 'templates/dashboard_page.hjs'
     },
     'sessions': {
