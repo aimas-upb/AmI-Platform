@@ -6,11 +6,13 @@ from nose.tools import eq_
 
 from core import ParallelPDU
 
+
 def heavy_preprocess(message):
     """ Dummy heavy preprocessing function which sleeps for a given amount
         of seconds specified in the message. """
     if 'sleep' in message:
         time.sleep(message['sleep'])
+
 
 class MyParallelPDU(ParallelPDU):
     """ Dummy implementation of a parallel PDU. It has 2 main functionalities:
@@ -27,13 +29,13 @@ class MyParallelPDU(ParallelPDU):
     def light_postprocess(self, actual_result, message):
         self.processed.append(message)
 
+
 class ParallelPDUTest(TestCase):
 
     @attr('unit')
     def test_pdu_processes_all_messages(self):
-        """ Tests that the parallel PDU successfully processes all messages. """
-
-        pdu = MyParallelPDU(heavy_preprocess = heavy_preprocess)
+        """ Tests that the parallel PDU successfully processes all messages."""
+        pdu = MyParallelPDU(heavy_preprocess=heavy_preprocess)
         pdu.process_message({'id': 1})
         pdu.process_message({'id': 2})
         time.sleep(1)
@@ -49,8 +51,7 @@ class ParallelPDUTest(TestCase):
             This is because by default, parallel pdu's have ordered delivery
             set to false.
         """
-
-        pdu = MyParallelPDU(heavy_preprocess = heavy_preprocess)
+        pdu = MyParallelPDU(heavy_preprocess=heavy_preprocess)
         pdu.process_message({'id': 1, 'sleep': 2})
         pdu.process_message({'id': 2, 'sleep': 1})
         time.sleep(2.5)
@@ -63,9 +64,8 @@ class ParallelPDUTest(TestCase):
         """ If processing 2 messages, although the first one takes
             longer to process, it should get processed first because of
             ordered delivery. """
-
-        pdu = MyParallelPDU(heavy_preprocess = heavy_preprocess,
-                            ORDERED_DELIVERY = True)
+        pdu = MyParallelPDU(heavy_preprocess=heavy_preprocess,
+                            ORDERED_DELIVERY=True)
         pdu.process_message({'id': 1, 'sleep': 2})
         pdu.process_message({'id': 2, 'sleep': 1})
         time.sleep(2.5)

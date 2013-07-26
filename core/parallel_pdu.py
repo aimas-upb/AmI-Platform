@@ -6,10 +6,11 @@ from pdu import PDU
 
 logger = logging.getLogger(__name__)
 
+
 def run_and_return(f, param, k, v):
     """ Runs function f(param) and returns a dictionary containing {k:v}
         and the result of the function run. """
-        
+
     # Make sure that exceptions of the function to run don't disappoint us
     # and crash our worker pool workers.
     try:
@@ -19,10 +20,11 @@ def run_and_return(f, param, k, v):
         traceback.print_exc()
         logger.error("Exception while executing %r" % f)
         f_result = None
-        
+
     to_return = {'result': f_result}
     to_return[k] = v
     return to_return
+
 
 class ParallelPDU(PDU):
     """ PDU which can process messages in parallel. In order to
@@ -65,6 +67,7 @@ class ParallelPDU(PDU):
         if not 'heavy_preprocess' in kwargs:
             raise ValueError('Need a heavy_preprocess function')
         self.heavy_preprocess = kwargs['heavy_preprocess']
+        self.debug = kwargs.get('debug', False)
 
         self.pool = Pool(self.POOL_SIZE)
 
@@ -79,7 +82,7 @@ class ParallelPDU(PDU):
         self.messages = {}
 
         self.unfinished_tasks = AtomicInt()
-        
+
         self.last_busy_result = False
 
     def light_postprocess(self, preprocess_result, message):
@@ -89,9 +92,7 @@ class ParallelPDU(PDU):
         """ This function acts as a callback for when a task given to
             the thread pool (aka a heavy_preprocess) is finished,
             in order to decide what to do next. """
-
         self.unfinished_tasks.dec()
-
         message_no = result['message_no']
         actual_result = result['result']
 
@@ -120,9 +121,9 @@ class ParallelPDU(PDU):
         """
         unfinished_tasks = self.unfinished_tasks.get()
         result = unfinished_tasks > self.UNFINISHED_TASKS_THRESHOLD
-        if result and not self.last_busy_result:            
+        if result and not self.last_busy_result:
             self.log("Busy with %d unfinished tasks!" % unfinished_tasks)
-        
+
         self.last_busy_result = result
         return result
 
@@ -143,11 +144,17 @@ class ParallelPDU(PDU):
         self.message_no = self.message_no + 1
         self.messages[self.message_no] = message
 
-        # Run heavy_process, which is an unbound function on the thread pool.
-        # The explanation is that Python isn't good at pickling bound functions
-        # (soon to be improved in Python 3.3), so it requires us to run an
-        # unbound function on the thread pool.
-        self.pool.apply_async(run_and_return,
-                              [self.heavy_preprocess, message,\
-                               'message_no', self.message_no],
-                              callback = self._internal_light_postprocess)
+        if not self.debug:
+            # Run heavy_process, which is an unbound function on the thread pool.
+            # The explanation is that Python isn't good at pickling bound functions
+            # (soon to be improved in Python 3.3), so it requires us to run an
+            # unbound function on the thread pool.
+            self.pool.apply_async(
+                run_and_return,
+                [self.heavy_preprocess, message, 'message_no', self.message_no],
+                callback=self._internal_light_postprocess)
+        else:
+            # Run in debug mode (process message in the main thread)
+            result = run_and_return(self.heavy_preprocess, message,
+                                    'message_no', self.message_no)
+            self.light_postprocess(result['result'], message)

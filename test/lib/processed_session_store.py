@@ -4,11 +4,12 @@ import time
 from unittest import TestCase
 
 import redis
-from nose.tools import eq_, ok_
+from nose.tools import eq_
 
 from core import settings
 from lib import log
 from lib.processed_session_store import ProcessedSessionStore
+
 
 class ProcessedSessionStoreTest(TestCase):
 
@@ -22,9 +23,9 @@ class ProcessedSessionStoreTest(TestCase):
         super(ProcessedSessionStoreTest, self).setUp()
         settings.REDIS_SERVER = 'localhost'
 
-        self.redis = redis.StrictRedis(host = settings.REDIS_SERVER,
-                                       port = settings.REDIS_PORT,
-                                       db = settings.REDIS_SESSION_DB)
+        self.redis = redis.StrictRedis(host=settings.REDIS_SERVER,
+                                       port=settings.REDIS_PORT,
+                                       db=settings.REDIS_SESSION_DB)
 
         self.redis.flushdb()
         self.store = ProcessedSessionStore()
@@ -36,11 +37,11 @@ class ProcessedSessionStoreTest(TestCase):
         eq_(len(session_ids), len(set(session_ids)),
             "Generated session ids should all be different!")
 
-    def _create_new_session(self, N = None,
-                            min_t = None, max_t = None,
-                            min_x = None, max_x = None,
-                            min_y = None, max_y = None,
-                            min_z = None, max_z = None):
+    def _create_new_session(self, N=None,
+                            min_t=None, max_t=None,
+                            min_x=None, max_x=None,
+                            min_y=None, max_y=None,
+                            min_z=None, max_z=None):
 
         N = N or random.randint(50, 100)
         min_t = min_t or int(time.time()) - 10
@@ -79,7 +80,7 @@ class ProcessedSessionStoreTest(TestCase):
         old_time_max = t - threshold - 10
 
         for _ in xrange(num_sessions):
-            self._create_new_session(min_t = old_time_min, max_t = old_time_max)
+            self._create_new_session(min_t=old_time_min, max_t=old_time_max)
 
         eq_(self.store.session_ending_at(t, {}), None,
             "No stale session should be returned")
@@ -89,10 +90,10 @@ class ProcessedSessionStoreTest(TestCase):
         Y = random.uniform(100, 500)
         Z = random.uniform(100, 500)
         for _ in xrange(num_sessions):
-            self._create_new_session(min_t = old_time_min, max_t = old_time_max,
-                                     min_x = X, max_x = X,
-                                     min_y = Y, max_y = Y,
-                                     min_z = Z, max_z = Z)
+            self._create_new_session(min_t=old_time_min, max_t=old_time_max,
+                                     min_x=X, max_x=X,
+                                     min_y=Y, max_y=Y,
+                                     min_z=Z, max_z=Z)
 
         eq_(self.store.session_ending_at(t, {'X': X, 'Y': Y, 'Z': Z}), None,
             "No stale session should be returned")
@@ -106,10 +107,10 @@ class ProcessedSessionStoreTest(TestCase):
         old_time_max = t - threshold - 10
 
         for _ in xrange(num_sessions - 1):
-            self._create_new_session(min_t = old_time_min, max_t = old_time_max)
+            self._create_new_session(min_t=old_time_min, max_t=old_time_max)
 
-        good_sid = self._create_new_session(min_t = t - threshold + 1,
-                                            max_t = t)
+        good_sid = self._create_new_session(min_t=t - threshold + 1,
+                                            max_t=t)
 
         eq_(self.store.session_ending_at(t, {}), good_sid,
             "The good session (having fresh updated_at) should be returned")
@@ -132,7 +133,7 @@ class ProcessedSessionStoreTest(TestCase):
         old_time_max = t - threshold - 10
 
         for _ in xrange(num_sessions - 1):
-            self._create_new_session(min_t = old_time_min, max_t = old_time_max)
+            self._create_new_session(min_t=old_time_min, max_t=old_time_max)
 
         X = random.uniform(100, 500)
         Y = random.uniform(100, 500)
@@ -141,8 +142,8 @@ class ProcessedSessionStoreTest(TestCase):
         # Create a "good" session. So far, it has no positional data.
         # We will add some "old" positional data, and see that it doesn't
         # get returned.
-        good_sid = self._create_new_session(min_t = t - threshold + 1,
-                                            max_t = t)
+        good_sid = self._create_new_session(min_t=t - threshold + 1,
+                                            max_t=t)
         N = random.randint(50, 100)
         for _ in xrange(N):
             old_timestamp = random.randint(t - positional_threshold - 20,
@@ -167,7 +168,7 @@ class ProcessedSessionStoreTest(TestCase):
         old_time_max = t - threshold - 10
 
         for _ in xrange(num_sessions - 1):
-            self._create_new_session(min_t = old_time_min, max_t = old_time_max)
+            self._create_new_session(min_t=old_time_min, max_t=old_time_max)
 
         X = random.uniform(100, 500)
         Y = random.uniform(100, 500)
@@ -176,8 +177,8 @@ class ProcessedSessionStoreTest(TestCase):
         # Create a "good" session. So far, it has no positional data.
         # We will add some "old" positional data, and see that it doesn't
         # get returned.
-        good_sid = self._create_new_session(min_t = t - threshold + 1,
-                                            max_t = t)
+        good_sid = self._create_new_session(min_t=t - threshold + 1,
+                                            max_t=t)
         N = random.randint(50, 100)
         for _ in xrange(N):
             new_timestamp = random.randint(t - positional_threshold + 1, t)
@@ -206,7 +207,7 @@ class ProcessedSessionStoreTest(TestCase):
         old_time_max = t - threshold - 10
 
         for _ in xrange(num_sessions - 1):
-            self._create_new_session(min_t = old_time_min, max_t = old_time_max)
+            self._create_new_session(min_t=old_time_min, max_t=old_time_max)
 
         X = random.uniform(100, 500)
         Y = random.uniform(100, 500)
@@ -215,8 +216,8 @@ class ProcessedSessionStoreTest(TestCase):
         # Create a "good" session. So far, it has no positional data.
         # We will add some "old" positional data, and see that it doesn't
         # get returned.
-        good_sid = self._create_new_session(min_t = t - threshold + 1,
-                                            max_t = t)
+        good_sid = self._create_new_session(min_t=t - threshold + 1,
+                                            max_t=t)
         N = random.randint(50, 100)
         for _ in xrange(N):
             new_timestamp = random.randint(t - positional_threshold + 1, t)
