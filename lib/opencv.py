@@ -6,6 +6,7 @@ from lib.files import random_file_name
 
 logger = logging.getLogger(__name__)
 
+
 def crop_face_from_image(image):
     """ Return a cropped face from a given image. """
 

@@ -14,13 +14,14 @@ from webtest import TestApp
 
 from api import api
 from core import settings
+from factories import RouterFactory
 from lib import log
 from lib.dashboard_cache import DashboardCache
 from lib.session_store import SessionStore
 from lib.processed_session_store import ProcessedSessionStore
-from test.pipeline.messages import MEASUREMENTS_MESSAGE_SKELETON
 
 STATUS_OK = 200
+
 
 class ApiTest(TestCase):
 
@@ -32,15 +33,15 @@ class ApiTest(TestCase):
 
     def setUp(self):
         # Clean-up databases
-        redis.StrictRedis(host = settings.REDIS_SERVER,
-                          port = settings.REDIS_PORT,
-                          db = settings.REDIS_SESSION_DB).flushdb()
-        redis.StrictRedis(host = settings.REDIS_SERVER,
-                          port = settings.REDIS_PORT,
-                          db = settings.REDIS_PROCESSED_SESSION_DB).flushdb()
+        redis.StrictRedis(host=settings.REDIS_SERVER,
+                          port=settings.REDIS_PORT,
+                          db=settings.REDIS_SESSION_DB).flushdb()
+        redis.StrictRedis(host=settings.REDIS_SERVER,
+                          port=settings.REDIS_PORT,
+                          db=settings.REDIS_PROCESSED_SESSION_DB).flushdb()
 
     def _skeleton_message(self):
-        return MEASUREMENTS_MESSAGE_SKELETON
+        return RouterFactory('skeleton')
 
     def test_latest_subject_positions(self):
         # Keep this import here in order to avoid OpenCV imports

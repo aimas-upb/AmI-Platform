@@ -6,7 +6,9 @@ from mock import patch
 
 from lib import log
 from lib.session_store import SessionStore
-from messages import MATCHES_MOCK, FACE_RECOGNITION_SAMPLE_MESSAGE
+from core.constants import MATCHES_MOCK
+from factories import FaceRecognitionFactory
+from pipeline import face_recognition
 from pipeline.face_recognition import FaceRecognition
 
 MAX_WAIT = 5
@@ -21,15 +23,15 @@ class TestFaceRecognition(TestCase):
 
     @patch.object(SessionStore, 'set')
     def test_send_message_to_redis_recognized_face(self, session_store_mock):
-        from pipeline import face_recognition
         orig_fn = face_recognition.betaface_recognition
         face_recognition.betaface_recognition = get_matches
 
         pdu = FaceRecognition()
-        pdu.process_message(FACE_RECOGNITION_SAMPLE_MESSAGE)
+        message = FaceRecognitionFactory()
+        pdu.process_message(message)
         time.sleep(MAX_WAIT)
 
-        sid = FACE_RECOGNITION_SAMPLE_MESSAGE['session_id']
+        sid = message['session_id']
         t = 0
         max_probability = max(MATCHES_MOCK.values())
         person_name = MATCHES_MOCK.keys()[MATCHES_MOCK.values(
@@ -39,5 +41,6 @@ class TestFaceRecognition(TestCase):
         session_store_mock.assert_called_once_with(sid, t, info)
         face_recognition.betaface_recognition = orig_fn
 
-def get_matches(image_dict):
+
+def get_matches(_):
     return MATCHES_MOCK

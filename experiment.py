@@ -15,9 +15,11 @@ from core.measurements_player import MeasurementsPlayer
 from core import settings
 from lib.log import setup_logging
 
+
 def we_are_frozen():
     # All of the modules are built-in to the interpreter, e.g., by py2exe
     return hasattr(sys, "frozen")
+
 
 def module_path():
     encoding = sys.getfilesystemencoding()
@@ -41,7 +43,7 @@ parser.add_argument('operation',
                     help='Operation to perform (start/stop/delete/play/list)')
 parser.add_argument('name',
                     nargs='?',
-                    default = None,
+                    default=None,
                     help='Experiment name')
 
 args = parser.parse_args()
@@ -51,18 +53,18 @@ if args.operation not in ['start', 'stop', 'delete', 'play', 'list']:
 
 elif args.operation in ['start', 'stop', 'delete', 'play'] and args.name is None:
     logger.error("Operation: %s needs the name of the experiment" % args.operation)
-    
+
 elif args.operation == 'list':
         # See if there is an existing Experiment with that name
     connect('experiments', host=settings.MONGO_SERVER)
     experiments = sorted(Experiment.objects, lambda x,y: y.active - x.active)
-    
+
     if len(experiments) == 0:
         print "No active experiments"
     else:
         print "Experiments:" 
         print "%20s %20s %20s" % ("name", "file", "active")
-        print "--------------------------------------------------------------"        
+        print "--------------------------------------------------------------"
         for e in experiments:
             print "%20s %20s %20s" % (e.name, e.file, e.active)
 
