@@ -13,7 +13,7 @@ function v = getParameters(varargin)
 %  Second parameter is the index of the line of the record (in the csv file
 %  above), ie the measurement's index
 
-cd E:\new_CSV\CSV-filtrate\; % cd /home/JohnDoe/data/filtered_CSV/;
+cd /home/JohnDoe/data/filtered_CSV/;
 
 % The folder where the repository of filtered-CSVs is to be found
 % Name of the files in that folder are Like: filename = 'export-AD_dreapta_sus.csv'; 
@@ -54,21 +54,23 @@ end
          % Start processing angles of triplets of points (from 'parts' above) && angles of "points pairs with Planes" ...
          % Have to figure out which combinations of doublets/triplets are interesting for the assessment of subject's posture
          %    I. Compute angles of the Triplets of points using Kinect_Features_Compute(i1,i2,i3):
-         % T1 	|   head(1-3)               |  		neck(4-6)               | 	left_shoulder(7-9)
-         % T2 	|   head(1-3)               |  		neck(4-6)               | 	right_shoulder(10-12)
+         % T1 	|   	head(1-3)               |  		neck(4-6)               | 	left_shoulder(7-9)
+         % T2 	|   	head(1-3)               |  		neck(4-6)               | 	right_shoulder(10-12)
          % T3 	|  	neck(4-6)               |  		left_shoulder(7-9)      | 	left_elbow(13-15)
          % T4 	|  	neck(4-6)               |  		right_shoulder(10-12)	| 	right_elbow(16-18)
-         % T5	|  	left_shoulder(7-9)      | 		left_elbow(13-15) 		|	left_hand(19-21)
+         % T5	|  	left_shoulder(7-9)      | 		left_elbow(13-15) 	|	left_hand(19-21)
          % T6	|  	right_shoulder(10-12)	| 		right_elbow(16-18)      |	right_hand(22-24)
          % T7	|	head(1-3)               |  		neck(4-6)               | 	torso(25-27)
          % T8	|	neck(4-6)               |  		torso(25-27)            | 	left_hip(28-30)
          % T9	|	neck(4-6)               |  		torso(25-27)            | 	right_hip(31-33)
          % T10	| 	torso(25-27)            | 		left_hip(28-30)         |	left_knee(34-36)
          % T11	| 	torso(25-27)            | 		right_hip(31-33)        |	right_knee(37-39)
-         % T12	| 	left_hip(28-30)         |		left_knee(34-36)        |   left_foot(40-42)
-         % T13	| 	right_hip(31-33)        |		right_knee(37-39)       |   right_foot(43-45)
+         % T12	| 	left_hip(28-30)         |		left_knee(34-36)        |   	left_foot(40-42)
+         % T13	| 	right_hip(31-33)        |		right_knee(37-39)       |   	right_foot(43-45)
          % T14	|	neck(4-6)               |  		torso(25-27)            | 	left_knee(34-36)
          % T15	|	neck(4-6)               |  		torso(25-27)            | 	right_knee(37-39)
+	 % T16  |       left_hip(28-30)		|		left_knee(34-36)	|	left_foot(40-42)
+ 	 % T17  |       right_hip(31-33)	|		right_knee(37-39)	|	right_foot(43-45)
          %
          i1=0; % i is the index of the body part; i = 0...14; i ==0 (Head), i=1 (Neck)... i=14 (right_foot)
          i2=1; i3=2;
@@ -88,8 +90,8 @@ end
          i1=1; i2=8; i3=11; angl14= Kinect_Features_Compute(parts,i1,i2,i3); clear i1 i2 i3; pause(0.001);
          i1=1; i2=8; i3=12; angl15= Kinect_Features_Compute(parts,i1,i2,i3); clear i1 i2 i3; pause(0.001);
          
-         % 	  II. Compute angles from Pairs_of_Points to Planes /distance (using Line_to_Plane_Angle):
-         % A. body trunk characteristic tree (MSc-Thesis Diana Tatu, Chpter 3-Architecture.docx)
+         % 	II. Compute angles from Pairs_of_Points to Planes /distance (using Line_to_Plane_Angle):
+         % 	A. body trunk characteristic tree 
          % P1	|	neck(4-6)               |  		torso(25-27)            | 		y0z
          % P2	|	neck(4-6)               |  		torso(25-27)            | 		x0y
          i1=1; P1=[parts{1,3*i1+1},parts{1,3*i1+2},parts{1,3*i1+3}];
@@ -112,6 +114,9 @@ end
          angleInDegrees5=Line_to_Plane_Angle(P1,P2,1); 
          angleInDegrees6=Line_to_Plane_Angle(P1,P2,2); clear P1 P2;
          
+	 i1=9; i2=11; i3=13; angl16= Kinect_Features_Compute(parts,i1,i2,i3); clear i1 i2 i3; pause(0.001);
+	 i1=10; i2=12; i3=14; angl17= Kinect_Features_Compute(parts,i1,i2,i3); clear i1 i2 i3; pause(0.001);
+
          % C.	Distance between two joints-lines
          % d1= line_segment[left_shoulder(7-9)-left_elbow(13-15)]-line_segment[right_shoulder(10-12)-right_elbow(16-18)]
          %  using script  distBW2lines
@@ -121,15 +126,15 @@ end
          L2 =  [u;v];           %  [right_shoulder-right_elbow] line
          d = distBW2lines(L1,L2); clear x0 y0 u v L1 L2;  % d is the minimum distance between L1 and L2
                
-         % P.S: D. 	Lower-limbs characteristic trees <--> not tackled just yet
-         
+                 
          % Assemble in one array the whole v-parameters cell
           v{1,1}=angl1; v{1,2}=angl2; v{1,3}=angl3; v{1,4}=angl4; v{1,5}=angl5;        
           v{1,6}=angl6; v{1,7}=angl7; v{1,8}=angl8 ; v{1,9}=angl9; v{1,10}=angl10;        
           v{1,11}=angl11; v{1,12}=angl12; v{1,13}=angl13; v{1,14}=angl14; v{1,15}=angl15;
-          v{1,16}=angleInDegrees1; v{1,17}=angleInDegrees2; v{1,18}=angleInDegrees3;
-          v{1,19}=angleInDegrees4; v{1,20}=angleInDegrees5; v{1,21}=angleInDegrees6;
-          v{1,22}=d;
+	  v{1,16}=angl16; v{1,17}=angl17;	
+          v{1,18}=angleInDegrees1; v{1,19}=angleInDegrees2; v{1,20}=angleInDegrees3;
+          v{1,21}=angleInDegrees4; v{1,22}=angleInDegrees5; v{1,23}=angleInDegrees6;
+          v{1,24}=d;
       %end
       elseif (mod((Ncoord),3)~= 0),
                   disp('Wrong No. of coordinates!');
