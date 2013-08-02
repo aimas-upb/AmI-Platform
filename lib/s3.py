@@ -47,7 +47,7 @@ def validate_output(output):
     Output example:
     "File '/tmp/hello.txt' stored as 's3://ami-lab/hello.txt' (0 bytes in 0.5 seconds, -1.00 B/s) [1 of 1]\nPublic URL of the object is: http://ami-lab.s3.amazonaws.com/hello.txt\n"
     """
-    regex = "File '[\\/a-zA-Z0-9.]*' stored as '[\\/a-zA-Z0-9.:-]*' \([0-9]* bytes in [0-9.]* seconds, [-0-9.]* B\/s\) \[[0-9]* of [0-9]*\]\\nPublic URL of the object is: [-.:\/a-zA-Z0-9]*\\n"
+    regex = "File '[-\\/a-zA-Z0-9._]*' stored as '[-\\/a-zA-Z0-9.:_]*' \\([0-9]* bytes in [0-9.]* seconds, [-0-9.]* [k]*B\\/s\\) \\[[0-9]* of [0-9]*\\]\\nPublic URL of the object is: [-_.:\\/a-zA-Z0-9]*\\n"
     result = re.match(regex, output)
     match = result.group(0)
 
