@@ -54,9 +54,6 @@ def skybiometry_recognition(image_dict):
         # os.remove(str(image_path))
         # logger.info("Removed image from disk (%s)" % str(temp_path))
 
-        # Matches example:
-        # [{u'confidence': 100, u'uid': u'diana@amilab-test2'},
-        #  {u'confidence': 48, u'uid': u'andrei@amilab-test2'}]
         logger.debug("Response from SkyBiometry: %r" % response)
         tags = response['photos'][0]['tags']
         if tags:
