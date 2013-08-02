@@ -32,4 +32,4 @@ class TestRecognition(PipelineTest):
             events.append(event)
             event = self._queue_system.get('room', 1)
 
-        ok_(len(events) >= self.NB_MIN_EXPECTED_EVENTS)
+        self.assertGreaterEqual(len(events), self.NB_MIN_EXPECTED_EVENTS)
