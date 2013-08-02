@@ -112,7 +112,7 @@ class PipelineTest(TestCase):
         self._pdu_instances = []
         for pdu in self.PDUs:
             logger.info("Starting PDU with class %r" % pdu)
-            pdu_instance = pdu(queue_system=self._queue_system)
+            pdu_instance = pdu(queue_system=self._queue_system, debug=True)
             # Run each PDU on a thread
             pdu_thread = threading.Thread(target=pdu_instance.run, name=('%r' % pdu))
             self._thread_pool.append(pdu_thread)
