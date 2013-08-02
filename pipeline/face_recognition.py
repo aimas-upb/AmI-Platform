@@ -51,20 +51,44 @@ def skybiometry_recognition(image_dict):
         response = api.faces_recognize('all', image_url,
                                        namespace=SKYBIOMETRY_NAMESPACE)
 
-        # Matches example:
-        # [{u'confidence': 100, u'uid': u'diana@amilab-test2'},
-        #  {u'confidence': 48, u'uid': u'andrei@amilab-test2'}]
-        matches = response['photos'][0]['tags'][0]['uids']
-        logger.info("Received recognized faces from SkyBiometry API %r" %
-                    matches)
-
         # os.remove(str(image_path))
         # logger.info("Removed image from disk (%s)" % str(temp_path))
 
-        return matches
-    except Exception as e:
+        # Matches example:
+        # [{u'confidence': 100, u'uid': u'diana@amilab-test2'},
+        #  {u'confidence': 48, u'uid': u'andrei@amilab-test2'}]
+        logger.debug("Response from SkyBiometry: %r" % response)
+        tags = response['photos'][0]['tags']
+        if tags:
+            matches = tags[0]['uids']
+            logger.info("Received recognized faces from SkyBiometry API %r" %
+                        matches)
+            return to_dict(matches)
+        else:
+            return {}
+
+    except:
         logger.exception("Failed to recognize faces via SkyBiometry API")
         return {}
+
+
+def to_dict(matches):
+    """Transforms SkyBiometry matches format to dictionary.
+
+    Example:
+        from:
+            [{u'confidence': 70, u'uid': u'diana@amilab-test2'},
+            {u'confidence': 52, u'uid': u'andrei@amilab-test2'}]
+        to:
+            {u'diana@amilab-test2': 70,
+             u'andrei@amilab-test2': 52}
+    """
+    result = {}
+
+    for match in matches:
+        result.update({match['uid']: match['confidence']})
+
+    return result
 
 
 class FaceRecognition(ParallelPDU):
