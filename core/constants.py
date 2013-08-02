@@ -1,6 +1,10 @@
 import os
 PROJECT_PATH = os.path.dirname(os.path.dirname(__file__))
 
+SKYBIOMETRY_NAMESPACE = 'amilab-test2'
+SKYBIOMETRY_API_KEY = '711d297cb9a04301a97ef06d33916fae'
+SKYBIOMETRY_API_SECRET = '3c989bc2209e47f2aecba4ef116cec58'
+
 SECONDS_IN_DAY = 24 * 60 * 60
 
 JOINTS = ["head", "neck", "left_shoulder", "left_hand", "left_knee",
