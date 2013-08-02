@@ -23,10 +23,10 @@ class TestFaceRecognition(TestCase):
 
     @patch.object(SessionStore, 'set')
     def test_send_message_to_redis_recognized_face(self, session_store_mock):
-        orig_fn = face_recognition.betaface_recognition
-        face_recognition.betaface_recognition = get_matches
+        orig_fn = face_recognition.skybiometry_recognition
+        face_recognition.skybiometry_recognition = get_matches
 
-        pdu = FaceRecognition()
+        pdu = FaceRecognition(debug=True)
         message = FaceRecognitionFactory()
         pdu.process_message(message)
         time.sleep(MAX_WAIT)
@@ -39,7 +39,7 @@ class TestFaceRecognition(TestCase):
         info = {'person_name':  person_name}
 
         session_store_mock.assert_called_once_with(sid, t, info)
-        face_recognition.betaface_recognition = orig_fn
+        face_recognition.skybiometry_recognition = orig_fn
 
 
 def get_matches(_):
