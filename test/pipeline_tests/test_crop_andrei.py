@@ -17,7 +17,7 @@ class TestCrop(PipelineTest):
 
     PDUs = [Router, HeadCrop]
     DATA_FILE = '%s/dumps/andrei.txt' % PROJECT_PATH
-    NB_MIN_EXPECTED_FACES = 10
+    NB_MIN_EXPECTED_FACES = 1
     DELAY_UNTIL_MESSAGES_PROPAGATE = 30
 
     @attr('pipeline', 'slow')
