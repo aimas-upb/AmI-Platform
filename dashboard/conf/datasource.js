@@ -22,7 +22,7 @@ App.DataSourceConfig = {
             },
             '/sessions': {
                 type: 'api',
-                url: App.general.FRONTEND_URL + '/sessions/{{type}}?N=100',
+                url: App.general.FRONTEND_URL + '/sessions/{{type}}?N=100&max_age=30',
                 refresh: 'periodic',
                 refresh_interval: 3000
             },
