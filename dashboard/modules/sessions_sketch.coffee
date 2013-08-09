@@ -34,9 +34,17 @@ define ['cs!widget/trace_sketch'], (TraceSketch) ->
                         created_at: measurement.time
                     )
 
+        setup: ->
+            super(arguments...)
+            @courier_new = @loadFont("Courier New")
+            @textFont(@courier_new, 30)
+
         draw: ->
             @background(255, 255, 255)
             @drawRoomWalls()
+
+            @stroke(0)
+            @text("Number of sessions: #{_.keys(@widget.sessions).length}", 200, 30 + @widget.BORDER_Y)
 
             COLORS = [Constants.RED, Constants.PURPLE, Constants.BLUE,
                       Constants.GREEN, Constants.ORANGE]
