@@ -24,7 +24,7 @@ App.DataSourceConfig = {
                 type: 'api',
                 url: App.general.FRONTEND_URL + '/sessions/{{type}}?N=100',
                 refresh: 'periodic',
-                refresh_interval: 10000
+                refresh_interval: 3000
             },
         },
 };
