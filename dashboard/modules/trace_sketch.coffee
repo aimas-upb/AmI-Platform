@@ -9,6 +9,9 @@ define ['cs!widget/sketch'], (Sketch) ->
                                ['/kinect1', '/kinect2', '/kinect3',
                                 '/kinect4', '/kinect5']}
 
+        ROOM_WIDTH_PX: 941
+        ROOM_HEIGHT_PX: 485
+
         # Viewport dimensions: the room is supposed to be WIDTH x HEIGHT
         # in room coordinates, with a border around in order to account for
         # cases when Kinect coordinates are a little off.
@@ -53,8 +56,8 @@ define ['cs!widget/sketch'], (Sketch) ->
             ###
                 Convert a 3D point from room coordinates to screen coordinates.
             ###
-            return [@widget.BORDER_X + Math.floor(point['X'] / 10),
-                    @widget.BORDER_Y + Math.floor(point['Z'] / 10)]
+            return [@widget.BORDER_X + Math.floor(point['X'] * @widget.WIDTH / (10.0 * @widget.ROOM_WIDTH_PX)),
+                    @widget.BORDER_Y + Math.floor(point['Z'] * @widget.HEIGHT / (10.0 * @widget.ROOM_HEIGHT_PX))]
 
         setup: ->
             @frameRate(25)
@@ -94,6 +97,7 @@ define ['cs!widget/sketch'], (Sketch) ->
             ###
             now = Utils.now()
             @fill(drawing_color...)
+            @stroke(drawing_color...)
             @prevPoint = null
 
             for point in trajectory
