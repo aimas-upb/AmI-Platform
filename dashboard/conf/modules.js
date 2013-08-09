@@ -9,6 +9,7 @@ App.the_modules = {
     'widget/trace': 'modules/trace',
     'widget/session_store': 'modules/session_store',
     'widget/sketch': 'modules/sketch',
+    'widget/trace_sketch': 'modules/trace_sketch',
     'widget/DashboardController': 'modules/dashboard_controller',
     'widget/SessionsController': 'modules/sessions_controller',
     'widget/TraceController': 'modules/trace_controller',
