@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 import logging
 import random
@@ -70,7 +71,8 @@ class SessionStore(object):
     def get_all_sessions_with_measurements(self,
                                            N=100,
                                            keys=['subject_position', 'time'],
-                                           max_sessions=None):
+                                           max_sessions=None,
+                                           max_age=None):
         """ Retrieve all the sessions with their last N measurements which have
         keys specified as a parameter. If there are less than N measurements
         with this property, all of them will be returned.
@@ -83,39 +85,127 @@ class SessionStore(object):
         sessions = self.get_all_sessions()
         if max_sessions is not None:
             sessions = sessions[:max_sessions]
-        return {sid: self.get_session_measurements(sid, keys, N, True)
-                for sid in sessions}
 
-    def get_session_times(self, sid):
-        """ Returns the list of times within a session, sorted descending. """
-        return [int(x) for x in self.redis.zrevrange('stimes:%s' % sid, 0, -1)]
+        # Fetch at most 2*N measurements for each session to try and find
+        # at least N measurements that have the given keys. If we don't get
+        # lucky, that's just too bad, it's too complicated to do it otherwise.
+        return self.get_sessions_measurements(sessions, keys, 2*N, True,
+                                              max_age=max_age)
 
-    def get_session_measurements(self, sid, properties=[],
-                                 N=None, ignore_if_missing=False):
-        """ Returns the values of the specified properties for all
-        measurements of this session as list of dicts. """
+    def get_sessions_times(self, session_ids, max_age=None):
+        """ Given a set of session_ids, retrieve a dictionary mapping each
+        session_id to its list of timestamps. """
 
-        result = []
-        for t in self.get_session_times(sid):
-            measurement = self.get_session_measurement(sid, t, properties)
-            add_to_result = True
+        pipeline = self.redis.pipeline()
+        for session_id in session_ids:
+            pipeline.zrevrange('stimes:%s' % session_id, 0, -1)
+        pipeline_results = pipeline.execute()
+
+        # Fetch raw result and convert ints to native values instead of strings
+        # (this is an implicit conversion done by Redis)
+        raw_result = dict(zip(session_ids, pipeline_results))
+        for session_id, times in raw_result.iteritems():
+            raw_result[session_id] = [int(t) for t in times]
+
+        # If we don't care whether the sessions should contain fresh data or
+        # not, then we return the result "as is".
+        if max_age is None:
+            return raw_result
+
+        # Otherwise, we will filter the times for a session and leave only
+        # those which are "recent enough". Furthermore, if a session has no
+        # recent measurement, it will be left out completely.
+        filtered_result = {}
+        oldest_acceptable_timestamp = int((time.time() - max_age) * 1000)
+        dropped = 0
+        total = 0
+        for session_id, times in raw_result.iteritems():
+            filtered_times = [t for t in times
+                              if t >= oldest_acceptable_timestamp]
+            # Only keep the session if it has at least one fresh measurement
+            if filtered_times:
+                filtered_result[session_id] = filtered_times
+
+            # Compute total measurements fetched & how many we are dropping
+            dropped += len(times) - len(filtered_times)
+            total += len(times)
+
+        logger.info("DROPPED %d measurements out of %d because "
+                    "they were too old" % (dropped, total))
+        return filtered_result
+
+    def get_sessions_measurements(self, session_ids, properties=[], N=100,
+                                  ignore_if_missing=False, max_age=None):
+        """ Given a set of session_ids, retrieve a dictionary mapping each
+        session ids to a list of measurements.
+
+        We also retrieve only a number of at most N measurements per session,
+        out of practical reasons: there can be arbitrarily many measurements
+        in a session, and the measurements we're looking for can be arbitrarily
+        sparse. This would complicate getting all the measurements via a
+        Redis pipeline, because getting a batch could potentially not be enough.
+
+        """
+
+        # Fetch the session times for all our sessions. This might filter out
+        # some sessions completely if they don't contain any fresh measurement.
+        sessions_times = self.get_sessions_times(session_ids, max_age)
+
+        # Setup a pipeline of commands to either get the measurements completely
+        # or only get the selected fields of them via hmget(). Getting a few
+        # selected fields is useful because measurements might have huge
+        # fields such as images.
+        pipeline = self.redis.pipeline()
+        result_keys = []
+        result = defaultdict(list)
+        for session_id, times in sessions_times.iteritems():
+            for t in times[:N]:
+                result_keys.append((session_id, t))
+                measurement_key = _hash_name(session_id, t)
+                if not properties:
+                    pipeline.hgetall(measurement_key)
+                else:
+                    pipeline.hmget(measurement_key, properties)
+        pipeline_result = pipeline.execute()
+        logger.info("GOT %d results from Redis pipeline for %d sessions" %
+                    (len(pipeline_result), len(sessions_times.keys())))
+
+
+        # For each requested measurement, we optionally check if it has
+        # the requested fields and add it to the final result.
+        for ((session_id, t), packed_measurement) in zip(result_keys, pipeline_result):
+
+            # If we only requested a few selected fields for the measurement,
+            # hmget() returns a list of values instead of a dict, so we need
+            # to turn it back into a dict.
+            if properties:
+                packed_measurement = dict(zip(properties, packed_measurement))
+
+            # Skip this measurement if we already have what we need for
+            # the session_id in question.
+            if N is not None and len(result[session_id]) >= N:
+                continue
+
+            # Unpack JSON fields into dicts
+            measurement = _unpack_dict_values(packed_measurement)
 
             # If we should ignore measurements who don't have all the
             # mentioned properties, check the current measurement - if it has
             # everything we need or not.
+            add_to_result = True
             if ignore_if_missing:
                 for prop in properties:
                     if (prop not in measurement) or measurement[prop] is None:
                         add_to_result = False
 
             if add_to_result:
-                result.append(measurement)
-
-                # Make sure to limit the number of results if this is desired
-                if (N is not None) and len(result) == N:
-                    break
+                result[session_id].append(measurement)
 
         return result
+
+    def get_session_times(self, sid):
+        """ Returns the list of times within a session, sorted descending. """
+        return [int(x) for x in self.redis.zrevrange('stimes:%s' % sid, 0, -1)]
 
     def remove_session(self, sid):
         """ Remove a session completely. """

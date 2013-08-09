@@ -50,7 +50,7 @@ class SessionsStoreTest(TestCase):
         ok_(set(sessions) == set(['ts1', 'ts2']), "Sessions must match")
 
         #test to see if
-        s1props = self.store.get_session_measurements('ts1', ['p1'])
+        s1props = self.store.get_sessions_measurements(['ts1'], ['p1']).values()[0]
         s1p1 = [x['p1'] for x in s1props if x['p1'] is not None]
         ok_(set(['1-1-p1', '1-2-p1']) == set(s1p1), "Props must match")
 
@@ -58,7 +58,7 @@ class SessionsStoreTest(TestCase):
         eq_(3, len(s1times), "Expecting 3 times")
         eq_([30,20,10], s1times, "Times must match")
 
-        s2props = self.store.get_session_measurements('ts2', ['time'])
+        s2props = self.store.get_sessions_measurements(['ts2'], ['time']).values()[0]
         s2times = [int(x['time']) for x in s2props]
 
         eq_(1, len(s2times), "Expecting 1 times")
