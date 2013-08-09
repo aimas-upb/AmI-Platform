@@ -5,8 +5,11 @@ App.main_modules = App.main_modules || {};
 App.the_modules = {
     'constants': 'modules/constants',
     'widget/image': 'modules/image',
+    'widget/image_sketch': 'modules/image_sketch',
     'widget/trace': 'modules/trace',
     'widget/session_store': 'modules/session_store',
+    'widget/sketch': 'modules/sketch',
+    'widget/trace_sketch': 'modules/trace_sketch',
     'widget/DashboardController': 'modules/dashboard_controller',
     'widget/SessionsController': 'modules/sessions_controller',
     'widget/TraceController': 'modules/trace_controller',
