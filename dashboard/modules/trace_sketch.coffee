@@ -98,7 +98,8 @@ define ['cs!widget/sketch'], (Sketch) ->
 
             for point in trajectory
                 # Skip the point completely if it's too old
-                age = Math.max(now - parseInt(point['created_at']) / 1000.0, 0)
+                created_at = parseInt(point['created_at']) / 1000.0
+                age = Math.max(now - created_at, 0) # Account for future points
                 if age > @widget.MAX_POINT_AGE
                     continue
 
@@ -113,10 +114,9 @@ define ['cs!widget/sketch'], (Sketch) ->
                 # is to make it more obvious if we're sampling measurements
                 # too rarely for some time intervals and sensors. It will
                 # display a big long line which looks nasty in this case :)
-                if @prevPoint
+                if @prevPoint and Math.abs(created_at - @prevPoint.created_at) < 2
                     @line(@prevPoint.x, @prevPoint.y, x, y)
-                @prevPoint = {x: x, y: y}
-
+                @prevPoint = {x: x, y: y, created_at: created_at}
             @noFill()
 
         draw: ->
