@@ -57,7 +57,7 @@ define ['cs!widget/sketch'], (Sketch) ->
                     @widget.BORDER_Y + Math.floor(point['Z'] / 10)]
 
         setup: ->
-            @frameRate(5)
+            @frameRate(25)
             @size(@widget.WIDTH + 2 * @widget.BORDER_X,
                   @widget.HEIGHT + 2 * @widget.BORDER_Y)
             @colorMode(@RGB, 255)
