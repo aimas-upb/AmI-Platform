@@ -97,6 +97,7 @@ define ['cs!widget/sketch'], (Sketch) ->
             ###
             now = Utils.now()
             @fill(drawing_color...)
+            @stroke(drawing_color...)
             @prevPoint = null
 
             for point in trajectory
