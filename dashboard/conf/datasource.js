@@ -18,7 +18,7 @@ App.DataSourceConfig = {
                 type: 'api',
                 url: App.general.FRONTEND_URL + '/latest_subject_positions/{{sensor_id}}',
                 refresh: 'periodic',
-                refresh_interval: 1
+                refresh_interval: 100
             },
             '/sessions': {
                 type: 'api',
