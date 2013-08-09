@@ -1,3 +1,4 @@
+from collections import defaultdict, Counter
 import json
 import logging
 import random
@@ -83,21 +84,58 @@ class SessionStore(object):
         sessions = self.get_all_sessions()
         if max_sessions is not None:
             sessions = sessions[:max_sessions]
-        return {sid: self.get_session_measurements(sid, keys, N, True)
-                for sid in sessions}
 
-    def get_session_times(self, sid):
-        """ Returns the list of times within a session, sorted descending. """
-        return [int(x) for x in self.redis.zrevrange('stimes:%s' % sid, 0, -1)]
+        # Fetch at most 2*N measurements for each session to try and find
+        # at least N measurements that have the given keys. If we don't get
+        # lucky, that's just too bad, it's too complicated to do it otherwise.
+        return self.get_sessions_measurements(sessions, keys, 2*N, True)
 
-    def get_session_measurements(self, sid, properties=[],
-                                 N=None, ignore_if_missing=False):
-        """ Returns the values of the specified properties for all
-        measurements of this session as list of dicts. """
+    def get_sessions_times(self, session_ids):
+        """ Given a set of session_ids, retrieve a dictionary mapping each
+        session_id to its list of timestamps. """
 
-        result = []
-        for t in self.get_session_times(sid):
-            measurement = self.get_session_measurement(sid, t, properties)
+        pipeline = self.redis.pipeline()
+        for session_id in session_ids:
+            pipeline.zrevrange('stimes:%s' % session_id, 0, -1)
+        pipeline_results = pipeline.execute()
+        return dict(zip(session_ids, pipeline_results))
+
+    def get_sessions_measurements(self, session_ids, properties=[], N=100,
+                                  ignore_if_missing=False):
+        """ Given a set of session_ids, retrieve a dictionary mapping each
+        session ids to a list of measurements.
+
+        We also retrieve only a number of at most N measurements per session,
+        out of practical reasons: there can be arbitrarily many measurements
+        in a session, and the measurements we're looking for can be arbitrarily
+        sparse. This would complicate getting all the measurements via a
+        Redis pipeline, because getting a batch could potentially not be enough.
+
+        """
+        sessions_times = self.get_sessions_times(session_ids)
+        pipeline = self.redis.pipeline()
+        result_keys = []
+        result = defaultdict(list)
+        for session_id, times in sessions_times.iteritems():
+            for t in times[:N]:
+                result_keys.append((session_id, t))
+                measurement_key = _hash_name(session_id, t)
+                if not properties:
+                    pipeline.hgetall(measurement_key)
+                else:
+                    pipeline.hmget(measurement_key, properties)
+        pipeline_result = pipeline.execute()
+        print "GOT %d results from Redis pipeline for %d sessions" % (len(pipeline_result), len(session_ids))
+        for ((session_id, t), packed_measurement) in zip(result_keys, pipeline_result):
+            if properties:
+                packed_measurement = dict(zip(properties, packed_measurement))
+
+            # Skip this measurement if we already have what we need for
+            # the session_id in question.
+            if N is not None and len(result[session_id]) >= N:
+                continue
+
+            measurement = _unpack_dict_values(packed_measurement)
             add_to_result = True
 
             # If we should ignore measurements who don't have all the
@@ -109,13 +147,12 @@ class SessionStore(object):
                         add_to_result = False
 
             if add_to_result:
-                result.append(measurement)
-
-                # Make sure to limit the number of results if this is desired
-                if (N is not None) and len(result) == N:
-                    break
-
+                result[session_id].append(measurement)
         return result
+
+    def get_session_times(self, sid):
+        """ Returns the list of times within a session, sorted descending. """
+        return [int(x) for x in self.redis.zrevrange('stimes:%s' % sid, 0, -1)]
 
     def remove_session(self, sid):
         """ Remove a session completely. """
