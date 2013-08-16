@@ -10,7 +10,7 @@ package { "git":
 vcsrepo { "/home/ami/AmI-Platform":
     ensure   => present,
     provider => git,
-    source   => "git@github.com:ami-lab/AmI-Platform.git",
+    source   => "git://github.com/ami-lab/AmI-Platform.git",
     user     => "ami",
     require  => Package["git"], User["ami"],
 }
