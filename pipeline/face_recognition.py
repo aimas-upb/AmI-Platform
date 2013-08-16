@@ -22,7 +22,8 @@ def betaface_recognition(image_dict):
 
         image_path = save_image(image_dict['head_image']['image'],
                                 int(image_dict['head_image']['width']),
-                                int(image_dict['head_image']['height']))
+                                int(image_dict['head_image']['height']),
+                                prefix="FR_")
 
         matches = api.recognize_faces(image_path, 'amilab.ro')
         logger.info("Received recognized faces from BetaFace API %r" % matches)
@@ -45,7 +46,8 @@ def skybiometry_recognition(image_dict):
 
         local_path = save_image(image_dict['head_image']['image'],
                                 int(image_dict['head_image']['width']),
-                                int(image_dict['head_image']['height']))
+                                int(image_dict['head_image']['height']),
+                                prefix="FR_")
         image_url = upload_to_s3(local_path)
 
         response = api.faces_recognize('all', image_url,
