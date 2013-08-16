@@ -12,5 +12,6 @@ vcsrepo { "/home/ami/AmI-Platform":
     provider => git,
     source   => "git://github.com/ami-lab/AmI-Platform.git",
     user     => "ami",
-    require  => Package["git"], User["ami"],
 }
+
+User["ami"] -> Package["git"] -> Vcsrepo["/home/ami/AmI-Platform"]
