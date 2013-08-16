@@ -4,6 +4,7 @@ from mongoengine import connect
 
 from core import PDU, settings
 from lib.log import setup_logging
+from lib.s3 import save_image
 from models.experiment import Experiment
 
 
@@ -31,6 +32,12 @@ class Router(PDU):
         # Images & skeletons should be sent to head-crop
         if message['type'] in ['image_rgb', 'skeleton']:
             self.send_to('head-crop', message)
+
+        if message['type'] == 'image_rgb':
+            save_image(message['image_rgb']['image'],
+                       int(message['image_rgb']['width']),
+                       int(message['image_rgb']['height']),
+                       prefix='RAW_', decoder_name='jpg')
 
         # If there is at least one active experiment, send them to
         # recorder. Otherwise, prevent bandwidth waste :)
