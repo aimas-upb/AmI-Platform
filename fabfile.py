@@ -147,9 +147,9 @@ def provision_machine(manifest='node.pp'):
 
     # we are running masterless puppet to simplifiy automatic setup and teardown
     run('sudo apt-get -y install puppet')
-    run('puppet module install puppetlabs/vcsrepo')
-    run('puppet module install maestrodev/ssh_keygen')
+    run('sudo puppet module install puppetlabs/vcsrepo')
+    run('sudo puppet module install maestrodev/ssh_keygen')
 
     # TODO (fetch puppet bootstrap file and apply, fetch repo and apply)
     run('cd /tmp; wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/bootstrap.pp')
-    run('puppet apply /tmp/bootstrap.pp')
+    run('sudo puppet apply /tmp/bootstrap.pp')
