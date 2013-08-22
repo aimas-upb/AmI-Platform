@@ -153,4 +153,4 @@ def provision_machine(manifest='node.pp'):
 
     # TODO (fetch puppet bootstrap file and apply, fetch repo and apply)
     run('cd /tmp; wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/bootstrap.pp')
-    run('puppet apply /tmp/bootstrap.pp')
+    run('sudo puppet apply /tmp/bootstrap.pp')
