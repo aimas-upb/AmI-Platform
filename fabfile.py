@@ -120,23 +120,22 @@ def open_and_provision_machine(machine_type='m1.small',
     reservation = ec2.run_instances(image_id=ami_id, security_group_ids=['sg-82df60e9'], key_name='ami-keypair')
     print("Created reservation for 1 instance: %r" % reservation)
 
-    machine_ready = False
-    public_hostname = None
-    while not machine_ready:
-        reservations = ec2.get_all_instances()
-        for existing_reservation in reservations:
-            if existing_reservation.id == reservation.id:
-                if existing_reservation.instances[0].public_dns_name:
-                    machine_ready = True
-                    public_hostname = existing_reservation.instances[0].public_dns_name
+    instance = reservation.instances[0]
+    status = instance.update()
+    while status == 'pending':
         print("Waiting for another 10 seconds for machine to show up..")
         time.sleep(10)
+        status = instance.update()
+
+    if status != 'running':
+        print("Machine didn't start OK, status = %s" % status)
+        return
 
     print("Giving the SSH daemon the opportunity to start up and stuff..")
     time.sleep(30)
 
     with settings(user='ubuntu', key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('provision_machine', host=public_hostname)
+        execute('provision_machine', host=instance.public_dns_name)
 
 @task
 def provision_machine(manifest='node.pp'):
@@ -149,6 +148,8 @@ def provision_machine(manifest='node.pp'):
     run('sudo apt-get -y install puppet')
     run('sudo puppet module install puppetlabs/vcsrepo')
     run('sudo puppet module install maestrodev/ssh_keygen')
+    run('sudo puppet module install thomasvandoren/redis')
+    run('sudo puppet module install maestrodev/wget')
 
     # TODO (fetch puppet bootstrap file and apply, fetch repo and apply)
     run('cd /tmp; wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/bootstrap.pp')
