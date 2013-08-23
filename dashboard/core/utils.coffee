@@ -53,6 +53,13 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
                                           and ignored when using a container
                     - (object) modalParams A different set of params for the modal
                                            widget itself
+                    - (Boolean) wrappedInject The widgets need to be wrapped in
+                                        an additional container. This feature
+                                        is used when removing from list those
+                                        widgets not visible in viewport. This
+                                        wrapper will help to retain the space
+                                        ocuppied by the widget before was
+                                        removed from DOM
                     - (string) placement Method of injecting:
                         - replace: Inside container, replaces its current contents
                         - before - Outside container, before it
@@ -104,21 +111,28 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
             # Return created widget DOM element on success
             return node
 
-        buildDomElement: (type, id, classes, data) ->
+        buildDomElement: (type, id, classes, data, wrappedInject) ->
             ###
                 Build DOM element based on a specified type, id, list of
                 classes and a data dict. Only the type is required.
             ###
-            node = $("<#{type}></#{type}>")
-            node.attr('id', id) if id
-            node.attr('class', classes) if classes
+            if wrappedInject
+                $injected_element = $("<#{type}><div></div></#{type}>")
+                $widget_node = $injected_element.children(":first")
+            else
+                $widget_node = $("<#{type}></#{type}>")
+                $injected_element = $widget_node
+
+            $widget_node.attr('id', id) if id
+            $widget_node.attr('class', classes) if classes
             unless _.isEmpty(data)
                 for k, v of data
                     # Strings get an extra set of quotes when they get
                     # stringified, so we should only stringify objects
                     v = JSON.stringify(v) if _.isObject(v)
-                    node.attr("data-#{k}", v)
-            return node
+                    $widget_node.attr("data-#{k}", v)
+
+            return $injected_element
 
         onWidgetRender: (widgetName, parentWidget, onRender) ->
             ###
@@ -143,9 +157,11 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
             pipe = loader.get_module('pubsub')
             f = (widget_id, widget_name) =>
                 widget = loader.widgets[widget_id]
+                # Weirdly enough, the widget might've been already removed
+                return unless widget?
                 return if widgetName and widget_name isnt widgetName
                 return if parentWidget and
-                          not parentWidget.view?.$el.has(widget.view.$el).length
+                          not parentWidget.view?.$el.has(widget.view?.$el).length
 
                 # This handler can be removed automatically by returning true
                 # from inside the callback function
@@ -537,7 +553,7 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
             data = options.data or {}
             data.widget = options.name
             data.params = options.params or {}
-            node = @buildDomElement(type, id, classes, data)
+            node = @buildDomElement(type, id, classes, data, options.wrappedInject)
 
         getControllerContainer: -> $('#controller-container')
 
