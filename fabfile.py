@@ -138,7 +138,7 @@ def open_and_provision_machine(machine_type='m1.small',
         execute('provision_machine', host=instance.public_dns_name)
 
 @task
-def provision_machine(manifest='node.pp'):
+def provision_machine(manifest='crunch_01.pp'):
     # http://docs.puppetlabs.com/guides/puppetlabs_package_repositories.html#for-debian-and-ubuntu
     run('cd /tmp; wget http://apt.puppetlabs.com/puppetlabs-release-precise.deb')
     run('sudo dpkg -i /tmp/puppetlabs-release-precise.deb')
@@ -146,11 +146,19 @@ def provision_machine(manifest='node.pp'):
 
     # we are running masterless puppet to simplifiy automatic setup and teardown
     run('sudo apt-get -y install puppet')
-    run('sudo puppet module install puppetlabs/vcsrepo')
-    run('sudo puppet module install maestrodev/ssh_keygen')
-    run('sudo puppet module install thomasvandoren/redis')
-    run('sudo puppet module install maestrodev/wget')
+    run('sudo puppet module install -f puppetlabs/vcsrepo')
+    run('sudo puppet module install -f maestrodev/ssh_keygen')
+    run('sudo puppet module install -f thomasvandoren/redis')
+    run('sudo puppet module install -f maestrodev/wget')
 
-    # TODO (fetch puppet bootstrap file and apply, fetch repo and apply)
+    # Fetch puppet config file - most notable change is modulepath which points
+    # to local repo dir as well.
+    run('cd /etc/puppet; wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/puppet.conf')
+
+    # Fetch & apply bootstrap manifest - fetch the repo with the rest of the
+    # manifests in the correct dir with the correct permissions.
     run('cd /tmp; wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/bootstrap.pp')
     run('sudo puppet apply /tmp/bootstrap.pp')
+
+    # Run the actual manifest for provisioning this node from the repo
+    run("sudo puppet apply /home/ami/AmI-Platform/provisioning/nodes/%s" % manifest)
