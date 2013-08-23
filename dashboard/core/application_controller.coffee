@@ -1,4 +1,4 @@
-define ['cs!layout', 'cs!mozaic_module'], (Layout, Module) ->
+define ['cs!layout', 'cs!mozaic_module', 'cs!channels_utils'], (Layout, Module, channels_utils) ->
     injectControllerInterval = null
 
     class ApplicationController extends Module
@@ -11,8 +11,8 @@ define ['cs!layout', 'cs!mozaic_module'], (Layout, Module) ->
         initialize: =>
 
         renderLayout: (layout_params = {}, stringify = true) =>
-            @layout = new Layout(@page_template, layout_params)
-            @layout.renderHTML(null, stringify)
+            layout = new Layout(@page_template, layout_params)
+            layout.renderHTML(null, stringify)
 
         action: (controller, params, injectControllerCallback, deleteControllerCallback) =>
             @renderLayout()
@@ -27,7 +27,6 @@ define ['cs!layout', 'cs!mozaic_module'], (Layout, Module) ->
                 application controller.
             ###
             modules = ['cs!datasource', 'cs!loading_animation', 'cs!modal_window']
-            if App.general.ENABLE_PROFILING then modules.push 'cs!profiler'
             return modules
 
         injectController: (new_controller_config, controller_params) =>
@@ -54,7 +53,9 @@ define ['cs!layout', 'cs!mozaic_module'], (Layout, Module) ->
                                 config: new_controller_config
                                 url_params: url_params
                                 template_name: new_controller_config.layout
-                                channels: @controller_channels
+                                # By defaults controllers receive all global
+                                # channels as they're interested in them.
+                                channels: channels_utils.getAllGlobalChannels()
                             _.extend(controller_params, extra_params)
 
                             # Scroll to the top of the viewport before injecting

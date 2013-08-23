@@ -21,6 +21,7 @@ define ['cs!channels_utils'], (channels_utils) ->
 
             pipe = loader.get_module('pubsub')
             pipe.publish('/add', translated_channel, dict)
+            return null
 
         modifyChannel: (channel, dict, options = {}) ->
             ###
@@ -82,7 +83,7 @@ define ['cs!channels_utils'], (channels_utils) ->
 
             pipe = loader.get_module('pubsub')
             pipe.publish('/modify', replaced_channel, dict, _.pick(options, 'update_mode','sync','silent', 'filter'))
-
+            return null
 
         deleteChannel: (channel, options = {sync: true}) ->
             ###
@@ -97,6 +98,7 @@ define ['cs!channels_utils'], (channels_utils) ->
 
             pipe = loader.get_module('pubsub')
             pipe.publish('/delete', translated_channel, options)
+            return null
 
         scrollChannel: (channel) ->
             ###
@@ -107,6 +109,7 @@ define ['cs!channels_utils'], (channels_utils) ->
 
             pipe = loader.get_module('pubsub')
             pipe.publish('/scroll', [translated_channel])
+            return null
 
         refreshChannel: (channel, params = null, already_translated = false) ->
             ###
@@ -119,6 +122,7 @@ define ['cs!channels_utils'], (channels_utils) ->
                 dict = {}
                 dict[channel] = params
                 @refreshChannels(dict, already_translated)
+            return null
 
         refreshChannels: (channels, already_translated = false) ->
             ###
@@ -147,6 +151,7 @@ define ['cs!channels_utils'], (channels_utils) ->
                         translated_channels[@channel_mapping[k]] = v
                 pipe = loader.get_module('pubsub')
                 pipe.publish('/refresh', translated_channels)
+            return null
 
         subscribeToChannel: (channel, type, params) =>
             ###
@@ -172,6 +177,9 @@ define ['cs!channels_utils'], (channels_utils) ->
 
             # Prevent widgets from subscribing 2 times to the same
             # channel. The behaviour is unpredictable in this case.
+            # However, we do support use-cases like this:
+            #
+            # subscribed_channels: ['/mentions', '/mentions/123']
             if _.contains(@subscribed_channels, channel)
                 logger.warn("Widget #{@params.widget_id} is already " +
                             "subscribed to #{channel}")

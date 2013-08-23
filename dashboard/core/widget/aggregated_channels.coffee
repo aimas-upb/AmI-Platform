@@ -15,7 +15,10 @@ define ['cs!channels_utils'], (channels_utils) ->
                 has been initialized with id = 123 in its parameters, and there
                 is a data channel "mention/{{id}}", this will return "mention/123".
             ###
-            (@replaceTokensWithParams(channel) for channel in @subscribed_channels)
+            result = []
+            for channel in @subscribed_channels
+                result.push(@replaceTokensWithParams(channel))
+            return result
 
         _getTranslatedSubscribedChannels: ->
             new_channels = channels_utils.translateChannels(@subscribed_channels, @channel_mapping)
@@ -111,7 +114,7 @@ define ['cs!channels_utils'], (channels_utils) ->
             channel_callbacks = {}
             for channel in channels
                 channel_key = channels_utils.getChannelKey(channel)
-                channel_callbacks[channel] = channels_utils.widgetMethodForChannel(@, channel_key)
+                channel_callbacks[channel] = channels_utils.widgetMethodForChannel(channel_key)
 
             for channel, channel_callback of channel_callbacks
                 do(channel_callbacks, channel, channel_callback, key) =>

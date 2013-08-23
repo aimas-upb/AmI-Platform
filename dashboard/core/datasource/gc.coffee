@@ -80,10 +80,25 @@ define ['cs!channels_utils'], (channels_utils) ->
                 delete @data[channel].buffer.collection
                 @data[channel].buffer.off()
                 delete @data[channel].buffer
+            # Unbind individual models from a collection from all widgets.
+            # This is only a sanity check, because all the widgets should be
+            # already unbound.
+            if @data[channel].models?
+                for model in @data[channel].models
+                    model.off()
+            # If the underlying channel supports this operation, empty it.
+            # For relational channels, this means that the collection is emptied
+            # and the collection is unbound from the model events (remember,
+            # a collection is subscribed to widget events via _onModelEvent).
+            if @data[channel].reset?
+                @data[channel].reset([])
             # Unbind all remaining widgets (should be none!)
             @data[channel].off()
             # Throw away reference to the actual data
             delete @data[channel]
+            # Remove any elements from channel_config_options that could
+            # cause a leak.
+            delete @channel_config_options[channel]
 
         checkForUnusedChannels: ->
             ###
@@ -119,10 +134,17 @@ define ['cs!channels_utils'], (channels_utils) ->
                     logger.warn("Couldn't increase count of #{key} " +
                                 "because it was already removed")
                     continue
+                if widget.params.widget_id in @reference_data[key]
+                    logger.warn("Widget #{widget.name} (#{widget.widget_id}) " +
+                                "already subscribed to channel #{key}")
+                    continue
                 # Add reference counter for determining if this channel
                 # is still in use or not
                 @reference_data[key]['reference_count'] ?= 0
                 @reference_data[key]['reference_count'] += 1
+                # Store a direct reference to the widget as well, it helps
+                # debugging and providing more transparency to the datasource
+                @reference_data[key].widgets.push(widget.params.widget_id)
                 # This timestamp allows us to see for how long the channel
                 # has been inactive
                 @reference_data[key]['time_of_reference_expiry'] = null
@@ -141,7 +163,11 @@ define ['cs!channels_utils'], (channels_utils) ->
                                 "because it was already removed")
                     continue
                 @reference_data[channel]['reference_count'] -= 1
-                new_count = @reference_data[channel]['reference_count']
+                # Remove this widget's reference from the channel reference
+                # data because they will no longer be tied together
+                @reference_data[channel].widgets =
+                    _.without(@reference_data[channel].widgets,
+                              widget.params.widget_id)
                 if @reference_data[channel]['reference_count'] == 0
                     @reference_data[channel]['time_of_reference_expiry'] = (new Date).getTime()
 
@@ -154,24 +180,25 @@ define ['cs!channels_utils'], (channels_utils) ->
                 The datasource is responsible for this because it's also
                 responsible for binding the widget to channel events.
             ###
-            for fake_channel, channel of widget.channel_mapping
-                if not (channel of @meta_data)
+            for reference, translated of widget._getTranslatedSubscribedChannels()
+                channel_key = channels_utils.getChannelKey(translated)
+                if not (channel_key of @meta_data)
                     logger.warn('Could not unbind widget from collection ' +
-                                 channel + ' because it was already gone')
+                                 channel_key + ' because it was already gone')
                     continue
 
                 # Start unbinding the widget to the existing channel.
-                widget_method = @_getWidgetMethod(fake_channel, widget)
-                [collection, item, events] = channels_utils.splitChannel(fake_channel)
+                widget_method = @_getWidgetMethod(reference, widget)
+                [collection, item, events] = channels_utils.splitChannel(translated)
 
                 # For relational channel, we have item-level unbinding and
                 # collection-level unbinding, depending on the type of widget
                 # subscription.
-                if @_getType(channel) == 'relational'
+                if @_getType(channel_key) == 'relational'
                     if item == "all"
-                        @data[channel].off(events, widget_method, widget)
+                        @data[channel_key].off(events, widget_method, widget)
                     else
-                        individual_item = @data[channel].get(item)
+                        individual_item = @data[channel_key].get(item)
                         # Here we might have a problem: when resetting a
                         # collection, there is no way to keep references to the
                         # old widgets so that we unbind events from them.
@@ -179,8 +206,10 @@ define ['cs!channels_utils'], (channels_utils) ->
                         # the BaseModel class.
                         if individual_item
                             individual_item.off(events, widget_method, widget)
-                else if @_getType(channel) == 'api'
-                    @data[channel].off(events, widget_method, widget)
+                else if @_getType(channel_key) == 'api'
+                    @data[channel_key].off(events, widget_method, widget)
+
+            widget.removeReferencesToChannelCallbacks()
 
         destroyWidget: (widget_data) ->
             ###

@@ -175,7 +175,10 @@ define ['cs!mozaic_module'], (Module) ->
             # the user gets a bit of extra closure and sees the last instant
             # step of the progress bar filling up, when widgets catch up with
             # the estimated progress
-            $('#loading-animation').fadeOut()
+            if Utils.inPrintMode()
+                $('#loading-animation').hide()
+            else
+                $('#loading-animation').fadeOut()
             clearInterval(@intervalHandle)
             # Update the global "loading" flag from the application once the
             # loading is done
@@ -265,7 +268,7 @@ define ['cs!mozaic_module'], (Module) ->
             ###
             # Clearly we shouldn't wait for widgets if they don't have a
             # template to begin with
-            return true unless widget.template_name?
+            return true unless widget.view?
             # Don't skip any widget in print mode, we need to make sure things
             # are rendered completely when we make the capture
             return false if Utils.inPrintMode()
