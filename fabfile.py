@@ -151,6 +151,5 @@ def provision_machine(manifest='crunch_01.pp'):
     run('sudo puppet module install -f thomasvandoren/redis')
     run('sudo puppet module install -f maestrodev/wget')
 
-    # TODO (fetch puppet bootstrap file and apply, fetch repo and apply)
     run('cd /tmp; wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/bootstrap.pp')
     run('sudo puppet apply /tmp/bootstrap.pp')
