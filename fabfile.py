@@ -138,7 +138,7 @@ def open_and_provision_machine(machine_type='m1.small',
         execute('provision_machine', host=instance.public_dns_name)
 
 @task
-def provision_machine(manifest='node.pp'):
+def provision_machine(manifest='crunch_01.pp'):
     # http://docs.puppetlabs.com/guides/puppetlabs_package_repositories.html#for-debian-and-ubuntu
     run('cd /tmp; wget http://apt.puppetlabs.com/puppetlabs-release-precise.deb')
     run('sudo dpkg -i /tmp/puppetlabs-release-precise.deb')
