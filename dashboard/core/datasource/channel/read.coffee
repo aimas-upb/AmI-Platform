@@ -5,6 +5,63 @@ define ['cs!channels_utils'], (channels_utils) ->
             Includes methods to read from a http endpoint
         ###
 
+        _afterChannelDataArrived: (channel_key, arrived_content, reason='refresh') ->
+            ###
+                This function gets called after data is inserted into a
+                given channel of the datasource.
+
+                The reasons for this getting called can be multiple:
+
+                - an AJAX request triggered via Backbone.Collections.fetch()
+                  has finished (see success callback from
+                  _fetchChannelDataFromServer)
+
+                - channel receives data from "initial data" mechanism, where
+                  you are able to specify initial data that you got from
+                  somewhere else to fill the channel. For example: if you
+                  are displaying a list of tweets, and the API endpoint gives
+                  you the first 2 replies for each tweet, you can create
+                  channels with "initial data" containing those first 2 replies
+
+                - channel receives data from a "brother from another mother",
+                  that is it's a cloned channel and his brother already has
+                  data.
+            ###
+            meta = @meta_data[channel_key]
+
+            # Get the collection that has just received items.
+            #
+            # In the case of streampoll requests, because a stremapoll channel
+            # corresponds to 2 Backbone Collections (the normal one, and the
+            # buffer one) we have to be careful to select the correct collection
+            # on which to run postFetch.
+            collection = @data[channel_key]
+            if reason == 'streampoll'
+                collection = collection.buffer
+
+            # If there are widgets waiting for new items to arrive in the
+            # channel, we will subscribe them to the newly arrived models'
+            # events right now.
+            @_checkForNewlyArrivedAndAwaitedModels(channel_key)
+
+            # If collection has defined a callback for "after data has arrived"
+            # call that too. In Mozaic's case, in base_collection, we define
+            # this callback in order to propagate the "no data" has arrived
+            # event that's missing from Backbone.
+            if _.isFunction(collection.postFetch)
+                collection.postFetch(arrived_content, meta.params)
+
+            if meta.first_time_fetch
+                # Refreshing should only start after data has arrived into the
+                # channel for the first time, regardless of the method of
+                # arrival.
+                @_startRefreshing(channel_key)
+
+            # Since this function is called every time data arrives, make sure
+            # that we don't start refreshing the same channel twice (or any
+            # other operation that depends on the first arrival of data).
+            meta.first_time_fetch = false
+
         _fetchChannelDataFromServer: (channel, reason='refresh', callback=null) ->
             ###
                 Fetch the data for the channel given the params.
@@ -54,12 +111,21 @@ define ['cs!channels_utils'], (channels_utils) ->
                     # Careful - emtpy dict { } evaluates to true in JavaScript!
                     return
 
+                if reason is 'scroll' and _.isEqual(params, meta.last_params)
+                    logger.warn("Already scrolled #{channel} with the same" +
+                                "params")
+                    return
+
+            # Always the last params inside the channel's meta data. Might be
+            # useful for comparison when creating new ones for a new request
+            meta.last_params = params
+
             # If the encode_POST_as_JSON flag is set, instead of URL-encoding
             # the parameters as for normal forms, send them encoded as JSON.
             if conf.fetch_through_POST and conf.encode_POST_as_JSON
                 params_for_fetch = JSON.stringify(params)
             else
-                params_for_fetch = _.clone(params)
+                params_for_fetch = Utils.deepClone params
 
             # Channel has an associated URL. Fetch data from that URL.
             fetch_params =
@@ -89,8 +155,8 @@ define ['cs!channels_utils'], (channels_utils) ->
             # where 'reset' event will cause a bindWidgetToRelationalChannel
             # the step 2 above will find last_fetch null thus leaving the widget empty
             fetch_params.fetched = =>
-                meta.firstTimeFetch = !meta.last_fetch?
-                meta.last_fetch = Utils.now()
+                if reason != 'streampoll'
+                    meta.last_fetch = Utils.now()
 
             # Define success & error functions as wrappers around callback.
             fetch_params.success = (collection, response) =>
@@ -101,30 +167,42 @@ define ['cs!channels_utils'], (channels_utils) ->
                 # collected.
                 return unless @reference_data[channel_key]?
 
-                @_checkForNewlyArrivedAndAwaitedModels(channel_key)
-
-                # Only fill waiting channels the first time this
-                # channel receives data.
-                if meta.firstTimeFetch
-                    @_fillWaitingChannels(channel_key)
                 if reason != 'streampoll'
                     meta.waiting_fetches = meta.waiting_fetches - 1
+                else if @data[channel_key].length is 0
+                    # If the collection is empty flush the buffer
+                    # so directly so you don't end in a situation where
+                    # you have to click "Show new mentions" in order to see
+                    # the first mentions of a stream
+                    @_flushChannelBuffer(channel_key)
 
-                # Call the post fetching callback if the collection
-                # has one set
-                if _.isFunction(collection.postFetch)
-                    collection.postFetch(response)
+                was_first_fetch = meta.first_time_fetch
 
+                # NOTE: we don't really use "xhr" for collection.parse, and
+                # neither does Backbone.js, so we're just leaving it out!
+                @_afterChannelDataArrived(channel_key, collection.parse(response, null), reason)
+
+                # callback should not be moved to _afterChannelDataArrived
+                # because we're only using it right now to re-schedule new
+                # refreshes AFTER an HTTP request. Therefore, it doesn't make
+                # sense to call it after we copy data around.
                 callback(channel_key, true) if callback
-            fetch_params.error = (collection, response) =>
-                # Ignore response if channel was removed in the meantime
-                return unless @reference_data[channel_key]?
-                callback(channel_key, false) if callback
+
+                if was_first_fetch and (not @_getConfig(channel_key).disable_clone)
+                    @_fillWaitingChannels(channel_key)
+
+            if callback
+                #callback defaults to null in about all calls (just one call
+                #sets a value).
+                fetch_params.error = (collection, response) =>
+                    # Ignore response if channel was removed in the meantime
+                    return unless @reference_data[channel_key]?
+                    callback(channel_key, false)
 
             # What channel should receive the data we're about to fetch -
             # the original channel, or that channel's buffer?
             # (The first fetch should always be into the real channel).
-            if reason == 'streampoll' and @_getBufferSize(channel) and @meta_data[channel_key].last_fetch?
+            if reason == 'streampoll' and @_getBufferSize(channel)
                 receiving_channel = @data[channel_key].buffer
                 # If the buffer is full, avoid doing any more fetches.
                 if receiving_channel.length >= conf.buffer_size
@@ -184,7 +262,7 @@ define ['cs!channels_utils'], (channels_utils) ->
             ###
             duplicates = @_getChannelDuplicates(channel_guid)
             for dest_channel_guid in duplicates
-                if not @meta_data[dest_channel_guid].last_fetch?
+                if (not @meta_data[dest_channel_guid].last_fetch?) and (@meta_data[dest_channel_guid].waiting_for_cloned_data)
                     # If dest_channel does not yet have data, clone into it
                     # by using this channel as clone source.
                     @_cloneChannel(dest_channel_guid, channel_guid)

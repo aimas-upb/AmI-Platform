@@ -41,14 +41,14 @@ define ['cs!channels_utils'], (channels_utils) ->
             channel_key = channels_utils.getChannelKey(fake_channel)
 
             # Get the method name
-            method_name = channels_utils.widgetMethodForChannel(widget, channel_key)
+            method_name = channels_utils.widgetMethodForChannel(channel_key)
 
             # Wrap callback in order to make sure that the we're always calling
             # the current method for a given key on the widget, since members
             # of a class instance can be overridden dynamically at any point in
             # JavaScript
             if _.isFunction(widget[method_name])
-                return -> widget[method_name](arguments...)
+                return widget[method_name]
             null
 
         _bindWidgetToRelationalChannel: (fake_channel, channel, widget_data) ->

@@ -6,14 +6,16 @@ define [
     'cs!core/widget/params'
     'cs!core/widget/rendering'
     'cs!core/widget/states'
+    'cs!channels_utils'
 ], (
-    Module,
-    WidgetAggregatedChannelsMixin,
-    WidgetBackboneEventsMixin,
-    WidgetChannelsMixin,
-    WidgetParamsMixin,
-    WidgetRenderingMixin,
+    Module
+    WidgetAggregatedChannelsMixin
+    WidgetBackboneEventsMixin
+    WidgetChannelsMixin
+    WidgetParamsMixin
+    WidgetRenderingMixin
     WidgetStatesMixin
+    channels_utils
 ) ->
 
     class Widget extends Module
@@ -103,8 +105,6 @@ define [
             @property {Object} @saved_view - instance of Backbone.View, relevant
                                     for detached widgets, ie. widgets that are
                                     no longer in the DOM.
-            @property {Object} @saved_el - instance of jQuery, again only
-                                    relevant for detached widgets.
             @property {Object} @pre_render - hash of context processors to be
                                     executed _before_ the widget is rendered.
                                     A context processor is a function that
@@ -117,11 +117,6 @@ define [
                                     their parameters to be executed after the
                                     widget has rendered. Examples: tooltip,
                                     tinyscrollbar.
-            @property {Object} @layout - instance of core/layout class.
-
-            @property {Object} @profiler - instance of YUIProfiler class. Does
-                                    what it says on the tin! it's a class and
-                                    function profiler.
             @property {Boolean} @rendered_signal_sent - flag sent right after
                                     publishing `/new_widget_rendered`.
         ###
@@ -160,9 +155,6 @@ define [
         ###
         initial_state: null
 
-        # Singleton instance of class Profiler. Available for all Widgets.
-        profiler: loader.get_module('profiler')
-
         # Set this to true to only trigger changeState() whenever there is
         # a transition from an old state to a different new state (a transition
         # is also triggered if the old state and new state are both 'available')
@@ -177,12 +169,7 @@ define [
                 In this request, also send the channels the widget will be subscribed to
             ###
 
-            # Start profiling the rendering of this widget instance. This will end in `render`.
-            # To check out the results, in the console, do: loader.get_module('profiler').getFullReport();
-            if App.general.ENABLE_PROFILING
-                @profiler.start params.name
-
-            @constructed_at = Utils.now() / 1000
+            @constructed_at = Utils.now()
             if template
                 @template = template
             if params.template_name?
@@ -243,7 +230,7 @@ define [
             # is interested in certain data channels
             @announceNewWidget()
 
-        announceNewWidget: ->
+        announceNewWidget: =>
             ###
                 Announce that a new widget has been instantiated.
 
@@ -258,21 +245,10 @@ define [
 
             pipe = loader.get_module('pubsub')
 
-            # Announcing that a new widget is available is done in 2 waves:
-            # - first announce the people interested in the fact that the
-            #   widget has appeared that will count this (for example,
-            #   loading animation)
-            # - then announce the datasource to bind this widget to its
-            #   channels.
-            #
-            # Doing the two publishes instead of one is extremely unfortunate
-            # because for widget editors, one can encounter aggregated
-            # channels events before the widget.editor is set by the
-            # widget_editor.
-            #
-            # TODO(andrei): find better way to fix this. Complete braindamage.
-            pipe.publish('/new_widget', message)
-            pipe.publish('/new_widget_bind_to_data', message)
+            # Announce the creation of the widget first, and once all callbacks
+            # of /new_widget have been called, announce a new event that makes
+            # the widget ready for business, such as reciving data for channels
+            pipe.publish('/new_widget /widget_ready', message)
 
             # If this widget doesn't have a template, it either:
             # a) doesn't have any visible representation
@@ -284,7 +260,7 @@ define [
                 pipe.publish('/new_widget_rendered', @params['widget_id'], @params['name'])
                 @rendered_signal_sent = true
 
-        _initializeBackboneView: ->
+        _initializeBackboneView: =>
             ###
                 Initialize the widget associated Backbone.View.
             ###
@@ -293,12 +269,16 @@ define [
             #
             # This is always done by the widget starter.
             if @params.el
-                @setView(new Backbone.View(el: @params.el))
-                # Propagate "urgent for GC" flag to view class
+                @view = new Backbone.View(
+                    el: @params.el
+                )
+                @view.widget_id = @params.widget_id
+                @view.delegateEvents(@_getTranslatedDomEvents(@events))
+
                 if @URGENT_FOR_GC
                     @view.$el.addClass('urgent_for_gc')
 
-        _triggerInitialState: ->
+        _triggerInitialState: =>
             ###
                 Triggers the initial state of the widget, if there is one.
             ###
@@ -315,7 +295,7 @@ define [
                 # Trigger initial data state
                 @changeState(@initial_state)
 
-        _setupChildEvents: ->
+        _setupChildEvents: =>
             ###
                 Hook to events from child widgets. We're currently only
                 listening to render events from child widgets, but more could
@@ -333,26 +313,32 @@ define [
             # when trying to GC widget
             @_onChildRender = Utils.onWidgetRender(null, this, @onChildRender)
 
-        initialize: ->
+        initialize: =>
 
-        render: ->
+        render: =>
 
         destroy: =>
-            now = Utils.now() / 1000
+            now = Utils.now()
             # If widget has only lived half a second, something is wrong
             # and somebody is wasting widgets for nothing.
             if now - @constructed_at < 0.5
-                cloned_params = _.clone(@params)
-                delete cloned_params['el']
-                logger.warn("Widget with id #{@params['widget_id']} has lived too little (less than half a second). You're doing something wrong. (params = #{JSON.stringify(cloned_params)})")
+                cloned_params = _.omit(@params, 'el')
+                logger.warn "Widget with id #{@params['widget_id']} has lived "+
+                            "too little (less than half a second). You're "+
+                            "doing something wrong. (params = "+
+                            "#{JSON.stringify(cloned_params)})"
 
-            if @saved_view
-                #undelegate events
-                @saved_view?.off?()
-                #unbind element
-                @saved_view?.unbind?()
-                #remove element
-                @saved_view?.remove?()
+            if @saved_view?
+                @saved_view.undelegateEvents()
+                @params.el = null
+                @saved_view = null
+
+            # Also, it's not normal for users to be able to trigger anymore
+            # because widget is detached from DOM.
+            @events = null
+
+            # Lose references to the DOM elements.
+            @_cleanupDomElements()
 
             pipe = loader.get_module('pubsub')
             pipe.publish('/destroy_widget', {
@@ -370,13 +356,41 @@ define [
             ###
                 Mark the fact that the widget is currently detached from DOM.
             ###
+            # Avoid detaching a widget more than once, this can cause the
+            # @view reference to be lost and never unbound from DOM events,
+            # leading to leaking detached DOM elements
+            if @isDetachedFromDOM
+                logger.warn("Trying to detach already detached widget " +
+                            "#{@params.name} (#{@params.widget_id})")
+                return
             @isDetachedFromDOM = true
 
             # Make sure that detached widgets trying to access the DOM fail.
             @saved_view = @view
             @view = null
-            @saved_el = @el
-            @el = null
+
+            @template = null
+
+        removeReferencesToChannelCallbacks: =>
+            # References to the aggregated functions should be cut off completely
+            @aggregator = null
+
+            # Lose references to the aggregated channel callbacks.
+            # These are in fact wrappers over the user-defined functions
+            # like get_mentions and so on.
+            for aggregate_function of @aggregated_channels
+                @[aggregate_function] = null
+
+            # Lose references to the channel callbacks. Once a widget is
+            # detached, the params translation layer doesn't even send the
+            # events anymore, so it's safe to do this.
+            for channel_key in @_getTranslatedSubscribedChannels()
+                method_name = channels_utils.widgetMethodForChannel(channel_key)
+                @[method_name] = null
+
+            # Aggregated channels is a dictionary whose keys are functions (!!)
+            @aggregated_channels = null
+
 
     Widget.includeMixin(WidgetAggregatedChannelsMixin)
     Widget.includeMixin(WidgetBackboneEventsMixin)
