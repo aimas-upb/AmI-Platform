@@ -30,16 +30,47 @@ class kestrel ($max_ram='1024m') {
     ->
 
     file { "/usr/local/kestrel":
+        ensure => "directory"
+    }
+
+    ->
+
+    file { "/usr/local/kestrel/current":
         ensure => "link",
         target => "/usr/local/kestrel-2.4.1"
      }
+    ->
+
+    file { "/bin/java":
+        ensure => "link",
+        target => "/usr/bin/java"
+    }
+
+    ->
+
+    file { "/var/run/kestrel":
+        ensure => "directory"
+    }
+
+    ->
+
+    file { "/var/log/kestrel":
+        ensure => "directory"
+    }
 
     ->
 
     file { "/etc/init.d/kestrel":
         ensure => present,
-        content => template('kestrel.erb'),
-        notify => Service["kestrel"]
+        content => template('kestrel/kestrel.erb'),
+        notify => Service["kestrel"],
+        mode => '0755'
+    }
+
+    ->
+
+    file { "/usr/local/kestrel-2.4.1.zip":
+       ensure => absent
     }
 
     ->
