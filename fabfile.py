@@ -153,7 +153,7 @@ def provision_machine(manifest='crunch_01.pp'):
 
     # Fetch puppet config file - most notable change is modulepath which points
     # to local repo dir as well.
-    run('cd /etc/puppet; wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/puppet.conf')
+    run('cd /etc/puppet; sudo rm puppet.conf; sudo wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/puppet.conf')
 
     # Fetch & apply bootstrap manifest - fetch the repo with the rest of the
     # manifests in the correct dir with the correct permissions.
