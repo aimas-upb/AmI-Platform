@@ -1,6 +1,7 @@
 user { "ami":
     ensure     => present,
     managehome => true,
+    shell	   => '/bin/bash',
 }
 
 package { "git":
