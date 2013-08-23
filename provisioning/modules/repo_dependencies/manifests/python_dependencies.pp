@@ -16,6 +16,6 @@ class repo_dependencies::python_dependencies {
     }
 
     Package["python-pip"] -> Exec["install-python-packages"]
-    Package["pyhon-dev"] -> Exec["install-python-packages"]
+    Package["python-dev"] -> Exec["install-python-packages"]
 
 }
