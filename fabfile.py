@@ -159,3 +159,6 @@ def provision_machine(manifest='crunch_01.pp'):
     # manifests in the correct dir with the correct permissions.
     run('cd /tmp; wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/bootstrap.pp')
     run('sudo puppet apply /tmp/bootstrap.pp')
+
+    # Run the actual manifest for provisioning this node from the repo
+    run("sudo puppet apply /home/ami/AmI-Platform/provisioning/nodes/%s" % manifest)
