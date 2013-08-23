@@ -135,7 +135,7 @@ def open_and_provision_machine(machine_type='m1.small',
     time.sleep(30)
 
     with settings(user='ubuntu', key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('provision_machine', host=instance.public_dns_name)
+        execute('provision_machine', host=instance.public_dns_name, manifest=manifest)
 
 @task
 def provision_machine(manifest='crunch_01.pp'):
