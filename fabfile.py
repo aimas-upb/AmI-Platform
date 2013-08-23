@@ -107,6 +107,19 @@ def new_service(name, file = None, queue = None, class_name = None):
     with open('services.txt', 'wt') as f:
         f.write('\n'.join(services))
 
+
+@task
+def run_experiment():
+    crunch_01 = execute('open_and_provision_machine', manifest='crunch_01.pp')[0]['<local-only>']
+    mongo = execute('open_and_provision_machine', manifest='mongo.pp')[0]['<local-only>']
+    redis = execute('open_and_provision_machine', manifest='redis.pp')[0]['<local-only>']
+    kestrel = execute('open_and_provision_machine', manifest='kestrel.pp')[0]['<local-only>']
+
+    print "crunch server: %s" % crunch_01
+    print "mongo server: %s" % mongo
+    print "redis server: %s" % redis
+    print "kestrel server: %s" % kestrel
+
 @task
 def open_and_provision_machine(machine_type='m1.small',
                                manifest='crunch_01.pp',
