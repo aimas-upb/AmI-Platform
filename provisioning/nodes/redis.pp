@@ -1,0 +1,1 @@
+class { "session_store": }
