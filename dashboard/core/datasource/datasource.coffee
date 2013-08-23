@@ -49,7 +49,7 @@ define [
                         logger.error("Channel template #{k} has invalid parent #{v.parent}")
                         continue
                     parent = @config.channel_templates[v.parent]
-                    @config.channel_templates[k] = _.extend({}, parent, v)
+                    @config.channel_templates[k] = _.extend {}, parent, v
 
             for k, v of @config.channel_types
                 if v.template
@@ -57,7 +57,7 @@ define [
                         logger.error("Channel type #{k} has invalid template #{v.template}")
                         continue
                     template = @config.channel_templates[v.template]
-                    @config.channel_types[k] = _.extend({}, template, v)
+                    @config.channel_types[k] = _.extend {}, template, v
 
         initialize: ->
             logger.info "Initializing data source"
@@ -67,6 +67,7 @@ define [
             @data = {}
             @meta_data = {}
             @reference_data = {}
+            @channel_config_options = {}
 
             # Setting this to false will cause all fetches to perform
             # synchronous ajax requests (used only for testing).
@@ -82,7 +83,7 @@ define [
             # Announcements that new widgets are available
             # This binds the widgets' methods to the proper channel events
             # (we need this because channels are private to the DataSource)
-            @pipe.subscribe('/new_widget', (data) => @newWidget(data))
+            @pipe.subscribe('/widget_ready', (data) => @newWidget(data))
 
             # Announcements that widgets were removed
             # This binds the widgets' methods to the proper channel events
@@ -125,7 +126,15 @@ define [
                     logger.info("Initializing channel #{channel_guid}")
 
                     channel_type = channel_data.type
-                    channel_params = _.clone(channel_data.params)
+                    channel_params = Utils.deepClone channel_data.params
+
+                    # If channel_config_options is found in channel_params,
+                    # extract it from there, as those params are used for
+                    # initializing the channel, and we don't want it stored
+                    # in channel's @meta_data.
+                    if (params = channel_params['channel_config_options'])?
+                        channel_config_options = params
+                        delete channel_params['channel_config_options']
 
                     # Cannot use @_getType() because channel doesn't exist yet.
                     if channel_type of @config.channel_types
@@ -133,7 +142,27 @@ define [
                         # to be available ASAP, e.g. on /new_widget events
                         # In theory, this won't longer be needed after we fix
                         # issue https://github.com/uberVU/mozaic/issues/54
-                        @reference_data[channel_guid] = {}
+                        @reference_data[channel_guid] =
+                            # Create the reference data of a channel with an
+                            # empty object for referencing all widgets that
+                            # will be subscribed to that channel at any
+                            # specific point in time
+                            widgets: []
+
+                        # Save a channel_config_options for each channel instance,
+                        # which holds customizations that will be applied
+                        # over the configuration of the channel. E.g. You need
+                        # the /channel_XXX template to have a refresh interval
+                        # bigger than the default one for some reason.
+                        # e.g.
+                        #     Utils.newDataChannels('/channel_XXX':
+                        #           channel_config_options:
+                        #               refresh_interval: 100000
+                        #     )
+                        # it would affect the new instantiated channel to have
+                        # the 100000 interval, overriding the template's value.
+                        @channel_config_options[channel_guid] =
+                            Utils.deepClone channel_config_options
 
                         resource_type = @config.channel_types[channel_type].type
                         if resource_type == 'relational'
@@ -187,46 +216,34 @@ define [
                 for data (in fetching state), and when it receives data, it
                 will fill this channel as well (via _fillWaitingChannels).
             ###
-            # Get the channel's start_immediately configuration. It tells us
-            # whether we should fetch channel data from server right after
-            # channel instantiation. Defaults to true
-            start_immediately = @_getConfig(channel_guid).start_immediately
-            if not start_immediately?
-                start_immediately = true
+            conf = @_getConfig(channel_guid)
+            meta = @meta_data[channel_guid]
 
-            # Cloning / fetching logic:
-            duplicates = @_getChannelDuplicates(channel_guid)
-            if duplicates.length == 0 or @_getConfig(channel_guid).disable_clone
-                # 1) No channel duplicates exist, perform fetch.
-                refresh_interval = @_getRefreshInterval(channel_guid)
-                if refresh_interval > 0
-                    if start_immediately
-                        # Fetch the initial data for the channel
-                        @_fetchChannelDataFromServer(channel_guid)
+            # We should completely ignore the data cloning or an initial fetch
+            # if the channel is populated on init
+            if not meta.populate_on_init
+                # Cloning / fetching logic:
+                duplicates = @_getChannelDuplicates(channel_guid)
+                if duplicates.length == 0 or conf.disable_clone
+                    # 1) No channel duplicates exist, perform fetch.
+                    @_fetchChannelDataFromServer(channel_guid)
                 else
-                    # Fetch the initial data for the channel
-                    if not @meta_data[channel_guid].populate_on_init and start_immediately
-                        @_fetchChannelDataFromServer(channel_guid)
+                    # If at least one duplicate was fetched (has data), use it
+                    # as a cloning source. Otherwise, this channel will wait
+                    # for data.
+                    duplicate_channel_guid = null
+                    for other_channel_guid in duplicates
+                        if @meta_data[other_channel_guid].last_fetch?
+                            duplicate_channel_guid = other_channel_guid
+                            break
+                    if duplicate_channel_guid
+                        @_cloneChannel(channel_guid, duplicate_channel_guid)
                     else
-                        # If this channel was populated on init, mark it
-                        # as having data.
-                        @meta_data[channel_guid].last_fetch = Utils.now()
+                        logger.info "Channel #{channel_guid} is waiting for data"
+                        meta.waiting_for_cloned_data = true
             else
-                # If at least one duplicate was fetched (has data), use it
-                # as a cloning source. Otherwise, this channel will wait
-                # for data.
-                duplicate_channel_guid = null
-                for other_channel_guid in duplicates
-                    if @meta_data[other_channel_guid].last_fetch?
-                        duplicate_channel_guid = other_channel_guid
-                        break
-                if duplicate_channel_guid
-                    @_cloneChannel(channel_guid, duplicate_channel_guid)
-                else
-                    logger.info "Channel #{channel_guid} is waiting for data"
-
-            # Setup periodic refresh if needed.
-            @_startRefreshing(channel_guid)
+                # If this channel was populated on init, mark it as having data
+                meta.last_fetch = Utils.now()
 
             # Announce widget starter a new channel is available
             @pipe.publish('/initialized_channel', {name: channel_guid})

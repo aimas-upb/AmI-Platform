@@ -64,9 +64,9 @@ define ['cs!widget'], (Widget) ->
         initialize: ->
             @renderLayout(
                 list_widget: @list_widget
-                list_params: @extendParams(@list_params)
+                list_params: @extendListParams(@list_params)
                 header_widget: @header_widget
-                header_params: @extendParams(@header_params)
+                header_params: @extendHeaderParams(@header_params)
             , false)
 
             # Listen to scroll events on the list viewport in the presence of
@@ -151,6 +151,28 @@ define ['cs!widget'], (Widget) ->
             ###
             return _.extend({channels: @params.channels}, params)
 
+        extendHeaderParams: (params) ->
+            ###
+                Provide extended parameters for the header widget.
+            ###
+            return @extendParams(params)
+
+        extendListParams: (params) ->
+            ###
+                Provide extended parameters for the list widget.
+
+                When a list is embedded within the expanded list, the expanded
+                is managing the scroll interactions with that list, not the
+                list itself. This also means that we cannot have
+                minimize_dom_nodes set to true, because the core list needs
+                to manage its own scroll in order to have that.
+            ###
+            intermediate_params = @extendParams(params)
+            return _.extend(intermediate_params, {
+                enable_scroll: false
+                minimize_dom_nodes: false
+            })
+
         onExpand: (e) =>
             item = @getItemFromEvent(e)
 
@@ -171,7 +193,8 @@ define ['cs!widget'], (Widget) ->
             # should disable the expanding
             return if getSelection()?.toString()
 
-            @modifyChannel('/filters', @getFilterChangesForExpand(item))
+            filter_changes = @getFilterChangesForExpand(item)
+            @modifyChannel('/filters', filter_changes)
 
         getFilterChangesForExpand: (item) ->
             ###
@@ -182,7 +205,7 @@ define ['cs!widget'], (Widget) ->
                 provide custom URL parameters.
             ###
             filterChange = {}
-            filterChange[@filter_key] = item.data('id')
+            filterChange[@filter_key] = item.data(@filter_key)
             return filterChange
 
         onRetract: (e) =>
@@ -230,5 +253,5 @@ define ['cs!widget'], (Widget) ->
             return target.closest('.list-item')
 
         destroy: =>
-            super()
             @listViewport.off('scroll', @onScroll)
+            super()

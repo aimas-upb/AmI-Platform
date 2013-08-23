@@ -28,6 +28,13 @@ define [], () ->
             logger.info "Loading module #{path}"
 
             require [original_path], (Module) ->
+                # For some reason, after changing window.location to redirect
+                # a page, require calls a few callbacks with undefined
+                # references on its last breaths
+                unless Module?
+                    logger.error("Module #{path} returned a null reference")
+                    return
+
                 if not (path of loader.modules)
                     loader.modules[path] = {module: Module}
                 if instantiate
@@ -133,8 +140,7 @@ define [], () ->
                     # Don't instantiate widgets which should have already been
                     # garbage collected.
                     if loader.born_dead[id]
-                        cloned_params = _.clone(params)
-                        delete cloned_params['el']
+                        cloned_params = Utils.deepClone (_.omit params, 'el')
                         logger.warn("Widget with id #{id} was born dead (params = #{JSON.stringify(cloned_params)}). You're doing something wrong.")
                         delete loader.born_dead[id]
                         return
@@ -144,8 +150,7 @@ define [], () ->
                 # Don't instantiate widgets which should have already been
                 # garbage collected.
                 if loader.born_dead[id]
-                    cloned_params = _.clone(params)
-                    delete cloned_params['el']
+                    cloned_params = Utils.deepClone (_.omit params, 'el')
                     logger.warn("Widget with id #{id} was born dead (params = #{JSON.stringify(cloned_params)}). You're doing something wrong.")
                     delete loader.born_dead[id]
                     return
@@ -188,7 +193,12 @@ define [], () ->
 
         destroy_widget: (widget_id) ->
             if loader.widgets[widget_id]
-                loader.widgets[widget_id].destroy()
+                try
+                    loader.widgets[widget_id].destroy()
+                catch err
+                    widget_name = loader.widgets[widget_id].params.name
+                    logger.error("Error while GC-ing widget #{widget_id} " +
+                                 "#{widget_name}")
                 delete loader.widgets[widget_id]
             else
                 loader.born_dead[widget_id] = true
