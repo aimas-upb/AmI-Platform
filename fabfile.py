@@ -1,7 +1,8 @@
-from fabric.api import task
+from fabric.api import task, env, run, local
 from jinja2 import Template
 import string
 import os
+
 
 def get_services():
     """ Returns the set of already defined services. """
@@ -9,25 +10,27 @@ def get_services():
         services = [line[:-1] for line in f.readlines()]
         return filter(lambda x: len(x) > 0, services)
 
+
 def service_already_exists(name):
     """ Check if a service with the given name already exists. """
     return name in set(get_services())
 
+
 def default_file_name(name):
     """ Given a service name, provide a good default for a file name. """
-
     if name.startswith('ami-'):
         return 'pipeline/' + name[4:] + '.py'
     else:
         return 'pipeline/' + name + '.py'
 
+
 def default_queue_name(name):
     """ Given a service name, provide a good default for a queue name. """
-
     if name.startswith('ami-'):
         return name[4:]
     else:
         return name
+
 
 def default_class_name(name):
     """ Given a service name, provide a good default for a class name. """
@@ -37,9 +40,9 @@ def default_class_name(name):
         dashed_name = name
     return string.capwords(dashed_name.replace('-', ' ')).replace(' ', '')
 
+
 def render_template(template_file, context, target_file):
     """ Renders a template to a given destination file, given context vars. """
-
     with open(template_file, 'rt') as src:
         content = ''.join(src.readlines())
         jinja_template = Template(content)
@@ -47,8 +50,9 @@ def render_template(template_file, context, target_file):
         with open(target_file, 'wt') as dest:
             dest.write(output)
 
+
 @task
-def new_service(name, file = None, queue = None, class_name = None):
+def new_service(name, file=None, queue=None, class_name=None):
     """ Installs a new service with the given name. """
 
     if service_already_exists(name):
@@ -98,3 +102,21 @@ def new_service(name, file = None, queue = None, class_name = None):
     services.append('')
     with open('services.txt', 'wt') as f:
         f.write('\n'.join(services))
+
+DAQ_HOSTS = ['ami-daq-01.local', 'ami-daq-03.local',
+             'ami-daq-04.local', 'ami-daq-05.local']
+
+
+@task
+def copy_pub_key_to_daq():
+    """Copy public ssh key to all data acquisition hosts."""
+    for host in DAQ_HOSTS:
+        local("cat ~/.ssh/id_rsa.pub | ssh %s@%s 'cat >> .ssh/authorized_keys'"
+              % ('ami', host))
+
+
+@task
+def stop_daq():
+    """Stops all data acquisition hosts."""
+    for host in DAQ_HOSTS:
+        run('ssh ami@%s; cd ~/AmI-Platform/; ./stop.py' % host)
