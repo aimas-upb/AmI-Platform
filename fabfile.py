@@ -109,7 +109,7 @@ def new_service(name, file = None, queue = None, class_name = None):
 
 @task
 def open_and_provision_machine(machine_type='m1.small',
-                               manifest='node.pp',
+                               manifest='crunch_01.pp',
                                ami_id='ami-d0f89fb9'):
     """
         Opens up an EC2 machine and provisions it with the given puppet
