@@ -146,10 +146,14 @@ def provision_machine(manifest='crunch_01.pp'):
 
     # we are running masterless puppet to simplifiy automatic setup and teardown
     run('sudo apt-get -y install puppet')
+    run('sudo puppet module install -f puppetlabs/apt')
+    run('sudo puppet module install -f puppetlabs/gcc')
+    run('sudo puppet module install -f puppetlabs/mongodb')
+    run('sudo puppet module install -f puppetlabs/stdlib')
     run('sudo puppet module install -f puppetlabs/vcsrepo')
     run('sudo puppet module install -f maestrodev/ssh_keygen')
-    run('sudo puppet module install -f thomasvandoren/redis')
     run('sudo puppet module install -f maestrodev/wget')
+    run('sudo puppet module install -f thomasvandoren/redis')
 
     # Fetch puppet config file - most notable change is modulepath which points
     # to local repo dir as well.
