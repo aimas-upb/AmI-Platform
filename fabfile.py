@@ -110,7 +110,6 @@ def new_service(name, file = None, queue = None, class_name = None):
 
 @task
 def run_experiment():
-    crunch_01 = execute('open_and_provision_machine', manifest='crunch_01.pp')[0]['<local-only>']
     mongo = execute('open_and_provision_machine', manifest='mongo.pp')[0]['<local-only>']
     redis = execute('open_and_provision_machine', manifest='redis.pp')[0]['<local-only>']
     kestrel = execute('open_and_provision_machine', manifest='kestrel.pp')[0]['<local-only>']
@@ -119,6 +118,33 @@ def run_experiment():
     print "mongo server: %s" % mongo
     print "redis server: %s" % redis
     print "kestrel server: %s" % kestrel
+
+    crunch_nodes = {
+        'crunch_01': {
+            'modules': ['ami-router', 'ami-mongo-writer',
+                        'ami-room-position', 'ami-dashboard']
+        },
+
+        'crunch_02': {
+            'modules': ['ami-head-crop']
+        },
+
+        'crunch_03': {
+            'modules': ['ami-face-recognition']
+        },
+
+        'crunch_04': {
+            'modules': ['ami-upgrade_face_samples', 'ami-room', 'ami-ip-power']
+        },
+
+        'crunch_05': {
+            'modules': ['ami-recorder']
+        }
+    }
+
+    for crunch_node in crunch_nodes.iterkeys():
+        hostname = execute('open_and_provision_machine', manifest='crunch_01.pp')['<local-only>']
+        crunch_nodes[crunch_node]['hostname'] = hostname
 
 @task
 def open_and_provision_machine(machine_type='m1.small',
