@@ -51,3 +51,4 @@ file { "/etc/sudoers.d/80-ami":
     group   => "root",
     mode    => "0440",
     content => "ami ALL=(ALL) NOPASSWD:ALL"
+}
