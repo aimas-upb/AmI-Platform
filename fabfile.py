@@ -110,9 +110,6 @@ def new_service(name, file = None, queue = None, class_name = None):
 
 @task
 def run_experiment():
-    mongo = execute('open_and_provision_machine', manifest='mongo.pp')[0]['<local-only>']
-    redis = execute('open_and_provision_machine', manifest='redis.pp')[0]['<local-only>']
-    kestrel = execute('open_and_provision_machine', manifest='kestrel.pp')[0]['<local-only>']
 
     print "crunch server: %s" % crunch_01
     print "mongo server: %s" % mongo
@@ -146,6 +143,9 @@ def run_experiment():
         hostname = execute('open_and_provision_machine', manifest='crunch_01.pp')['<local-only>']
         crunch_nodes[crunch_node]['hostname'] = hostname
 
+    mongo = execute('open_and_provision_machine', manifest='mongo.pp')['<local-only>']
+    redis = execute('open_and_provision_machine', manifest='redis.pp')['<local-only>']
+    kestrel = execute('open_and_provision_machine', manifest='kestrel.pp')['<local-only>']
 @task
 def open_and_provision_machine(machine_type='m1.small',
                                manifest='crunch_01.pp',
