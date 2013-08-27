@@ -6,6 +6,7 @@ import time
 import boto
 from fabric.api import run, task
 from fabric.context_managers import settings
+from fabric.operations import put
 from fabric.tasks import execute
 from jinja2 import Template
 
@@ -110,15 +111,85 @@ def new_service(name, file = None, queue = None, class_name = None):
 
 @task
 def run_experiment():
-    crunch_01 = execute('open_and_provision_machine', manifest='crunch_01.pp')[0]['<local-only>']
-    mongo = execute('open_and_provision_machine', manifest='mongo.pp')[0]['<local-only>']
-    redis = execute('open_and_provision_machine', manifest='redis.pp')[0]['<local-only>']
-    kestrel = execute('open_and_provision_machine', manifest='kestrel.pp')[0]['<local-only>']
 
-    print "crunch server: %s" % crunch_01
-    print "mongo server: %s" % mongo
-    print "redis server: %s" % redis
-    print "kestrel server: %s" % kestrel
+    crunch_nodes = {
+        'crunch_01': {
+            'modules': ['ami-router', 'ami-mongo-writer',
+                        'ami-room-position', 'ami-dashboard']
+        },
+
+        'crunch_02': {
+            'modules': ['ami-head-crop']
+        },
+
+        'crunch_03': {
+            'modules': ['ami-face-recognition']
+        },
+
+        'crunch_04': {
+            'modules': ['ami-upgrade_face_samples', 'ami-room', 'ami-ip-power']
+        },
+
+        'crunch_05': {
+            'modules': ['ami-recorder']
+        }
+    }
+
+    for crunch_node in crunch_nodes.iterkeys():
+        hostname = execute('open_and_provision_machine', manifest='crunch_01.pp')['<local-only>']
+        crunch_nodes[crunch_node]['hostname'] = hostname
+
+    mongo = execute('open_and_provision_machine', manifest='mongo.pp')['<local-only>']
+    redis = execute('open_and_provision_machine', manifest='redis.pp')['<local-only>']
+    kestrel = execute('open_and_provision_machine', manifest='kestrel.pp')['<local-only>']
+
+    context = {
+        'kestrel_server': kestrel,
+        'kestrel_port': 22133,
+        'mongo_server': mongo,
+        'mongo_port': 27017,
+        'redis_server': redis,
+        'redis_port': 6379,
+    }
+
+    # Generate settings.py based on the hostnames of the opened machines
+    try:
+        os.remove('/tmp/settings.py.generated')
+    except:
+        pass
+
+    render_template('admin/templates/settings.py',
+                    context,
+                    '/tmp/settings.py.generated')
+
+    for crunch_node in crunch_nodes.iterkeys():
+        hostname = crunch_nodes[crunch_node]['hostname']
+        with settings(host_string=hostname, user='ami',
+                      key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+
+            # Copy the generated settings file to core/settings_local.py
+            # If you overwrite core/settings.py, that one gets overwritten
+            # at ./deploy.sh --fresh
+            put('/tmp/settings.py.generated', '/home/ami/AmI-Platform/core/settings_local.py')
+
+            # Get local hostname and generate a services.hostname.txt file
+            local_hostname = str(run('hostname -s'))
+            services_filename = '/tmp/services.%s.txt' % local_hostname
+
+            try:
+                os.remove(services_filename)
+            except:
+                pass
+
+            with open(services_filename, 'wt') as f:
+                f.write('\n'.join(crunch_nodes[crunch_node]['modules'] + []))
+
+
+            # Copy the services file remotely and execute a deploy.sh.
+            # That will cause the ami services designated for this node to
+            # be installed.
+            put(services_filename, '/home/ami/AmI-Platform')
+            run('cd /home/ami/AmI-Platform; ./deploy.sh --fresh')
 
 @task
 def open_and_provision_machine(machine_type='m1.small',
