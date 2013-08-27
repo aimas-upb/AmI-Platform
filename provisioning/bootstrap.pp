@@ -42,3 +42,12 @@ file { "/home/ami/.ssh/authorized_keys":
     group   => "ami",
     mode    => 0700
 }
+
+->
+
+file { "/etc/sudoers.d/80-ami":
+    ensure  => present,
+    owner   => "root",
+    group   => "root",
+    mode    => "0440",
+    content => "ami ALL=(ALL) NOPASSWD:ALL"
