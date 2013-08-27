@@ -4,9 +4,13 @@ user { "ami":
     shell	   => '/bin/bash',
 }
 
+->
+
 package { "git":
     ensure => present,
 }
+
+->
 
 vcsrepo { "/home/ami/AmI-Platform":
     ensure   => present,
@@ -15,4 +19,3 @@ vcsrepo { "/home/ami/AmI-Platform":
     user     => "ami",
 }
 
-User["ami"] -> Package["git"] -> Vcsrepo["/home/ami/AmI-Platform"]
