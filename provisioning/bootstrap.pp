@@ -19,3 +19,26 @@ vcsrepo { "/home/ami/AmI-Platform":
     user     => "ami",
 }
 
+->
+
+file { "/home/ami/.ssh":
+    ensure => directory,
+    owner  => "ami",
+    group  => "ami",
+    mode   => "0700",
+}
+
+->
+
+exec { "copy_authorized_keys":
+    command => "/bin/cp /home/ubuntu/.ssh/authorized_keys /home/ami/.ssh"
+}
+
+->
+
+file { "/home/ami/.ssh/authorized_keys":
+    ensure  => present,
+    owner   => "ami",
+    group   => "ami",
+    mode    => 0700
+}
