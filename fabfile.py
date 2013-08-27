@@ -111,11 +111,6 @@ def new_service(name, file = None, queue = None, class_name = None):
 @task
 def run_experiment():
 
-    print "crunch server: %s" % crunch_01
-    print "mongo server: %s" % mongo
-    print "redis server: %s" % redis
-    print "kestrel server: %s" % kestrel
-
     crunch_nodes = {
         'crunch_01': {
             'modules': ['ami-router', 'ami-mongo-writer',
@@ -146,6 +141,25 @@ def run_experiment():
     mongo = execute('open_and_provision_machine', manifest='mongo.pp')['<local-only>']
     redis = execute('open_and_provision_machine', manifest='redis.pp')['<local-only>']
     kestrel = execute('open_and_provision_machine', manifest='kestrel.pp')['<local-only>']
+
+    context = {
+        'kestrel_server': kestrel,
+        'kestrel_port': 22133,
+        'mongo_server': mongo,
+        'mongo_port': 27017,
+        'redis_server': redis,
+        'redis_port': 6379,
+    }
+
+    # Generate settings.py based on the hostnames of the opened machines
+    try:
+        os.remove('/tmp/settings.py.generated')
+    except:
+        pass
+
+    render_template('admin/templates/settings.py',
+                    context,
+                    '/tmp/settings.py.generated')
 @task
 def open_and_provision_machine(machine_type='m1.small',
                                manifest='crunch_01.pp',
