@@ -8,6 +8,7 @@ from lib.kinect import crop_head_using_skeleton
 from lib.log import setup_logging
 from lib.opencv import crop_face_from_image
 from lib.session_tracker import SessionTracker
+from lib.s3 import save_image
 
 logger = logging.getLogger(__name__)
 MAX_TIME = 5000
@@ -36,6 +37,11 @@ def _crop_head_using_face_detection(last_image):
 
 
 def crop_head(message):
+    if message['type'] == 'image_rgb':
+        cropped_head = _crop_head_using_face_detection(message['image_rgb'])
+        if cropped_head:
+            return image_to_base64(cropped_head)
+
     last_image = message['hack']['last_image']
     last_image_at = message['hack']['last_image_at']
     last_skeleton = message['hack']['last_skeleton']
@@ -62,18 +68,8 @@ def crop_head(message):
                         (abs(last_skeleton_at - last_image_at) / 1000))
             cropped_head = _crop_head_using_face_detection(last_image)
 
-    # If we have no "recent" skeleton or no skeleton at all,
-    # we'll detect the face from image
-    else:
-        logger.info("We have no skeleton so far, so we're using face "
-                    "detection in order to crop the head")
-        cropped_head = _crop_head_using_face_detection(last_image)
-
-    if cropped_head is not None:
-        logger.info("%s gave us a face to recognize!" % message['sensor_id'])
+    if cropped_head:
         return image_to_base64(cropped_head)
-    else:
-        return None
 
 
 class HeadCrop(ParallelPDU):
@@ -109,9 +105,9 @@ class HeadCrop(ParallelPDU):
             self.last_skeleton_at[sensor_id] = message['created_at']
 
         message['hack'] = {}
-        message['hack']['last_image'] = copy.copy(self.last_image).get(sensor_id)
+        message['hack']['last_image'] = copy.deepcopy(self.last_image.get(sensor_id))
         message['hack']['last_image_at'] = self.last_image_at.get(sensor_id)
-        message['hack']['last_skeleton'] = copy.copy(self.last_skeleton).get(sensor_id)
+        message['hack']['last_skeleton'] = copy.deepcopy(self.last_skeleton.get(sensor_id))
         message['hack']['last_skeleton_at'] = self.last_skeleton_at.get(sensor_id)
 
         super(HeadCrop, self).process_message(message)
@@ -128,6 +124,7 @@ class HeadCrop(ParallelPDU):
     def _send_to_recognition(self, image):
         """ Send a given image to face recognition. """
         self.send_to('face-recognition', {'head_image': image})
+        save_image(image['image'], image['width'], image['height'], prefix="TO_FR_HEADCROP_")
 
 if __name__ == "__main__":
     setup_logging()

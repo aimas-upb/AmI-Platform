@@ -6,6 +6,7 @@ from unittest import TestCase
 
 from core.kestrel_mock import KestrelMock
 from core.measurements_player import MeasurementsPlayer
+from lib.log import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class PipelineTest(TestCase):
         self._setup_queue_system()
         self._setup_player()
         self._setup_pdus()
-        logging.basicConfig()
+        setup_logging()
 
     def _test_pipeline(self):
         """ Each such test class will contain only one test method,

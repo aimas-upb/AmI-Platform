@@ -107,6 +107,11 @@ class FaceRecognition(ParallelPDU):
         super(FaceRecognition, self).__init__(**kwargs)
         self.session_tracker = SessionTracker()
 
+    def process_message(self, message):
+        image_rgb = message['head_image']
+        save_image(image_rgb['image'], image_rgb['width'], image_rgb['height'], "TO_FR_FR_")
+        super(FaceRecognition, self).process_message(message)
+
     def light_postprocess(self, matches, image_dict):
         self.logger.info("Received matches from FaceRecognition: %r" % matches)
 
