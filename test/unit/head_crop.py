@@ -13,7 +13,15 @@ from sky_biometrics.face_client import FaceClient
 
 class TestHeadCrop(TestCase):
     def test_face_cropped_ok(self):
-        """Detect faces from a folder of Kinect face images."""
+        """Detect faces from a folder of Kinect face images.
+
+        HOW TO TEST HEAD CROP ON A GIVEN IMAGE DATASET:
+            - just place the images in PROJECT_PATH/test/unit/dataset and run
+            this test:
+            $ nosetests head_crop.py --nocapture.
+            Use "--nocapture" option to see all output. Results images will be
+            stored under PROJECT_PATH/test/unit/dataset/results folder.
+        """
         image_folder = "%s/test/unit/dataset" % PROJECT_PATH
         images = [image for image in os.listdir(image_folder)
                   if os.path.isfile("%s/%s" % (image_folder, image))]
