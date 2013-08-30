@@ -18,7 +18,6 @@ class TestRecognition(PipelineTest):
     PDUs = [Router, HeadCrop, FaceRecognition]
     DATA_FILE = '%s/dumps/andrei.txt' % PROJECT_PATH
     NB_MIN_EXPECTED_EVENTS = 1
-    DELAY_UNTIL_MESSAGES_PROPAGATE = 30
 
     @attr('pipeline', 'slow')
     def test_that_pipeline_test_works_ok(self):
