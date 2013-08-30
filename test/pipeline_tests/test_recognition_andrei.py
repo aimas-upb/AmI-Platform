@@ -1,7 +1,6 @@
 import logging
 
 from nose.plugins.attrib import attr
-from nose.tools import ok_
 
 from core import PipelineTest
 from core.constants import PROJECT_PATH

@@ -17,7 +17,7 @@ class TestCrop(PipelineTest):
 
     PDUs = [Router, HeadCrop]
     DATA_FILE = '%s/dumps/diana-rgb.txt' % PROJECT_PATH
-    NB_MIN_EXPECTED_FACES = 2
+    NB_MIN_EXPECTED_FACES = 1
 
     @attr('pipeline', 'slow')
     def test_that_pipeline_test_works_ok(self):
@@ -29,4 +29,4 @@ class TestCrop(PipelineTest):
         while (self._queue_system.get('face-recognition', 1) is not None):
             nb_faces = nb_faces + 1
 
-        ok_(nb_faces >= self.NB_MIN_EXPECTED_FACES)
+        self.assertGreaterEqual(nb_faces, self.NB_MIN_EXPECTED_FACES)
