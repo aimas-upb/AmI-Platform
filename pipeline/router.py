@@ -37,7 +37,8 @@ class Router(PDU):
             save_image(message['image_rgb']['image'],
                        int(message['image_rgb']['width']),
                        int(message['image_rgb']['height']),
-                       prefix='RAW_', decoder_name='jpg')
+                       prefix='RAW_%s_%s_' % (message['sensor_id'],
+                                              message['created_at']), decoder_name='jpg')
 
         # If there is at least one active experiment, send them to
         # recorder. Otherwise, prevent bandwidth waste :)
