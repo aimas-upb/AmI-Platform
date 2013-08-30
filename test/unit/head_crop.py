@@ -55,7 +55,23 @@ class TestHeadCrop(TestCase):
             if tags:
                 matches = tags[0]['uids']
                 cprint("Matches: %r" % matches, 'green')
+                cprint(" => %s" % self._get_best_match(matches), 'blue')
             else:
                 cprint("No matches!", 'red')
         except Exception as e:
             cprint(e, 'red')
+
+    def _get_best_match(self, matches):
+        """Args:
+                matches: a list of dicts representing the SkyBIometry matches.
+                Example:
+                    [{u'confidence': 51, u'uid': u'andrei@amilab-test2'},
+                    {u'confidence': 48, u'uid': u'diana@amilab-test2'}]
+        """
+        best_confidence = 0
+        person = ''
+        for match in matches:
+            if match['confidence'] > best_confidence:
+                best_confidence = match['confidence']
+                person = match['uid']
+        return person
