@@ -67,6 +67,12 @@ class repo_dependencies::daq_dependencies {
 
     ->
 
+    package { "python-opencv":
+        ensure => present,
+    }
+
+    ->
+
     wget::fetch { "download_openni_binaries":
         source      => "http://www.openni.org/wp-content/uploads/2012/12/OpenNI-Bin-Dev-Linux-x64-v1.5.4.0.tar.zip",
         destination => "/tmp/OpenNI-Bin-Dev-Linux-x64-v1.5.4.0.tar.zip",
