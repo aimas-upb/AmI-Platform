@@ -238,6 +238,13 @@ def deploy_ami_services_on_crunch_node():
 
 @task
 def provision_machine(manifest='crunch_01.pp'):
+
+    # Give priority to what is found in env.hostname_to_manifest if such
+    # an entry is found.
+    host = env.host_string
+    if hasattr(env, 'hostname_to_manifest') and host in env.hostname_to_manifest:
+        manifest = env.hostname_to_manifest[host]
+
     # http://docs.puppetlabs.com/guides/puppetlabs_package_repositories.html#for-debian-and-ubuntu
     run('cd /tmp; wget http://apt.puppetlabs.com/puppetlabs-release-precise.deb')
     run('sudo dpkg -i /tmp/puppetlabs-release-precise.deb')
