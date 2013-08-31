@@ -237,6 +237,10 @@ def run_experiment():
     # create experiment record in mongo
     # profit :)
 
+    import pprint
+    pprint.pprint(env.hostname_to_manifest)
+    pprint.pprint(crunch_nodes)
+
 @task
 def open_machines(machine_type='m1.small',
                   manifest='crunch_01.pp',
