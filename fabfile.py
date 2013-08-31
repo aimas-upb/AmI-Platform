@@ -194,36 +194,11 @@ def run_experiment():
             run('cd /home/ami/AmI-Platform; ./deploy.sh --fresh')
 
 @task
-def open_and_provision_machine(machine_type='m1.small',
-                               manifest='crunch_01.pp',
-                               ami_id='ami-d0f89fb9'):
-    """
-        Opens up an EC2 machine and provisions it with the given puppet
-        manifest. You can optionally specify an AMI id, or otherwise
-        use the AMI provided by Canonical with Ubuntu 12.04 LTS.
-    """
-    ec2 = boto.connect_ec2()
-    reservation = ec2.run_instances(image_id=ami_id, security_group_ids=['sg-82df60e9'], key_name='ami-keypair')
-    print("Created reservation for 1 instance: %r" % reservation)
 
-    instance = reservation.instances[0]
-    status = instance.update()
-    while status == 'pending':
-        print("Waiting for another 10 seconds for machine to show up..")
         time.sleep(10)
-        status = instance.update()
 
-    if status != 'running':
-        print("Machine didn't start OK, status = %s" % status)
-        return
 
-    print("Giving the SSH daemon the opportunity to start up and stuff..")
-    time.sleep(30)
 
-    with settings(user='ubuntu', key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('provision_machine', host=instance.public_dns_name, manifest=manifest)
-
-    return instance.public_dns_name
 
 @task
 def provision_machine(manifest='crunch_01.pp'):
