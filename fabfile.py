@@ -4,11 +4,13 @@ import string
 import time
 
 import boto
-from fabric.api import run, task
+from fabric.api import run, task, env
 from fabric.context_managers import settings
 from fabric.operations import put
 from fabric.tasks import execute
 from jinja2 import Template
+
+env.connection_attempts = 5
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +114,7 @@ def new_service(name, file = None, queue = None, class_name = None):
 @task
 def run_experiment():
 
+    # Mapping from nodes to installed services on them.
     crunch_nodes = {
         'crunch_01': {
             'modules': ['ami-router', 'ami-mongo-writer',
@@ -135,24 +138,50 @@ def run_experiment():
         }
     }
 
-    for crunch_node in crunch_nodes.iterkeys():
-        hostname = execute('open_and_provision_machine', manifest='crunch_01.pp')['<local-only>']
-        crunch_nodes[crunch_node]['hostname'] = hostname
+    # Open exactly the desired number of machines. Sometimes EC2 fails
+    # weirdly to open the requested number of machines (don't know why)
+    # so I'm putting in a retry mechanism.
+    machines_to_open = len(crunch_nodes) + 3
+    machines_opened = 0
+    machine_hostnames = []
+    while machines_opened < machines_to_open:
+        hostnames = execute('open_machines',
+                            count=machines_to_open - machines_opened)['<local-only>']
+        machine_hostnames.extend(hostnames)
+        machines_opened += len(hostnames)
 
-    mongo = execute('open_and_provision_machine', manifest='mongo.pp')['<local-only>']
-    redis = execute('open_and_provision_machine', manifest='redis.pp')['<local-only>']
-    kestrel = execute('open_and_provision_machine', manifest='kestrel.pp')['<local-only>']
+    # Map the freshly obtained hostnames to manifests
+    manifests = {}
+    manifests[hostnames[0]] = 'mongo.pp'
+    manifests[hostnames[1]] = 'redis.pp'
+    manifests[hostnames[2]] = 'kestrel.pp'
+    i = 1
+    for crunch_hostname in hostnames[3:]:
+        manifests[crunch_hostname] = 'crunch_01.pp'
+        crunch_nodes['crunch_0%d' % i]['hostname'] = crunch_hostname
+        i += 1
+    env.hostname_to_manifest = manifests
 
+    # Provision the machines in parallel. The manifest for each machine
+    # will be taken from env.hostname_to_manifest, because it's the only sane
+    # way I found in fab to do the provisioning in parallel.
+    with settings(parallel=True, user='ubuntu',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        execute('provision_machine', hosts=hostnames)
+
+    # Generate settings_local.py based on the hostnames of the opened machines
+    # This is needed in order to wire up the machines with knowledge of the
+    # MongoDB / Redis / Kestrel server so that they connect to it correctly.
+    # Since we're generating the file in the /tmp dir, make sure we clean up
+    # a potentially existing old file before we use it.
     context = {
-        'kestrel_server': kestrel,
+        'kestrel_server': hostnames[2],
         'kestrel_port': 22133,
-        'mongo_server': mongo,
+        'mongo_server': hostnames[0],
         'mongo_port': 27017,
-        'redis_server': redis,
+        'redis_server': hostnames[1],
         'redis_port': 6379,
     }
-
-    # Generate settings.py based on the hostnames of the opened machines
     try:
         os.remove('/tmp/settings.py.generated')
     except:
@@ -162,6 +191,12 @@ def run_experiment():
                     context,
                     '/tmp/settings.py.generated')
 
+    # Copy the settings.py to each machine, and generate services.txt
+    # for each one. The name of the services file is based on the `hostname -s`
+    # command (see deploy.sh command for more details), and its content
+    # will enable deploy.sh to install the AmI services correctly as system
+    # services managed by upstart & monit (these guys are installed prior to
+    # this step via puppet).
     for crunch_node in crunch_nodes.iterkeys():
         hostname = crunch_nodes[crunch_node]['hostname']
         with settings(host_string=hostname, user='ami',
@@ -189,42 +224,69 @@ def run_experiment():
             # That will cause the ami services designated for this node to
             # be installed.
             put(services_filename, '/home/ami/AmI-Platform')
-            run('cd /home/ami/AmI-Platform; ./deploy.sh --fresh')
+
+    # Install the AmI services on each machine in parallel. The reason is that
+    # this might require some compilation from sources, and that tends to be
+    # slow.
+    with settings(parallel=True, user='ami',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        execute('deploy_ami_services_on_crunch_node', hosts=hostnames)
+
+
+    # copy dump where experiment.py should be run
+    # create experiment record in mongo
+    # profit :)
 
 @task
-def open_and_provision_machine(machine_type='m1.small',
-                               manifest='crunch_01.pp',
-                               ami_id='ami-d0f89fb9'):
-    """
-        Opens up an EC2 machine and provisions it with the given puppet
-        manifest. You can optionally specify an AMI id, or otherwise
-        use the AMI provided by Canonical with Ubuntu 12.04 LTS.
-    """
+def open_machines(machine_type='m1.small',
+                  manifest='crunch_01.pp',
+                  ami_id='ami-d0f89fb9',
+                  count=1):
+
     ec2 = boto.connect_ec2()
-    reservation = ec2.run_instances(image_id=ami_id, security_group_ids=['sg-82df60e9'], key_name='ami-keypair')
-    print("Created reservation for 1 instance: %r" % reservation)
+    reservation = ec2.run_instances(image_id=ami_id,
+                                    min_count=count,
+                                    max_count=count,
+                                    security_group_ids=['sg-82df60e9'],
+                                    key_name='ami-keypair')
+    print("Created reservation for %d instances: %r" % (count, reservation))
 
-    instance = reservation.instances[0]
-    status = instance.update()
-    while status == 'pending':
-        print("Waiting for another 10 seconds for machine to show up..")
+    statuses = [instance.update() for instance in reservation.instances]
+    while any(status == 'pending' for status in statuses):
+        print("Waiting for 10 seconds for machine(s) to show up..")
         time.sleep(10)
-        status = instance.update()
+        statuses = [instance.update() for instance in reservation.instances]
 
-    if status != 'running':
-        print("Machine didn't start OK, status = %s" % status)
-        return
+    failed_machines = 0
+    public_hostnames = []
+    for idx, status in enumerate(statuses):
+        if status != 'running':
+            failed_machines += 1
+        else:
+            public_hostnames.append(reservation.instances[idx].public_dns_name)
 
-    print("Giving the SSH daemon the opportunity to start up and stuff..")
-    time.sleep(30)
+    if failed_machines > 0:
+        print("%d machines failed to start!" % failed_machines)
+    else:
+        print("All %d machines were started correctly." % count)
 
-    with settings(user='ubuntu', key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('provision_machine', host=instance.public_dns_name, manifest=manifest)
+    time.sleep(10)
 
-    return instance.public_dns_name
+    return public_hostnames
+
+@task
+def deploy_ami_services_on_crunch_node():
+    run('cd /home/ami/AmI-Platform; ./deploy.sh --fresh')
 
 @task
 def provision_machine(manifest='crunch_01.pp'):
+
+    # Give priority to what is found in env.hostname_to_manifest if such
+    # an entry is found.
+    host = env.host_string
+    if hasattr(env, 'hostname_to_manifest') and host in env.hostname_to_manifest:
+        manifest = env.hostname_to_manifest[host]
+
     # http://docs.puppetlabs.com/guides/puppetlabs_package_repositories.html#for-debian-and-ubuntu
     run('cd /tmp; wget http://apt.puppetlabs.com/puppetlabs-release-precise.deb')
     run('sudo dpkg -i /tmp/puppetlabs-release-precise.deb')
