@@ -232,6 +232,9 @@ def open_machines(machine_type='m1.small',
 
     return public_hostnames
 
+@task
+def deploy_ami_services_on_crunch_node():
+    run('cd /home/ami/AmI-Platform; ./deploy.sh --fresh')
 
 @task
 def provision_machine(manifest='crunch_01.pp'):
