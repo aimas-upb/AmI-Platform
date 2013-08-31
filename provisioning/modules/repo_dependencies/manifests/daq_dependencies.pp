@@ -95,8 +95,9 @@ class repo_dependencies::daq_dependencies {
     ->
 
     exec { "install_openni":
-        command => "/bin/bash /tmp/OpenNI-Bin-Dev-Linux-x64-v1.5.4.0/install.sh",
-        cwd => "/tmp/OpenNI-Bin-Dev-Linux-x64-v1.5.4.0"
+        command => "/bin/bash install.sh",
+        cwd => "/tmp/OpenNI-Bin-Dev-Linux-x64-v1.5.4.0",
+        logoutput => true
     }
 
 }
