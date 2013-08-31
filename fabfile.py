@@ -10,6 +10,8 @@ from fabric.operations import put
 from fabric.tasks import execute
 from jinja2 import Template
 
+env.connection_attempts = 5
+
 logger = logging.getLogger(__name__)
 
 def get_services():
