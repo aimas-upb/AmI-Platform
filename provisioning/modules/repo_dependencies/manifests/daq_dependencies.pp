@@ -61,12 +61,6 @@ class repo_dependencies::daq_dependencies {
 
     ->
 
-    package { "python-dev":
-        ensure => present,
-    }
-
-    ->
-
     package { "unzip":
         ensure => present,
     }
