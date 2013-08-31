@@ -195,9 +195,42 @@ def run_experiment():
 
 @task
 
+@task
+def open_machines(machine_type='m1.small',
+                  manifest='crunch_01.pp',
+                  ami_id='ami-d0f89fb9',
+                  count=1):
+
+    ec2 = boto.connect_ec2()
+    reservation = ec2.run_instances(image_id=ami_id,
+                                    min_count=count,
+                                    max_count=count,
+                                    security_group_ids=['sg-82df60e9'],
+                                    key_name='ami-keypair')
+    print("Created reservation for %d instances: %r" % (count, reservation))
+
+    statuses = [instance.update() for instance in reservation.instances]
+    while any(status == 'pending' for status in statuses):
+        print("Waiting for 10 seconds for machine(s) to show up..")
         time.sleep(10)
+        statuses = [instance.update() for instance in reservation.instances]
 
+    failed_machines = 0
+    public_hostnames = []
+    for idx, status in enumerate(statuses):
+        if status != 'running':
+            failed_machines += 1
+        else:
+            public_hostnames.append(reservation.instances[idx].public_dns_name)
 
+    if failed_machines > 0:
+        print("%d machines failed to start!" % failed_machines)
+    else:
+        print("All %d machines were started correctly." % count)
+
+    time.sleep(10)
+
+    return public_hostnames
 
 
 @task
