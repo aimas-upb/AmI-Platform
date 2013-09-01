@@ -164,17 +164,22 @@ def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps
          'modules': 'ami-recorder'},
     ]
 
-    # Open exactly the desired number of machines. Sometimes EC2 fails
-    # weirdly to open the requested number of machines (don't know why)
-    # so I'm putting in a retry mechanism.
-    machines_to_open = len(machines)
-    machines_opened = 0
-    machine_hostnames = []
-    while machines_opened < machines_to_open:
-        hostnames = execute('open_machines',
-                            count=machines_to_open - machines_opened)['<local-only>']
-        machine_hostnames.extend(hostnames)
-        machines_opened += len(hostnames)
+    # Only open new machines if it's necessary
+    opened_instances = get_all_instances()
+    if len(opened_instances) == 0:
+        # Open exactly the desired number of machines. Sometimes EC2 fails
+        # weirdly to open the requested number of machines (don't know why)
+        # so I'm putting in a retry mechanism.
+        machines_to_open = len(machines)
+        machines_opened = 0
+        machine_hostnames = []
+        while machines_opened < machines_to_open:
+            hostnames = execute('open_machines',
+                                count=machines_to_open - machines_opened)['<local-only>']
+            machine_hostnames.extend(hostnames)
+            machines_opened += len(hostnames)
+    else:
+        hostnames = [instance.public_dns_name for instance in opened_instances]
 
     # Attach tags to machines. This meta-data is used for provisioning and
     # for the lifecycle management of machines as well.
