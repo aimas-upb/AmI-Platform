@@ -363,17 +363,17 @@ def generate_settings_local_file():
     """ Given a crunch node, generate a settings.py file pointing the modules
     running on it to the correct resources (redis/kestrel/mongodb/etc). """
 
-    mongo = get_instance_by_tag({'name': 'measurements'})
+    mongo = get_instance_by_tag({'Name': 'measurements'})
     if not mongo:
         print("Could not find measurements DB in the cloud!")
         return
 
-    redis = get_instance_by_tag({'name': 'sessions'})
+    redis = get_instance_by_tag({'Name': 'sessions'})
     if not redis:
         print("Could not find sessions DB in the cloud!")
         return
 
-    kestrel = get_instance_by_tag({'name': 'queues'})
+    kestrel = get_instance_by_tag({'Name': 'queues'})
     if not kestrel:
         print("Could not find queues machine in the cloud!")
         return
