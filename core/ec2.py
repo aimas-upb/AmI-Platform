@@ -7,14 +7,14 @@ logger = logging.getLogger(__name__)
 def get_running_instances(reservations):
     """ Given a set of reservations, each of which might contain 0
     or more instances, get the set of running instances (those with
-    status == 'running'. """
+    state == 'running'. """
     if not reservations or len(reservations) == 0:
         return []
 
     instances = []
     for reservation in reservations:
         for instance in reservation.instances:
-            if instance.status == 'running':
+            if instance.state == 'running':
                 instances.append(instance)
     return instances
 
