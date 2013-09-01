@@ -4,8 +4,8 @@ import string
 import time
 
 import boto
-from fabric.api import run, task, env
-from fabric.context_managers import settings
+from fabric.api import run, task, env, local
+from fabric.context_managers import settings, cd
 from fabric.operations import put
 from fabric.tasks import execute
 from jinja2 import Template
@@ -112,7 +112,9 @@ def new_service(name, file = None, queue = None, class_name = None):
 
 
 @task
-def run_experiment():
+def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
+                   name='cloud_experiment',
+                   file_name='/tmp/experiment.txt'):
 
     # Mapping from nodes to installed services on them.
     crunch_nodes = {
@@ -230,12 +232,39 @@ def run_experiment():
     # slow.
     with settings(parallel=True, user='ami',
                   key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('deploy_ami_services_on_crunch_node', hosts=hostnames)
+        execute('deploy_ami_services_on_crunch_node', hosts=hostnames[3:])
 
+    # Find out which of the crunch hosts is running the recorder module.
+    # That one should get the dump file via wget and also have an experiment
+    # created in the MongoDB database via experiment.py entry point in order
+    # for the system to know how to play back the dump.
+    hostname = None
+    for crunch_node_info in crunch_nodes.itervalues():
+        if 'ami-recorder' in crunch_node_info['modules']:
+            hostname = crunch_node_info['hostname']
+            break
 
-    # copy dump where experiment.py should be run
-    # create experiment record in mongo
-    # profit :)
+    if hostname is None:
+        print("Something is misconfigured. No crunch node is running the "
+              "ami-recorder module, thus we have nowhere to run the experiment")
+        return
+
+    with settings(host_string=hostname):
+        with cd('/home/ami/AmI-Platform'):
+            # Start and stop the experiment immediately just to create a
+            # record in MongoDB in order to fool the experiment system :)
+            run('python experiment.py --file %s start %s' %
+                (file_name, name))
+            run('python experiment.py stop %s' % name)
+
+            # Fetch the dump from the remote location and place it just
+            # where the experiment system thinks it recorded it.
+            run('wget %s -O %s' % (url, file_name))
+
+            # This will cause the experiment measurements to be pumped
+            # in the kestrel queues, thus triggering the whole processing
+            # along the pipeline
+            run('python experiment.py play %s' % name)
 
     import pprint
     pprint.pprint(env.hostname_to_manifest)
@@ -280,7 +309,90 @@ def open_machines(machine_type='m1.small',
 
 @task
 def deploy_ami_services_on_crunch_node():
-    run('cd /home/ami/AmI-Platform; ./deploy.sh --fresh')
+    run('cd /home/ami/AmI-Platform; fab deploy:fresh=True')
+
+@task
+def deploy(fresh=False):
+    with cd('/home/ami/AmI-Platform'):
+        # Make sure we have the latest repo version if "fresh" parameter
+        # is specified. This will pull the latest version of the code.
+        if fresh:
+            branch = str(local('git rev-parse --abbrev-ref HEAD'))
+            local('git reset --hard HEAD')
+            local('git pull origin %s' % branch)
+            local('git reset --hard HEAD')
+            local('git submodule init')
+            local('git submodule update')
+            local('cd pybetaface; git pull origin master')
+
+        # Install the latest version of python requirements. For cloud
+        # experiments this isn't really necessary, because the hosts are
+        # already provisioned by puppet.
+        local('sudo pip install -r python_requirements.txt')
+
+        # Compile kinect data acquisition
+        local('cd acquisition/kinect; sudo make clean; sudo make')
+
+        # Clean up all pyc's. The safe way to go when you delete a file
+        # from the repo.
+        local('sudo find . -name "*.pyc" -exec rm -rf {} \;')
+
+        # Clean up the phantom of the old installed services. For this we need
+        # the full list of services, in order to know what to look for.
+        # This is needed because you might have the following situation:
+        # * your host is named xyz
+        # * in services.xyz.txt you used to have 2 modules, a and b
+        # * in the new version of services.xyz.txt, you only have b
+        # * this would mean that the only way out without having a full list
+        #   of services is to run the clean-up routine after fetching the new
+        #   code, but this is unacceptable for several reasons:
+        #   ** first, because administrative code should always be ran on the
+        #      latest version from master (e.g. fabfile)
+        #   ** second, because services.xyz.txt might be dirty and totally
+        #      screwed up anyway (working on a dirty tree)
+        with open('services.txt', 'rt') as f:
+            all_services = filter(lambda x: len(x) > 0, [l.strip() for l in f.readlines()])
+            for service in all_services:
+                # For each service, we need to clean up 2 things:
+                # - upstart script - transforms the python script into a
+                #   system-level service
+                # - monit script - makes sure that the script is running
+                #   continuously
+                upstart_script = '/etc/init/%s.conf' % service
+                if os.path.exists(upstart_script):
+                    print('Removing old upstart script for service %s' % service)
+                    local('sudo rm %s' % upstart_script)
+
+                monit_script = '/etc/monit/conf.d/%s' % service
+                if os.path.exists(monit_script):
+                    print('Removing old monit script for service %s' % service)
+                    local('sudo rm %s' % monit_script)
+
+        # Try to get a host-specific services file in order to know what
+        # services to install. If none is available, install all services
+        # by default
+        host_services_file = 'services.%s.txt' % str(local('hostname -s', capture=True))
+        services_file = host_services_file if os.path.exists(host_services_file) else 'services.txt'
+
+        with open(services_file, 'rt') as f:
+            services = filter(lambda x: len(x) > 0, [l.strip() for l in f.readlines()])
+            for service in services:
+                # For each service in the services file, we copy the upstart
+                # and monit scripts to the correct locations, and restart
+                # the service. Restarting the service is needed because the code
+                # might have been modified in the latest revision of the repo.
+                # Copying the config files from scratch is also needed because
+                # they might have been modified as well.
+                print("====================================================")
+                print("      Redeploying service %s                        " % service)
+                print("====================================================")
+                print("")
+                print("Copying new upstart script for service %s" % service)
+                local('sudo cp scripts/upstart/%s.conf /etc/init' % service)
+                print("Copying new monit script for service %s" % service)
+                local('sudo cp scripts/monit/%s /etc/monit/conf.d' % service)
+                print("Restarting service %s" % service)
+                local('sudo service %s restart' % service)
 
 @task
 def provision_machine(manifest='crunch_01.pp'):
