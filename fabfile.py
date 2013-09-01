@@ -208,9 +208,9 @@ def provision_machines():
     # Afterwards, run deploy task on each of them.
     with settings(parallel=True, user='ami',
                   key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('generate_settings_local_file', crunch_hostnames)
-        execute('generate_services_file', crunch_hostnames)
-        execute('deploy_ami_services_on_crunch_node', crunch_hostnames)
+        execute('generate_settings_local_file', hosts=crunch_hostnames)
+        execute('generate_services_file', hosts=crunch_hostnames)
+        execute('deploy_ami_services_on_crunch_node', hosts=crunch_hostnames)
 
 @task
 def copy_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
