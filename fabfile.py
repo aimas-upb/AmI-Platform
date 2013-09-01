@@ -1,3 +1,4 @@
+import json
 import os
 import logging
 import string
@@ -120,49 +121,11 @@ def new_service(name, file = None, queue = None, class_name = None):
 @task
 def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
                    name='cloud_experiment',
-                   file_name='/tmp/experiment.txt'):
+                   file_name='/tmp/experiment.txt',
+                   experiment_profile='default_experiment.json'):
 
-    machines = [
-        {'manifest': 'mongo.pp',
-         'name': 'measurements',
-         'type': 'mongo',
-         'modules': ''},
-
-        {'manifest': 'redis.pp',
-         'name': 'sessions',
-         'type': 'redis',
-         'modules': ''},
-
-        {'manifest': 'kestrel.pp',
-         'name': 'queues',
-         'type': 'kestrel',
-         'modules': ''},
-
-        {'manifest': 'crunch_01.pp',
-         'name': 'crunch_01',
-         'type': 'crunch',
-         'modules': 'ami-router,ami-mongo-writer,ami-room-position,ami-dashboard'},
-
-        {'manifest': 'crunch_01.pp',
-         'name': 'crunch_02',
-         'type': 'crunch',
-         'modules': 'ami-head-crop'},
-
-        {'manifest': 'crunch_01.pp',
-         'name': 'crunch_03',
-         'type': 'crunch',
-         'modules': 'ami-face-recognition'},
-
-        {'manifest': 'crunch_01.pp',
-         'name': 'crunch_04',
-         'type': 'crunch',
-         'modules': 'ami-upgrade_face_samples,ami-room,ami-ip-power'},
-
-        {'manifest': 'crunch_01.pp',
-         'name': 'crunch_05',
-         'type': 'crunch',
-         'modules': 'ami-recorder'},
-    ]
+    # Load up which machines are needed from the experiment profile
+    machines = json.load(open(experiment_profile, 'rt'))
 
     # Only open new machines if it's necessary
     opened_instances = get_all_instances()
