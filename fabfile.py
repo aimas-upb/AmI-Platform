@@ -112,7 +112,9 @@ def new_service(name, file = None, queue = None, class_name = None):
 
 
 @task
-def run_experiment():
+def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
+                   name='cloud_experiment',
+                   file_name='/tmp/experiment.txt'):
 
     # Mapping from nodes to installed services on them.
     crunch_nodes = {
@@ -230,12 +232,39 @@ def run_experiment():
     # slow.
     with settings(parallel=True, user='ami',
                   key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('deploy_ami_services_on_crunch_node', hosts=hostnames)
+        execute('deploy_ami_services_on_crunch_node', hosts=hostnames[3:])
 
+    # Find out which of the crunch hosts is running the recorder module.
+    # That one should get the dump file via wget and also have an experiment
+    # created in the MongoDB database via experiment.py entry point in order
+    # for the system to know how to play back the dump.
+    hostname = None
+    for crunch_node_info in crunch_nodes.itervalues():
+        if 'ami-recorder' in crunch_node_info['modules']:
+            hostname = crunch_node_info['hostname']
+            break
 
-    # copy dump where experiment.py should be run
-    # create experiment record in mongo
-    # profit :)
+    if hostname is None:
+        print("Something is misconfigured. No crunch node is running the "
+              "ami-recorder module, thus we have nowhere to run the experiment")
+        return
+
+    with settings(host_string=hostname):
+        with cd('/home/ami/AmI-Platform'):
+            # Start and stop the experiment immediately just to create a
+            # record in MongoDB in order to fool the experiment system :)
+            run('python experiment.py --file %s start %s' %
+                (file_name, name))
+            run('python experiment.py stop %s' % name)
+
+            # Fetch the dump from the remote location and place it just
+            # where the experiment system thinks it recorded it.
+            run('wget %s -O %s' % (url, file_name))
+
+            # This will cause the experiment measurements to be pumped
+            # in the kestrel queues, thus triggering the whole processing
+            # along the pipeline
+            run('python experiment.py play %s' % name)
 
     import pprint
     pprint.pprint(env.hostname_to_manifest)
