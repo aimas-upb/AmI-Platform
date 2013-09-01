@@ -25,11 +25,11 @@ def get_instances_by_tags(tags):
     filters = {}
     for k, v in tags.iteritems():
         filters['tag:%s' % k] = v
-    return get_running_instances(ec2.get_all_instances(filters))
+    return get_running_instances(ec2.get_all_instances(filters=filters))
 
 def get_instances_by_filters(filters):
     ec2 = boto.connect_ec2()
-    return get_running_instances(ec2.get_all_instances(filters))
+    return get_running_instances(ec2.get_all_instances(filters=filters))
 
 def get_instance_by_filters(filters):
     instances = get_instances_by_filters(filters)
