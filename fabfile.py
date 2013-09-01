@@ -6,9 +6,12 @@ import time
 import boto
 from fabric.api import run, task, env, local
 from fabric.context_managers import settings, cd
-from fabric.operations import put
 from fabric.tasks import execute
 from jinja2 import Template
+
+from core.ec2 import (get_tags_for_machine, get_instance_by_tag,
+                      get_all_instances, get_instances_by_tags,
+                      get_crunch_running, tag_instance)
 
 env.connection_attempts = 5
 
@@ -48,15 +51,18 @@ def default_class_name(name):
         dashed_name = name
     return string.capwords(dashed_name.replace('-', ' ')).replace(' ', '')
 
-def render_template(template_file, context, target_file):
+def render_template(template_file, context, target_file=None):
     """ Renders a template to a given destination file, given context vars. """
 
     with open(template_file, 'rt') as src:
         content = ''.join(src.readlines())
         jinja_template = Template(content)
         output = jinja_template.render(**context)
-        with open(target_file, 'wt') as dest:
-            dest.write(output)
+        if target_file is not None:
+            with open(target_file, 'wt') as dest:
+                dest.write(output)
+        else:
+            return output
 
 @task
 def new_service(name, file = None, queue = None, class_name = None):
@@ -116,34 +122,52 @@ def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps
                    name='cloud_experiment',
                    file_name='/tmp/experiment.txt'):
 
-    # Mapping from nodes to installed services on them.
-    crunch_nodes = {
-        'crunch_01': {
-            'modules': ['ami-router', 'ami-mongo-writer',
-                        'ami-room-position', 'ami-dashboard']
-        },
+    machines = [
+        {'manifest': 'mongo.pp',
+         'name': 'measurements',
+         'type': 'mongo',
+         'modules': ''},
 
-        'crunch_02': {
-            'modules': ['ami-head-crop']
-        },
+        {'manifest': 'redis.pp',
+         'name': 'sessions',
+         'type': 'redis',
+         'modules': ''},
 
-        'crunch_03': {
-            'modules': ['ami-face-recognition']
-        },
+        {'manifest': 'kestrel.pp',
+         'name': 'queues',
+         'type': 'kestrel',
+         'modules': ''},
 
-        'crunch_04': {
-            'modules': ['ami-upgrade_face_samples', 'ami-room', 'ami-ip-power']
-        },
+        {'manifest': 'crunch_01.pp',
+         'name': 'crunch_01',
+         'type': 'crunch',
+         'modules': 'ami-router,ami-mongo-writer,ami-room-position,ami-dashboard'},
 
-        'crunch_05': {
-            'modules': ['ami-recorder']
-        }
-    }
+        {'manifest': 'crunch_01.pp',
+         'name': 'crunch_02',
+         'type': 'crunch',
+         'modules': 'ami-head-crop'},
+
+        {'manifest': 'crunch_01.pp',
+         'name': 'crunch_03',
+         'type': 'crunch',
+         'modules': 'ami-face-recognition'},
+
+        {'manifest': 'crunch_01.pp',
+         'name': 'crunch_04',
+         'type': 'crunch',
+         'modules': 'ami-upgrade_face_samples,ami-room,ami-ip-power'},
+
+        {'manifest': 'crunch_01.pp',
+         'name': 'crunch_05',
+         'type': 'crunch',
+         'modules': 'ami-recorder'},
+    ]
 
     # Open exactly the desired number of machines. Sometimes EC2 fails
     # weirdly to open the requested number of machines (don't know why)
     # so I'm putting in a retry mechanism.
-    machines_to_open = len(crunch_nodes) + 3
+    machines_to_open = len(machines)
     machines_opened = 0
     machine_hostnames = []
     while machines_opened < machines_to_open:
@@ -152,123 +176,14 @@ def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps
         machine_hostnames.extend(hostnames)
         machines_opened += len(hostnames)
 
-    # Map the freshly obtained hostnames to manifests
-    manifests = {}
-    manifests[hostnames[0]] = 'mongo.pp'
-    manifests[hostnames[1]] = 'redis.pp'
-    manifests[hostnames[2]] = 'kestrel.pp'
-    i = 1
-    for crunch_hostname in hostnames[3:]:
-        manifests[crunch_hostname] = 'crunch_01.pp'
-        crunch_nodes['crunch_0%d' % i]['hostname'] = crunch_hostname
-        i += 1
-    env.hostname_to_manifest = manifests
+    # Attach tags to machines. This meta-data is used for provisioning and
+    # for the lifecycle management of machines as well.
+    for hostname, machine_meta_data in zip(hostnames, machines):
+        tag_instance(hostname, machine_meta_data)
 
-    # Provision the machines in parallel. The manifest for each machine
-    # will be taken from env.hostname_to_manifest, because it's the only sane
-    # way I found in fab to do the provisioning in parallel.
-    with settings(parallel=True, user='ubuntu',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('provision_machine', hosts=hostnames)
-
-    # Generate settings_local.py based on the hostnames of the opened machines
-    # This is needed in order to wire up the machines with knowledge of the
-    # MongoDB / Redis / Kestrel server so that they connect to it correctly.
-    # Since we're generating the file in the /tmp dir, make sure we clean up
-    # a potentially existing old file before we use it.
-    context = {
-        'kestrel_server': hostnames[2],
-        'kestrel_port': 22133,
-        'mongo_server': hostnames[0],
-        'mongo_port': 27017,
-        'redis_server': hostnames[1],
-        'redis_port': 6379,
-    }
-    try:
-        os.remove('/tmp/settings.py.generated')
-    except:
-        pass
-
-    render_template('admin/templates/settings.py',
-                    context,
-                    '/tmp/settings.py.generated')
-
-    # Copy the settings.py to each machine, and generate services.txt
-    # for each one. The name of the services file is based on the `hostname -s`
-    # command (see deploy.sh command for more details), and its content
-    # will enable deploy.sh to install the AmI services correctly as system
-    # services managed by upstart & monit (these guys are installed prior to
-    # this step via puppet).
-    for crunch_node in crunch_nodes.iterkeys():
-        hostname = crunch_nodes[crunch_node]['hostname']
-        with settings(host_string=hostname, user='ami',
-                      key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-
-            # Copy the generated settings file to core/settings_local.py
-            # If you overwrite core/settings.py, that one gets overwritten
-            # at ./deploy.sh --fresh
-            put('/tmp/settings.py.generated', '/home/ami/AmI-Platform/core/settings_local.py')
-
-            # Get local hostname and generate a services.hostname.txt file
-            local_hostname = str(run('hostname -s'))
-            services_filename = '/tmp/services.%s.txt' % local_hostname
-
-            try:
-                os.remove(services_filename)
-            except:
-                pass
-
-            with open(services_filename, 'wt') as f:
-                f.write('\n'.join(crunch_nodes[crunch_node]['modules'] + []))
-
-
-            # Copy the services file remotely and execute a deploy.sh.
-            # That will cause the ami services designated for this node to
-            # be installed.
-            put(services_filename, '/home/ami/AmI-Platform')
-
-    # Install the AmI services on each machine in parallel. The reason is that
-    # this might require some compilation from sources, and that tends to be
-    # slow.
-    with settings(parallel=True, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('deploy_ami_services_on_crunch_node', hosts=hostnames[3:])
-
-    # Find out which of the crunch hosts is running the recorder module.
-    # That one should get the dump file via wget and also have an experiment
-    # created in the MongoDB database via experiment.py entry point in order
-    # for the system to know how to play back the dump.
-    hostname = None
-    for crunch_node_info in crunch_nodes.itervalues():
-        if 'ami-recorder' in crunch_node_info['modules']:
-            hostname = crunch_node_info['hostname']
-            break
-
-    if hostname is None:
-        print("Something is misconfigured. No crunch node is running the "
-              "ami-recorder module, thus we have nowhere to run the experiment")
-        return
-
-    with settings(host_string=hostname):
-        with cd('/home/ami/AmI-Platform'):
-            # Start and stop the experiment immediately just to create a
-            # record in MongoDB in order to fool the experiment system :)
-            run('python experiment.py --file %s start %s' %
-                (file_name, name))
-            run('python experiment.py stop %s' % name)
-
-            # Fetch the dump from the remote location and place it just
-            # where the experiment system thinks it recorded it.
-            run('wget %s -O %s' % (url, file_name))
-
-            # This will cause the experiment measurements to be pumped
-            # in the kestrel queues, thus triggering the whole processing
-            # along the pipeline
-            run('python experiment.py play %s' % name)
-
-    import pprint
-    pprint.pprint(env.hostname_to_manifest)
-    pprint.pprint(crunch_nodes)
+    execute('provision_machines')
+    execute('copy_experiment', url=url, file_name=file_name, name=name)
+    execute('play_experiment', name=name)
 
 @task
 def open_machines(machine_type='m1.small',
@@ -306,6 +221,69 @@ def open_machines(machine_type='m1.small',
     time.sleep(10)
 
     return public_hostnames
+
+@task
+def provision_machines():
+    hostnames = [instance.public_dns_name for instance in get_all_instances()]
+
+    # Provision the machines in parallel. The manifest for each machine
+    # will be taken from env.hostname_to_manifest, because it's the only sane
+    # way I found in fab to do the provisioning in parallel.
+    with settings(parallel=True, user='ubuntu',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        execute('provision_machine', hosts=hostnames)
+
+    crunch_hostnames = [instance.public_dns_name for instance in
+                        get_instances_by_tags({'type': 'crunch'})]
+
+    # For crunch nodes, generate settings_local.py files and services.txt files.
+    # Afterwards, run deploy task on each of them.
+    with settings(parallel=True, user='ami',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        execute('generate_settings_local_file', crunch_hostnames)
+        execute('generate_services_file', crunch_hostnames)
+        execute('deploy_ami_services_on_crunch_node', crunch_hostnames)
+
+@task
+def copy_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
+                    name='cloud_experiment',
+                    file_name='/tmp/experiment.txt'):
+
+    # Search among the crunch nodes the one on which ami-recorder is running
+    recorder_hostname = get_crunch_running('ami-recorder')
+    if recorder_hostname is None:
+        print("Something is misconfigured. No crunch node is running the "
+              "ami-recorder module, thus we have nowhere to run the experiment")
+        return
+
+    with settings(host_string=recorder_hostname):
+        with cd('/home/ami/AmI-Platform'):
+            # Start and stop the experiment immediately just to create a
+            # record in MongoDB in order to fool the experiment system :)
+            run('python experiment.py --file %s start %s' %
+                (file_name, name))
+            run('python experiment.py stop %s' % name)
+
+            # Fetch the dump from the remote location and place it just
+            # where the experiment system thinks it recorded it.
+            run('wget %s -O %s' % (url, file_name))
+
+@task
+def play_experiment(name='cloud_experiment'):
+
+    # Search among the crunch nodes the one on which ami-recorder is running
+    recorder_hostname = get_crunch_running('ami-recorder')
+    if recorder_hostname is None:
+        print("Something is misconfigured. No crunch node is running the "
+              "ami-recorder module, thus we have nowhere to run the experiment")
+        return
+
+    with settings(host_string=recorder_hostname):
+        with cd('/home/ami/AmI-Platform'):
+            # This will cause the experiment measurements to be pumped
+            # in the kestrel queues, thus triggering the whole processing
+            # along the pipeline
+            run('python experiment.py play %s' % name)
 
 @task
 def deploy_ami_services_on_crunch_node():
@@ -395,13 +373,69 @@ def deploy(fresh=False):
                 local('sudo service %s restart' % service)
 
 @task
-def provision_machine(manifest='crunch_01.pp'):
+def generate_services_file():
+    """ Given a crunch node, generate a settings_local.py file which
+    contains the list of services that should run on this machine. """
 
-    # Give priority to what is found in env.hostname_to_manifest if such
-    # an entry is found.
-    host = env.host_string
-    if hasattr(env, 'hostname_to_manifest') and host in env.hostname_to_manifest:
-        manifest = env.hostname_to_manifest[host]
+    tags = get_tags_for_machine(env.host_string)
+    if not 'modules' in tags:
+        print("No modules are specified as EC2 tags for hostname %s" %
+              env.host_string)
+        return
+
+    modules = tags['modules'].split(',')
+    file_path = ('/home/ami/AmI-Platform/services.%s.txt' %
+                 str(run('hostname -s')))
+    run('echo "" > %s' % file_path)
+    for module in modules:
+        run('echo "%s" >> %s' % (module, file_path))
+
+@task
+def generate_settings_local_file():
+    """ Given a crunch node, generate a settings.py file pointing the modules
+    running on it to the correct resources (redis/kestrel/mongodb/etc). """
+
+    mongo = get_instance_by_tag({'name': 'measurements'})
+    if not mongo:
+        print("Could not find measurements DB in the cloud!")
+        return
+
+    redis = get_instance_by_tag({'name': 'sessions'})
+    if not redis:
+        print("Could not find sessions DB in the cloud!")
+        return
+
+    kestrel = get_instance_by_tag({'name': 'queues'})
+    if not kestrel:
+        print("Could not find queues machine in the cloud!")
+        return
+
+    # Render the settings_local.py file template to a string.
+    context = {
+        'kestrel_server': kestrel,
+        'kestrel_port': 22133,
+        'mongo_server': mongo,
+        'mongo_port': 27017,
+        'redis_server': redis,
+        'redis_port': 6379,
+    }
+    content = render_template('admin/templates/settings.py', context).split('\n')
+
+    # Afterwards, string is written line by line using echo to the remote
+    # host.
+    file_path = '/home/ami/AmI-Platform/core/settings_local.py'
+    run('echo "" > %s' % file_path)
+    for line in content:
+        run('echo "%s" > %s' % (line, file_path))
+
+@task
+def provision_machine(manifest='crunch_01.pp'):
+    # Retrieve EC2 tags for this machine, and see if there is a manifest tag
+    # among them. If yes, that one has priority over what gets specified as
+    # a parameter to this function.
+    tags = get_tags_for_machine(env.host_string)
+    if 'manifest' in tags:
+        manifest = tags['manifest']
 
     # http://docs.puppetlabs.com/guides/puppetlabs_package_repositories.html#for-debian-and-ubuntu
     run('cd /tmp; wget http://apt.puppetlabs.com/puppetlabs-release-precise.deb')
