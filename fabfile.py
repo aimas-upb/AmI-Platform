@@ -149,6 +149,7 @@ def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps
     for hostname, machine_meta_data in zip(hostnames, machines):
         tag_instance(hostname, machine_meta_data)
 
+    execute('bootstrap_machines')
     execute('provision_machines')
     execute('copy_experiment', url=url, file_name=file_name, name=name)
     execute('play_experiment', name=name)
@@ -397,14 +398,18 @@ def generate_settings_local_file():
         run('echo "%s" > %s' % (line, file_path))
 
 @task
-def provision_machine(manifest='crunch_01.pp'):
-    # Retrieve EC2 tags for this machine, and see if there is a manifest tag
-    # among them. If yes, that one has priority over what gets specified as
-    # a parameter to this function.
-    tags = get_tags_for_machine(env.host_string)
-    if 'manifest' in tags:
-        manifest = tags['manifest']
+def bootstrap_machines():
+    hostnames = [instance.public_dns_name for instance in get_all_instances()]
 
+    # Provision the machines in parallel. The manifest for each machine
+    # will be taken from env.hostname_to_manifest, because it's the only sane
+    # way I found in fab to do the provisioning in parallel.
+    with settings(parallel=True, user='ubuntu',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        execute('bootstrap_machine', hosts=hostnames)
+
+@task
+def bootstrap_machine():
     # http://docs.puppetlabs.com/guides/puppetlabs_package_repositories.html#for-debian-and-ubuntu
     run('cd /tmp; wget http://apt.puppetlabs.com/puppetlabs-release-precise.deb')
     run('sudo dpkg -i /tmp/puppetlabs-release-precise.deb')
@@ -429,6 +434,15 @@ def provision_machine(manifest='crunch_01.pp'):
     # manifests in the correct dir with the correct permissions.
     run('cd /tmp; wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/bootstrap.pp')
     run('sudo puppet apply /tmp/bootstrap.pp')
+
+@task
+def provision_machine(manifest='crunch_01.pp'):
+    # Retrieve EC2 tags for this machine, and see if there is a manifest tag
+    # among them. If yes, that one has priority over what gets specified as
+    # a parameter to this function.
+    tags = get_tags_for_machine(env.host_string)
+    if 'manifest' in tags:
+        manifest = tags['manifest']
 
     # Run the actual manifest for provisioning this node from the repo
     run("sudo puppet apply /home/ami/AmI-Platform/provisioning/nodes/%s" % manifest)
