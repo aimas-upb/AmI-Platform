@@ -7,14 +7,14 @@ logger = logging.getLogger(__name__)
 def get_running_instances(reservations):
     """ Given a set of reservations, each of which might contain 0
     or more instances, get the set of running instances (those with
-    status == 'running'. """
+    state == 'running'. """
     if not reservations or len(reservations) == 0:
         return []
 
     instances = []
     for reservation in reservations:
         for instance in reservation.instances:
-            if instance.status == 'running':
+            if instance.state == 'running':
                 instances.append(instance)
     return instances
 
@@ -25,11 +25,11 @@ def get_instances_by_tags(tags):
     filters = {}
     for k, v in tags.iteritems():
         filters['tag:%s' % k] = v
-    return get_running_instances(ec2.get_all_instances(filters))
+    return get_running_instances(ec2.get_all_instances(filters=filters))
 
 def get_instances_by_filters(filters):
     ec2 = boto.connect_ec2()
-    return get_running_instances(ec2.get_all_instances(filters))
+    return get_running_instances(ec2.get_all_instances(filters=filters))
 
 def get_instance_by_filters(filters):
     instances = get_instances_by_filters(filters)

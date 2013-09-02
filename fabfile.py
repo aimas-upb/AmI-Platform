@@ -1,3 +1,4 @@
+import json
 import os
 import logging
 import string
@@ -120,61 +121,28 @@ def new_service(name, file = None, queue = None, class_name = None):
 @task
 def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
                    name='cloud_experiment',
-                   file_name='/tmp/experiment.txt'):
+                   file_name='/tmp/experiment.txt',
+                   experiment_profile='default_experiment.json'):
 
-    machines = [
-        {'manifest': 'mongo.pp',
-         'name': 'measurements',
-         'type': 'mongo',
-         'modules': ''},
+    # Load up which machines are needed from the experiment profile
+    machines = json.load(open(experiment_profile, 'rt'))
 
-        {'manifest': 'redis.pp',
-         'name': 'sessions',
-         'type': 'redis',
-         'modules': ''},
-
-        {'manifest': 'kestrel.pp',
-         'name': 'queues',
-         'type': 'kestrel',
-         'modules': ''},
-
-        {'manifest': 'crunch_01.pp',
-         'name': 'crunch_01',
-         'type': 'crunch',
-         'modules': 'ami-router,ami-mongo-writer,ami-room-position,ami-dashboard'},
-
-        {'manifest': 'crunch_01.pp',
-         'name': 'crunch_02',
-         'type': 'crunch',
-         'modules': 'ami-head-crop'},
-
-        {'manifest': 'crunch_01.pp',
-         'name': 'crunch_03',
-         'type': 'crunch',
-         'modules': 'ami-face-recognition'},
-
-        {'manifest': 'crunch_01.pp',
-         'name': 'crunch_04',
-         'type': 'crunch',
-         'modules': 'ami-upgrade_face_samples,ami-room,ami-ip-power'},
-
-        {'manifest': 'crunch_01.pp',
-         'name': 'crunch_05',
-         'type': 'crunch',
-         'modules': 'ami-recorder'},
-    ]
-
-    # Open exactly the desired number of machines. Sometimes EC2 fails
-    # weirdly to open the requested number of machines (don't know why)
-    # so I'm putting in a retry mechanism.
-    machines_to_open = len(machines)
-    machines_opened = 0
-    machine_hostnames = []
-    while machines_opened < machines_to_open:
-        hostnames = execute('open_machines',
-                            count=machines_to_open - machines_opened)['<local-only>']
-        machine_hostnames.extend(hostnames)
-        machines_opened += len(hostnames)
+    # Only open new machines if it's necessary
+    opened_instances = get_all_instances()
+    if len(opened_instances) == 0:
+        # Open exactly the desired number of machines. Sometimes EC2 fails
+        # weirdly to open the requested number of machines (don't know why)
+        # so I'm putting in a retry mechanism.
+        machines_to_open = len(machines)
+        machines_opened = 0
+        machine_hostnames = []
+        while machines_opened < machines_to_open:
+            hostnames = execute('open_machines',
+                                count=machines_to_open - machines_opened)['<local-only>']
+            machine_hostnames.extend(hostnames)
+            machines_opened += len(hostnames)
+    else:
+        hostnames = [instance.public_dns_name for instance in opened_instances]
 
     # Attach tags to machines. This meta-data is used for provisioning and
     # for the lifecycle management of machines as well.
@@ -240,9 +208,9 @@ def provision_machines():
     # Afterwards, run deploy task on each of them.
     with settings(parallel=True, user='ami',
                   key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('generate_settings_local_file', crunch_hostnames)
-        execute('generate_services_file', crunch_hostnames)
-        execute('deploy_ami_services_on_crunch_node', crunch_hostnames)
+        execute('generate_settings_local_file', hosts=crunch_hostnames)
+        execute('generate_services_file', hosts=crunch_hostnames)
+        execute('deploy_ami_services_on_crunch_node', hosts=crunch_hostnames)
 
 @task
 def copy_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
@@ -395,17 +363,17 @@ def generate_settings_local_file():
     """ Given a crunch node, generate a settings.py file pointing the modules
     running on it to the correct resources (redis/kestrel/mongodb/etc). """
 
-    mongo = get_instance_by_tag({'name': 'measurements'})
+    mongo = get_instance_by_tag({'Name': 'measurements'})
     if not mongo:
         print("Could not find measurements DB in the cloud!")
         return
 
-    redis = get_instance_by_tag({'name': 'sessions'})
+    redis = get_instance_by_tag({'Name': 'sessions'})
     if not redis:
         print("Could not find sessions DB in the cloud!")
         return
 
-    kestrel = get_instance_by_tag({'name': 'queues'})
+    kestrel = get_instance_by_tag({'Name': 'queues'})
     if not kestrel:
         print("Could not find queues machine in the cloud!")
         return
