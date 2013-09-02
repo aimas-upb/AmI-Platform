@@ -7,6 +7,7 @@ import time
 import boto
 from fabric.api import run, task, env, local
 from fabric.context_managers import settings, cd
+from fabric.operations import open_shell
 from fabric.tasks import execute
 from jinja2 import Template
 
@@ -446,3 +447,15 @@ def provision_machine(manifest='crunch_01.pp'):
 
     # Run the actual manifest for provisioning this node from the repo
     run("sudo puppet apply /home/ami/AmI-Platform/provisioning/nodes/%s" % manifest)
+
+@task
+def ssh(name):
+    """ Opens a shell connection to a host given by its EC2 name. """
+
+    instance = get_instance_by_tags({'Name': name})
+    if instance is None:
+        return
+
+    with settings(user='ami', host_string=instance.public_dns_name,
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        open_shell()
