@@ -230,6 +230,18 @@ def refresh_code():
             run('git reset --hard HEAD')
             run('git pull origin %s' % branch)
             run('git reset --hard HEAD')
+
+@task
+def reprovision_machines():
+    # Pull latest version of the code on the machines
+    execute('refresh_code_on_machines')
+
+    # Execute per-node provisioning only (excluding bootstrap). Bootstrap
+    # is assumed to always be successful in order to speed things up for
+    # reprovisioning.
+    execute('provision_machines')
+
+@task
 def copy_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
                     name='cloud_experiment',
                     file_name='/tmp/experiment.txt'):
