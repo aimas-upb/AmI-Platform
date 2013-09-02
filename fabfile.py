@@ -198,7 +198,7 @@ def provision_machines():
     # Provision the machines in parallel. The manifest for each machine
     # will be taken from env.hostname_to_manifest, because it's the only sane
     # way I found in fab to do the provisioning in parallel.
-    with settings(parallel=True, user='ubuntu',
+    with settings(parallel=True, user='ami',
                   key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
         execute('provision_machine', hosts=hostnames)
 
