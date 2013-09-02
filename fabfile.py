@@ -10,7 +10,7 @@ from fabric.context_managers import settings, cd
 from fabric.tasks import execute
 from jinja2 import Template
 
-from core.ec2 import (get_tags_for_machine, get_instance_by_tag,
+from core.ec2 import (get_tags_for_machine, get_instance_by_tags,
                       get_all_instances, get_instances_by_tags,
                       get_crunch_running, tag_instance)
 
@@ -364,17 +364,17 @@ def generate_settings_local_file():
     """ Given a crunch node, generate a settings.py file pointing the modules
     running on it to the correct resources (redis/kestrel/mongodb/etc). """
 
-    mongo = get_instance_by_tag({'Name': 'measurements'})
+    mongo = get_instance_by_tags({'Name': 'measurements'})
     if not mongo:
         print("Could not find measurements DB in the cloud!")
         return
 
-    redis = get_instance_by_tag({'Name': 'sessions'})
+    redis = get_instance_by_tags({'Name': 'sessions'})
     if not redis:
         print("Could not find sessions DB in the cloud!")
         return
 
-    kestrel = get_instance_by_tag({'Name': 'queues'})
+    kestrel = get_instance_by_tags({'Name': 'queues'})
     if not kestrel:
         print("Could not find queues machine in the cloud!")
         return
