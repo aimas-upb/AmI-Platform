@@ -409,11 +409,11 @@ def generate_settings_local_file():
 
     # Render the settings_local.py file template to a string.
     context = {
-        'kestrel_server': kestrel,
+        'kestrel_server': kestrel.public_dns_name,
         'kestrel_port': 22133,
-        'mongo_server': mongo,
+        'mongo_server': mongo.public_dns_name,
         'mongo_port': 27017,
-        'redis_server': redis,
+        'redis_server': redis.public_dns_name,
         'redis_port': 6379,
     }
     content = render_template('admin/templates/settings.py', context).split('\n')
