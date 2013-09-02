@@ -47,7 +47,7 @@ def get_instance_by_filters(filters):
 def get_all_instances():
     return get_instances_by_filters({})
 
-def get_instance_by_tag(tags):
+def get_instance_by_tags(tags):
     """ Get a single instance from the EC2 cloud using tags to filter it out.
     Asserts that there is exactly one instance, and returns None when this isn't
     the case. """

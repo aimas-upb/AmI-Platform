@@ -7,10 +7,11 @@ import time
 import boto
 from fabric.api import run, task, env, local
 from fabric.context_managers import settings, cd
+from fabric.operations import open_shell
 from fabric.tasks import execute
 from jinja2 import Template
 
-from core.ec2 import (get_tags_for_machine, get_instance_by_tag,
+from core.ec2 import (get_tags_for_machine, get_instance_by_tags,
                       get_all_instances, get_instances_by_tags,
                       get_crunch_running, tag_instance)
 
@@ -149,6 +150,7 @@ def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps
     for hostname, machine_meta_data in zip(hostnames, machines):
         tag_instance(hostname, machine_meta_data)
 
+    execute('bootstrap_machines')
     execute('provision_machines')
     execute('copy_experiment', url=url, file_name=file_name, name=name)
     execute('play_experiment', name=name)
@@ -197,7 +199,7 @@ def provision_machines():
     # Provision the machines in parallel. The manifest for each machine
     # will be taken from env.hostname_to_manifest, because it's the only sane
     # way I found in fab to do the provisioning in parallel.
-    with settings(parallel=True, user='ubuntu',
+    with settings(parallel=True, user='ami',
                   key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
         execute('provision_machine', hosts=hostnames)
 
@@ -211,6 +213,33 @@ def provision_machines():
         execute('generate_settings_local_file', hosts=crunch_hostnames)
         execute('generate_services_file', hosts=crunch_hostnames)
         execute('deploy_ami_services_on_crunch_node', hosts=crunch_hostnames)
+
+@task
+def refresh_code_on_machines():
+    """ Refresh the current version of the code on the machines. """
+    hostnames = [instance.public_dns_name for instance in get_all_instances()]
+
+    with settings(parallel=True, user='ami',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        execute('refresh_code', hosts=hostnames)
+
+@task
+def refresh_code():
+    with cd('/home/ami/AmI-Platform'):
+            branch = str(run('git rev-parse --abbrev-ref HEAD'))
+            run('git reset --hard HEAD')
+            run('git pull origin %s' % branch)
+            run('git reset --hard HEAD')
+
+@task
+def reprovision_machines():
+    # Pull latest version of the code on the machines
+    execute('refresh_code_on_machines')
+
+    # Execute per-node provisioning only (excluding bootstrap). Bootstrap
+    # is assumed to always be successful in order to speed things up for
+    # reprovisioning.
+    execute('provision_machines')
 
 @task
 def copy_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
@@ -363,28 +392,28 @@ def generate_settings_local_file():
     """ Given a crunch node, generate a settings.py file pointing the modules
     running on it to the correct resources (redis/kestrel/mongodb/etc). """
 
-    mongo = get_instance_by_tag({'Name': 'measurements'})
+    mongo = get_instance_by_tags({'Name': 'measurements'})
     if not mongo:
         print("Could not find measurements DB in the cloud!")
         return
 
-    redis = get_instance_by_tag({'Name': 'sessions'})
+    redis = get_instance_by_tags({'Name': 'sessions'})
     if not redis:
         print("Could not find sessions DB in the cloud!")
         return
 
-    kestrel = get_instance_by_tag({'Name': 'queues'})
+    kestrel = get_instance_by_tags({'Name': 'queues'})
     if not kestrel:
         print("Could not find queues machine in the cloud!")
         return
 
     # Render the settings_local.py file template to a string.
     context = {
-        'kestrel_server': kestrel,
+        'kestrel_server': kestrel.public_dns_name,
         'kestrel_port': 22133,
-        'mongo_server': mongo,
+        'mongo_server': mongo.public_dns_name,
         'mongo_port': 27017,
-        'redis_server': redis,
+        'redis_server': redis.public_dns_name,
         'redis_port': 6379,
     }
     content = render_template('admin/templates/settings.py', context).split('\n')
@@ -394,17 +423,21 @@ def generate_settings_local_file():
     file_path = '/home/ami/AmI-Platform/core/settings_local.py'
     run('echo "" > %s' % file_path)
     for line in content:
-        run('echo "%s" > %s' % (line, file_path))
+        run('echo "%s" >> %s' % (line, file_path))
 
 @task
-def provision_machine(manifest='crunch_01.pp'):
-    # Retrieve EC2 tags for this machine, and see if there is a manifest tag
-    # among them. If yes, that one has priority over what gets specified as
-    # a parameter to this function.
-    tags = get_tags_for_machine(env.host_string)
-    if 'manifest' in tags:
-        manifest = tags['manifest']
+def bootstrap_machines():
+    hostnames = [instance.public_dns_name for instance in get_all_instances()]
 
+    # Provision the machines in parallel. The manifest for each machine
+    # will be taken from env.hostname_to_manifest, because it's the only sane
+    # way I found in fab to do the provisioning in parallel.
+    with settings(parallel=True, user='ubuntu',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        execute('bootstrap_machine', hosts=hostnames)
+
+@task
+def bootstrap_machine():
     # http://docs.puppetlabs.com/guides/puppetlabs_package_repositories.html#for-debian-and-ubuntu
     run('cd /tmp; wget http://apt.puppetlabs.com/puppetlabs-release-precise.deb')
     run('sudo dpkg -i /tmp/puppetlabs-release-precise.deb')
@@ -430,5 +463,34 @@ def provision_machine(manifest='crunch_01.pp'):
     run('cd /tmp; wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/bootstrap.pp')
     run('sudo puppet apply /tmp/bootstrap.pp')
 
+@task
+def provision_machine(manifest='crunch_01.pp'):
+    # Retrieve EC2 tags for this machine, and see if there is a manifest tag
+    # among them. If yes, that one has priority over what gets specified as
+    # a parameter to this function.
+    tags = get_tags_for_machine(env.host_string)
+    if 'manifest' in tags:
+        manifest = tags['manifest']
+
     # Run the actual manifest for provisioning this node from the repo
     run("sudo puppet apply /home/ami/AmI-Platform/provisioning/nodes/%s" % manifest)
+
+@task
+def ssh(name):
+    """ Opens a shell connection to a host given by its EC2 name. """
+
+    instance = get_instance_by_tags({'Name': name})
+    if instance is None:
+        return
+
+    with settings(user='ami', host_string=instance.public_dns_name,
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        open_shell()
+
+@task
+def host(name):
+    instance = get_instance_by_tags({'Name': name})
+    if instance is None:
+        return
+
+    print instance.public_dns_name
