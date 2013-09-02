@@ -423,7 +423,7 @@ def generate_settings_local_file():
     file_path = '/home/ami/AmI-Platform/core/settings_local.py'
     run('echo "" > %s' % file_path)
     for line in content:
-        run('echo "%s" > %s' % (line, file_path))
+        run('echo "%s" >> %s' % (line, file_path))
 
 @task
 def bootstrap_machines():
