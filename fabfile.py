@@ -486,3 +486,11 @@ def ssh(name):
     with settings(user='ami', host_string=instance.public_dns_name,
                   key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
         open_shell()
+
+@task
+def host(name):
+    instance = get_instance_by_tags({'Name': name})
+    if instance is None:
+        return
+
+    print instance.public_dns_name
