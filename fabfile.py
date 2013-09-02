@@ -215,6 +215,21 @@ def provision_machines():
         execute('deploy_ami_services_on_crunch_node', hosts=crunch_hostnames)
 
 @task
+def refresh_code_on_machines():
+    """ Refresh the current version of the code on the machines. """
+    hostnames = [instance.public_dns_name for instance in get_all_instances()]
+
+    with settings(parallel=True, user='ami',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        execute('refresh_code', hosts=hostnames)
+
+@task
+def refresh_code():
+    with cd('/home/ami/AmI-Platform'):
+            branch = str(run('git rev-parse --abbrev-ref HEAD'))
+            run('git reset --hard HEAD')
+            run('git pull origin %s' % branch)
+            run('git reset --hard HEAD')
 def copy_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
                     name='cloud_experiment',
                     file_name='/tmp/experiment.txt'):
