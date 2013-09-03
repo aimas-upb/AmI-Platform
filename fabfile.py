@@ -253,7 +253,8 @@ def copy_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dump
               "ami-recorder module, thus we have nowhere to run the experiment")
         return
 
-    with settings(host_string=recorder_hostname):
+    with settings(host_string=recorder_hostname, user='ami',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
         with cd('/home/ami/AmI-Platform'):
             # Start and stop the experiment immediately just to create a
             # record in MongoDB in order to fool the experiment system :)
@@ -275,7 +276,8 @@ def play_experiment(name='cloud_experiment'):
               "ami-recorder module, thus we have nowhere to run the experiment")
         return
 
-    with settings(host_string=recorder_hostname):
+    with settings(host_string=recorder_hostname, user='ami',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
         with cd('/home/ami/AmI-Platform'):
             # This will cause the experiment measurements to be pumped
             # in the kestrel queues, thus triggering the whole processing
