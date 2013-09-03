@@ -13,6 +13,8 @@ class repo_dependencies::python_dependencies {
     exec { "install-python-packages":
         command => '/usr/bin/pip install -r python_requirements.txt',
         cwd => '/home/ami/AmI-Platform',
+        # numpy takes a while to install :)
+        timeout => 0
     }
 
     Package["python-pip"] -> Exec["install-python-packages"]
