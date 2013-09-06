@@ -204,16 +204,21 @@ def provision_machines():
                   key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
         execute('provision_machine', hosts=hostnames)
 
-    crunch_hostnames = [instance.public_dns_name for instance in
-                        get_instances_by_tags({'type': 'crunch'})]
+    # Determine the crunching hostnames - these are generally modules of
+    # type 'crunch' but there might be exceptions when we want to keep the
+    # code close to a machine, especially since we have all the code on all
+    # the machines.
+    crunching_hostnames = [instance.public_dns_name
+                           for instance in get_all_instances()
+                           if len(instance.tags.get('modules', '').strip()) > 0]
 
     # For crunch nodes, generate settings_local.py files and services.txt files.
     # Afterwards, run deploy task on each of them.
     with settings(parallel=True, user='ami',
                   key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('generate_settings_local_file', hosts=crunch_hostnames)
-        execute('generate_services_file', hosts=crunch_hostnames)
-        execute('deploy_ami_services_on_crunch_node', hosts=crunch_hostnames)
+        execute('generate_settings_local_file', hosts=crunching_hostnames)
+        execute('generate_services_file', hosts=crunching_hostnames)
+        execute('deploy_ami_services_on_crunch_node', hosts=crunching_hostnames)
 
 @task
 def refresh_code_on_machines():
