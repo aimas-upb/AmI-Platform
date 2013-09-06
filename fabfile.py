@@ -504,7 +504,6 @@ def bootstrap_machine():
     run('sudo puppet module install -f puppetlabs/apt')
     run('sudo puppet module install -f puppetlabs/gcc')
     run('sudo puppet module install -f puppetlabs/mongodb')
-    run('sudo puppet module install -f puppetlabs/nginx')
     run('sudo puppet module install -f puppetlabs/stdlib')
     run('sudo puppet module install -f puppetlabs/vcsrepo')
     run('sudo puppet module install -f maestrodev/ssh_keygen')
