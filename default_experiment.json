@@ -11,7 +11,7 @@
          "Name": "sessions",
          "manifest": "redis.pp",
          "type": "redis",
-         "modules": ""
+         "modules": "ami-api"
         },
 
         {
