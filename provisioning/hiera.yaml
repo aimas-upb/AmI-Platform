@@ -1,0 +1,7 @@
+:backends:
+  - json
+:json:
+  :datadir: /etc/puppet/hiera
+:hierarchy:
+  - "node/%{::fqdn}"
+  - common
