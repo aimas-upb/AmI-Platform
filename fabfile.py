@@ -5,7 +5,7 @@ import string
 import time
 
 import boto
-from fabric.api import run, task, env, local
+from fabric.api import env, local, put, run, task
 from fabric.context_managers import settings, cd
 from fabric.operations import open_shell
 from fabric.tasks import execute
@@ -151,6 +151,7 @@ def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps
         tag_instance(hostname, machine_meta_data)
 
     execute('bootstrap_machines')
+    execute('configure_hiera_for_machines')
     execute('provision_machines')
     execute('copy_experiment', url=url, file_name=file_name, name=name)
     execute('play_experiment', name=name)
@@ -428,6 +429,59 @@ def generate_settings_local_file():
         run('echo "%s" >> %s' % (line, file_path))
 
 @task
+def generate_hiera_datasources():
+    """ Hiera datasources are hierarchical configurations to be applied by
+    puppet automatically in its template files. We need them for provisioning
+    purposes. """
+    instances = get_all_instances()
+
+    local('rm -rf /tmp/hiera')
+    local('mkdir -p /tmp/hiera/node')
+    local('echo "{}" > /tmp/hiera/common.json')
+    for instance in instances:
+        context = {'hostname': instance.public_dns_name}
+        render_template('admin/templates/node.json',
+                        context,
+                        '/tmp/hiera/node/%s.json' % instance.private_dns_name)
+
+@task
+def configure_hiera_for_machines():
+    """ Configures hiera for all machines launched by our experiment. """
+    hostnames = [instance.public_dns_name for instance in get_all_instances()]
+    execute('generate_hiera_datasources')
+    # NOTE: we would be better off executing configure_hiera_for_machine
+    # as root but I don't think it's OK to complicate ourselves by provisioning
+    # the keypair for the root user as well. So when we need, for example, to
+    # copy the files in a folder only accessible by root, we copy them in a
+    # folder accessible by the ami user, and then use sudo to move it around
+    # locally.
+    with settings(parallel=True, user='ami',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        execute('configure_hiera_for_machine', hosts=hostnames)
+
+@task
+def configure_hiera_for_machine():
+    """ Configures hiera for a given machine. Copies the files generated
+    in /tmp/hiera on the local machine remotely to /etc/puppet/hiera, and
+    copies the hiera.yaml configuration file in two places:
+    * /etc/puppet/hiera.yaml - to be used by the hiera appliance embedded
+                               within puppet
+    * /etc/hiera.yaml - to be used by the hiera command line utility.
+    """
+
+    run('rm -rf /home/ami/hiera')
+    put('/tmp/hiera', '/home/ami')
+    run('sudo rm -rf /etc/puppet/hiera')
+    run('sudo mv /home/ami/hiera /etc/puppet')
+    run('sudo chown -R root:root /etc/puppet/hiera')
+
+    run('sudo wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/hiera.yaml -O /etc/puppet/hiera.yaml')
+    # Make sure we overwrite whatever is present in /etc/hiera.yaml so that
+    # the command line tool gets the same configuration as the tool embedded
+    # within Puppet.
+    run('sudo ln -nsf /etc/puppet/hiera.yaml /etc/hiera.yaml')
+
+@task
 def bootstrap_machines():
     hostnames = [instance.public_dns_name for instance in get_all_instances()]
 
@@ -450,6 +504,7 @@ def bootstrap_machine():
     run('sudo puppet module install -f puppetlabs/apt')
     run('sudo puppet module install -f puppetlabs/gcc')
     run('sudo puppet module install -f puppetlabs/mongodb')
+    run('sudo puppet module install -f puppetlabs/nginx')
     run('sudo puppet module install -f puppetlabs/stdlib')
     run('sudo puppet module install -f puppetlabs/vcsrepo')
     run('sudo puppet module install -f maestrodev/ssh_keygen')
