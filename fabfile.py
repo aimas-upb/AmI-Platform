@@ -437,7 +437,7 @@ def generate_hiera_datasources():
 
     local('rm -rf /tmp/hiera')
     local('mkdir -p /tmp/hiera/node')
-    local('echo "{}" > /tmp/hiera/common.json')
+    local('cp provisioning/common.json /tmp/hiera/common.json')
     for instance in instances:
         context = {'hostname': instance.public_dns_name}
         render_template('admin/templates/node.json',
@@ -504,7 +504,6 @@ def bootstrap_machine():
     run('sudo puppet module install -f puppetlabs/apt')
     run('sudo puppet module install -f puppetlabs/gcc')
     run('sudo puppet module install -f puppetlabs/mongodb')
-    run('sudo puppet module install -f puppetlabs/nginx')
     run('sudo puppet module install -f puppetlabs/stdlib')
     run('sudo puppet module install -f puppetlabs/vcsrepo')
     run('sudo puppet module install -f maestrodev/ssh_keygen')
