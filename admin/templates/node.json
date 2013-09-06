@@ -1,0 +1,3 @@
+{
+    "dashboard_api::hostname": "{{hostname}}"
+}
