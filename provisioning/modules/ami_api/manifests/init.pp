@@ -7,7 +7,7 @@ class ami_api($hostname) {
     ->
 
     file {'/etc/nginx/conf.d/ami_api':
-        content => template('ami_api/api_vhost.erb'),
+        content => template('ami_api/api_nginx_vhost.erb'),
         owner   => 'root',
         group   => 'root',
         mode    => '0644'
