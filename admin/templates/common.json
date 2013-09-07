@@ -1,0 +1,8 @@
+{
+    "code_settings::mongo_hostname": "{{mongo_hostname}}",
+    "code_settings::mongo_port": 27017,
+    "code_settings::redis_hostname": "{{redis_hostname}}",
+    "code_settings::redis_port": 6379,
+    "code_settings::kestrel_hostname": "{{kestrel_hostname}}",
+    "code_settings::kestrel_port": 22133
+}

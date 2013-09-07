@@ -216,7 +216,6 @@ def provision_machines():
     # Afterwards, run deploy task on each of them.
     with settings(parallel=True, user='ami',
                   key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('generate_settings_local_file', hosts=crunching_hostnames)
         execute('generate_services_file', hosts=crunching_hostnames)
         execute('deploy_ami_services_on_crunch_node', hosts=crunching_hostnames)
 
@@ -396,44 +395,6 @@ def generate_services_file():
         run('echo "%s" >> %s' % (module, file_path))
 
 @task
-def generate_settings_local_file():
-    """ Given a crunch node, generate a settings.py file pointing the modules
-    running on it to the correct resources (redis/kestrel/mongodb/etc). """
-
-    mongo = get_instance_by_tags({'Name': 'measurements'})
-    if not mongo:
-        print("Could not find measurements DB in the cloud!")
-        return
-
-    redis = get_instance_by_tags({'Name': 'sessions'})
-    if not redis:
-        print("Could not find sessions DB in the cloud!")
-        return
-
-    kestrel = get_instance_by_tags({'Name': 'queues'})
-    if not kestrel:
-        print("Could not find queues machine in the cloud!")
-        return
-
-    # Render the settings_local.py file template to a string.
-    context = {
-        'kestrel_server': kestrel.public_dns_name,
-        'kestrel_port': 22133,
-        'mongo_server': mongo.public_dns_name,
-        'mongo_port': 27017,
-        'redis_server': redis.public_dns_name,
-        'redis_port': 6379,
-    }
-    content = render_template('admin/templates/settings.py', context).split('\n')
-
-    # Afterwards, string is written line by line using echo to the remote
-    # host.
-    file_path = '/home/ami/AmI-Platform/core/settings_local.py'
-    run('echo "" > %s' % file_path)
-    for line in content:
-        run('echo "%s" >> %s' % (line, file_path))
-
-@task
 def generate_hiera_datasources():
     """ Hiera datasources are hierarchical configurations to be applied by
     puppet automatically in its template files. We need them for provisioning
@@ -442,7 +403,16 @@ def generate_hiera_datasources():
 
     local('rm -rf /tmp/hiera')
     local('mkdir -p /tmp/hiera/node')
-    local('cp provisioning/common.json /tmp/hiera/common.json')
+
+    common_context = {
+        'mongo_hostname': get_instance_by_tags({'Name': 'measurements'}).public_dns_name,
+        'redis_hostname': get_instance_by_tags({'Name': 'sessions'}).public_dns_name,
+        'kestrel_hostname': get_instance_by_tags({'Name': 'queues'}).public_dns_name
+    }
+    render_template('admin/templates/common.json',
+                    common_context,
+                    '/tmp/hiera/common.json')
+
     for instance in instances:
         context = {'hostname': instance.public_dns_name}
         render_template('admin/templates/node.json',
