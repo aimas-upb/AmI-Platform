@@ -544,9 +544,7 @@ def ssh(name):
     if instance is None:
         return
 
-    with settings(user='ami', host_string=instance.public_dns_name,
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        open_shell()
+    local('ssh -i ~/.ssh/ami-keypair.pem ami@%s' % instance.public_dns_name)
 
 @task
 def host(name):
