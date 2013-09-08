@@ -34,7 +34,7 @@ class ProcessedSessionStore(SessionStore):
 
     TIME_MATCHING_THRESHOLD_MS = 2500
     POSITION_MATCHING_THRESHOLD_MS = 5000
-    POSITION_MATCHING_THRESHOLD_MM = 200
+    POSITION_MATCHING_THRESHOLD_MM = 750
 
     def __init__(self):
         self.redis = redis.StrictRedis(host=settings.REDIS_SERVER,
