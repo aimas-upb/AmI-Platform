@@ -34,11 +34,6 @@ class MeasurementsPlayer(object):
                 # back this measurement.
                 logger.info('sleeping %d' % (measurement_delta - playback_delta))
                 time.sleep((measurement_delta - playback_delta) / 1000000.0)
-            """
-                else:
-                # Skip this measurement because we're behind
-                continue
-            """
 
             self.callback(json.dumps(measurement))
 
