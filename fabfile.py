@@ -260,9 +260,18 @@ def play_experiment(name='duminica'):
         print("Could not find MongoDB instance where measurements are stored.")
         return
 
-    mongo_hostname = mongo_instance.public_dns_name
-    with settings(host_string=mongo_hostname):
+    with settings(host_string=mongo_instance.public_dns_name):
         run('mongo measurements --eval "db.docs.remove();"')
+
+    # Connect to Redis host and clean up all the state gathered so far.
+    # This will make sure that the experiment runs on a blank state.
+    redis_instance = get_instance_by_tags({'Name': 'sessions'})
+    if redis_instance is None:
+        print("Could not find Redis instance where sessions are stored.")
+        return
+
+    with settings(host_string=redis_instance.public_dns_name):
+        run('redis-cli flushall')
 
     # Search among the crunch nodes the one on which ami-recorder is running
     recorder_hostname = get_crunch_running('ami-recorder')
