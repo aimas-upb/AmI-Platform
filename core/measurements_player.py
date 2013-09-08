@@ -35,6 +35,11 @@ class MeasurementsPlayer(object):
                 time_to_sleep = measurement_delta - playback_delta
                 logger.info('sleeping %.2f seconds' % time_to_sleep)
                 time.sleep(time_to_sleep)
+
+            # Put the exact time of the measurement pumping into the
+            # created_at field so that we simulate that the measurement
+            # appeared right now.
+            measurement['created_at'] = int(time.time() * 1000.0)
             self.callback(json.dumps(measurement))
 
         logger.info('Done replaying file with %s messages', nb_messages)
