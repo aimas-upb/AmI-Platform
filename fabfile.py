@@ -7,13 +7,11 @@ import time
 import boto
 from fabric.api import env, local, put, run, task
 from fabric.context_managers import settings, cd
-from fabric.operations import open_shell
 from fabric.tasks import execute
 from jinja2 import Template
 
 from core.ec2 import (get_tags_for_machine, get_instance_by_tags,
-                      get_all_instances, get_instances_by_tags,
-                      get_crunch_running, tag_instance)
+                      get_all_instances, get_crunch_running, tag_instance)
 
 env.connection_attempts = 5
 
@@ -120,9 +118,7 @@ def new_service(name, file = None, queue = None, class_name = None):
 
 
 @task
-def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
-                   name='cloud_experiment',
-                   file_name='/tmp/experiment.txt',
+def run_experiment(name='duminica.txt',
                    experiment_profile='default_experiment.json'):
 
     # Load up which machines are needed from the experiment profile
@@ -153,7 +149,6 @@ def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps
     execute('bootstrap_machines')
     execute('configure_hiera_for_machines')
     execute('provision_machines')
-    execute('copy_experiment', url=url, file_name=file_name, name=name)
     execute('play_experiment', name=name)
 
 @task
@@ -247,9 +242,14 @@ def reprovision_machines():
     execute('provision_machines')
 
 @task
-def copy_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
-                    name='cloud_experiment',
-                    file_name='/tmp/experiment.txt'):
+def play_experiment(name='duminica'):
+
+    # File name where the experiment should be downloaded on the recorder
+    # host. If it exists, it will just be played back, instead of re-downloaded.
+    file_name = '/tmp/%s.txt' % name
+    # URL from S3 where the experiment should be found. Note that for now
+    # we are using S3 to host the experiments on a standard bucket.
+    url = 'https://s3.amazonaws.com/ami-lab-experiments/%s.txt' % name
 
     # Search among the crunch nodes the one on which ami-recorder is running
     recorder_hostname = get_crunch_running('ami-recorder')
@@ -261,29 +261,30 @@ def copy_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dump
     with settings(host_string=recorder_hostname, user='ami',
                   key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
         with cd('/home/ami/AmI-Platform'):
-            # Start and stop the experiment immediately just to create a
-            # record in MongoDB in order to fool the experiment system :)
-            run('python experiment.py --file %s start %s' %
-                (file_name, name))
-            run('python experiment.py stop %s' % name)
 
-            # Fetch the dump from the remote location and place it just
-            # where the experiment system thinks it recorded it.
-            run('wget %s -O %s' % (url, file_name))
+            # Only create the experiment record in MongoDB if it isn't there
+            # already. Otherwise, just stay put :)
+            #
+            # We don't need to check whether the experiment actually corresponds
+            # to the correct file, since the file name is currently generated
+            # automatically from the experiment name.
+            result = str(run('python experiment.py list | grep %s.txt | wc -l' % file_name)).strip()
+            print "za fucking result = %r" % result
+            if str(run('python experiment.py list | grep %s.txt | wc -l' % file_name)).strip() == '0':
+                # Start and stop the experiment immediately just to create a
+                # record in MongoDB in order to fool the experiment system :)
+                run('python experiment.py --file %s start %s' %
+                    (file_name, name))
+                run('python experiment.py stop %s' % name)
 
-@task
-def play_experiment(name='cloud_experiment'):
+            # Make sure we're only fetching the dump if the file doesn't
+            # already exist.
+            # TODO(andrei): check the integrity of the file as well via md5
+            if str(run('ls -la /tmp/*.txt | grep "%s" | wc -l' % file_name)).strip() == '0':
+                # Fetch the dump from the remote location and place it just
+                # where the experiment system thinks it recorded it.
+                run('wget %s -O %s' % (url, file_name))
 
-    # Search among the crunch nodes the one on which ami-recorder is running
-    recorder_hostname = get_crunch_running('ami-recorder')
-    if recorder_hostname is None:
-        print("Something is misconfigured. No crunch node is running the "
-              "ami-recorder module, thus we have nowhere to run the experiment")
-        return
-
-    with settings(host_string=recorder_hostname, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        with cd('/home/ami/AmI-Platform'):
             # This will cause the experiment measurements to be pumped
             # in the kestrel queues, thus triggering the whole processing
             # along the pipeline
