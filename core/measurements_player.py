@@ -27,14 +27,14 @@ class MeasurementsPlayer(object):
             logger.info('Sending a message %s' % measurement['sensor_id'])
             nb_messages += 1
             playback_delta = int(time.time()) - playback_start
-            measurement_delta = measurement['created_at'] - measurement_start
+            measurement_delta = (measurement['created_at'] - measurement_start) / 1000.0
 
             if playback_delta < measurement_delta:
                 # Sleep in order to wait for the correct time to play
                 # back this measurement.
-                logger.info('sleeping %d' % (measurement_delta - playback_delta))
-                time.sleep((measurement_delta - playback_delta) / 1000000.0)
-
+                time_to_sleep = measurement_delta - playback_delta
+                logger.info('sleeping %.2f seconds' % time_to_sleep)
+                time.sleep(time_to_sleep)
             self.callback(json.dumps(measurement))
 
         logger.info('Done replaying file with %s messages', nb_messages)
