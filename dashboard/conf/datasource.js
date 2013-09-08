@@ -8,12 +8,6 @@ App.DataSourceConfig = {
                 refresh: 'periodic',
                 refresh_interval: 2000
             },
-            '/latest_kinect_skeleton': {
-                type: 'api',
-                url: App.general.FRONTEND_URL + '/latest_kinect_skeleton/{{sensor_id}}',
-                refresh: 'periodic',
-                refresh_interval: 2000
-            },
             '/latest_subject_positions': {
                 type: 'api',
                 url: App.general.FRONTEND_URL + '/latest_subject_positions/{{sensor_id}}',
