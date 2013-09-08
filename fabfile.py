@@ -280,7 +280,7 @@ def play_experiment(name='duminica'):
             # We don't need to check whether the experiment actually corresponds
             # to the correct file, since the file name is currently generated
             # automatically from the experiment name.
-            if str(run('python experiment.py list | grep %s.txt | wc -l' % file_name)).strip() == '0':
+            if str(run('python experiment.py list | grep %s | wc -l' % file_name)).strip() == '0':
                 # Start and stop the experiment immediately just to create a
                 # record in MongoDB in order to fool the experiment system :)
                 run('python experiment.py --file %s start %s' %
