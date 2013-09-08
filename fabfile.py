@@ -525,7 +525,14 @@ def ssh(name):
     if instance is None:
         return
 
-    local('ssh -i ~/.ssh/ami-keypair.pem ami@%s' % instance.public_dns_name)
+    # Use command-line SSH instead of fab's open_shell which is troublesome
+    # and ignore host-related warnings.
+    # http://stackoverflow.com/questions/9299651/warning-permanently-added-to-the-list-of-known-hosts-message-from-git
+    local('ssh -i ~/.ssh/ami-keypair.pem '
+          '-o StrictHostKeyChecking=no '
+          '-o UserKnownHostsFile=/dev/null '
+          '-o LogLevel=quiet '
+          'ami@%s' % instance.public_dns_name)
 
 @task
 def host(name):
