@@ -251,6 +251,18 @@ def play_experiment(name='duminica'):
     # we are using S3 to host the experiments on a standard bucket.
     url = 'https://s3.amazonaws.com/ami-lab-experiments/%s.txt' % name
 
+    # Connect to MongoDB host and erase all measurements so far. This will
+    # prevent then from accumulating and filling up the disk
+    mongo_instance = get_instance_by_tags({'Name': 'measurements'})
+    if mongo_instance is None:
+        print("Could not find MongoDB instance where measurements are stored.")
+        return
+
+    mongo_hostname = mongo_instance.public_dns_name
+    with settings(host_string=mongo_hostname, user='ami',
+                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+        run('mongo measurements --eval "db.docs.remove();"')
+
     # Search among the crunch nodes the one on which ami-recorder is running
     recorder_hostname = get_crunch_running('ami-recorder')
     if recorder_hostname is None:
