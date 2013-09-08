@@ -14,6 +14,11 @@ from core.ec2 import (get_tags_for_machine, get_instance_by_tags,
                       get_all_instances, get_crunch_running, tag_instance)
 
 env.connection_attempts = 5
+env.key_filename = env.key_filename or '/Users/aismail/.ssh/ami-keypair.pem'
+# By default, we will connect to the hosts with the ami user (the most
+# notable exception being the bootstrap process, when only the ubuntu user
+# in the EC2 ami image exists).
+env.user = 'ami'
 
 logger = logging.getLogger(__name__)
 
@@ -195,8 +200,7 @@ def provision_machines():
     # Provision the machines in parallel. The manifest for each machine
     # will be taken from env.hostname_to_manifest, because it's the only sane
     # way I found in fab to do the provisioning in parallel.
-    with settings(parallel=True, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+    with settings(parallel=True):
         execute('provision_machine', hosts=hostnames)
 
     # Determine the crunching hostnames - these are generally modules of
@@ -209,8 +213,7 @@ def provision_machines():
 
     # For crunch nodes, generate settings_local.py files and services.txt files.
     # Afterwards, run deploy task on each of them.
-    with settings(parallel=True, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+    with settings(parallel=True):
         execute('generate_services_file', hosts=crunching_hostnames)
         execute('deploy_ami_services_on_crunch_node', hosts=crunching_hostnames)
 
@@ -219,8 +222,7 @@ def refresh_code_on_machines():
     """ Refresh the current version of the code on the machines. """
     hostnames = [instance.public_dns_name for instance in get_all_instances()]
 
-    with settings(parallel=True, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+    with settings(parallel=True):
         execute('refresh_code', hosts=hostnames)
 
 @task
@@ -251,6 +253,17 @@ def play_experiment(name='duminica'):
     # we are using S3 to host the experiments on a standard bucket.
     url = 'https://s3.amazonaws.com/ami-lab-experiments/%s.txt' % name
 
+    # Connect to MongoDB host and erase all measurements so far. This will
+    # prevent then from accumulating and filling up the disk
+    mongo_instance = get_instance_by_tags({'Name': 'measurements'})
+    if mongo_instance is None:
+        print("Could not find MongoDB instance where measurements are stored.")
+        return
+
+    mongo_hostname = mongo_instance.public_dns_name
+    with settings(host_string=mongo_hostname):
+        run('mongo measurements --eval "db.docs.remove();"')
+
     # Search among the crunch nodes the one on which ami-recorder is running
     recorder_hostname = get_crunch_running('ami-recorder')
     if recorder_hostname is None:
@@ -258,8 +271,7 @@ def play_experiment(name='duminica'):
               "ami-recorder module, thus we have nowhere to run the experiment")
         return
 
-    with settings(host_string=recorder_hostname, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+    with settings(host_string=recorder_hostname):
         with cd('/home/ami/AmI-Platform'):
 
             # Only create the experiment record in MongoDB if it isn't there
@@ -268,9 +280,7 @@ def play_experiment(name='duminica'):
             # We don't need to check whether the experiment actually corresponds
             # to the correct file, since the file name is currently generated
             # automatically from the experiment name.
-            result = str(run('python experiment.py list | grep %s.txt | wc -l' % file_name)).strip()
-            print "za fucking result = %r" % result
-            if str(run('python experiment.py list | grep %s.txt | wc -l' % file_name)).strip() == '0':
+            if str(run('python experiment.py list | grep %s | wc -l' % file_name)).strip() == '0':
                 # Start and stop the experiment immediately just to create a
                 # record in MongoDB in order to fool the experiment system :)
                 run('python experiment.py --file %s start %s' %
@@ -431,8 +441,7 @@ def configure_hiera_for_machines():
     # copy the files in a folder only accessible by root, we copy them in a
     # folder accessible by the ami user, and then use sudo to move it around
     # locally.
-    with settings(parallel=True, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+    with settings(parallel=True):
         execute('configure_hiera_for_machine', hosts=hostnames)
 
 @task
@@ -464,8 +473,7 @@ def bootstrap_machines():
     # Provision the machines in parallel. The manifest for each machine
     # will be taken from env.hostname_to_manifest, because it's the only sane
     # way I found in fab to do the provisioning in parallel.
-    with settings(parallel=True, user='ubuntu',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+    with settings(parallel=True, user='ubuntu'):
         execute('bootstrap_machine', hosts=hostnames)
 
 @task
@@ -515,7 +523,14 @@ def ssh(name):
     if instance is None:
         return
 
-    local('ssh -i ~/.ssh/ami-keypair.pem ami@%s' % instance.public_dns_name)
+    # Use command-line SSH instead of fab's open_shell which is troublesome
+    # and ignore host-related warnings.
+    # http://stackoverflow.com/questions/9299651/warning-permanently-added-to-the-list-of-known-hosts-message-from-git
+    local('ssh -i %s '
+          '-o StrictHostKeyChecking=no '
+          '-o UserKnownHostsFile=/dev/null '
+          '-o LogLevel=quiet '
+          'ami@%s' % (env.key_filename, instance.public_dns_name))
 
 @task
 def host(name):
