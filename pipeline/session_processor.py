@@ -18,11 +18,11 @@ class SessionProcessor(PDU):
 
     def process_message(self, message):
 
-        # TODO(andrei): implement source_session_id -> dest_session_id
-        # affinity table. Right now it's numerically unstable because of lack
-        # of that.
-        dst_session_id = self.processed_session_store.session_ending_at(
-                                               message['time'], message['info'])
+        # NOTE: we're passing the session_id as well because we have session
+        # affinity: once a measurement from a "source" session is declared to
+        # be part of a "destination" session, all subsequent measurements will
+        # go to the same session.
+        dst_session_id = self.processed_session_store.session_ending_at(message)
 
         # If no closely matching session is found, create a new one
         if dst_session_id is None:

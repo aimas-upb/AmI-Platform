@@ -52,17 +52,42 @@ class ProcessedSessionStore(SessionStore):
                                for _ in xrange(16)])
         return "%d_%s" % (int(time.time()), random_hash)
 
-    def session_ending_at(self, t, info):
+    def set_session_affinity(self, session_id, dst_session_id):
+        """ Set the affinity of a session for another session. """
+        self.redis.hset('session_affinities', session_id, dst_session_id)
+
+    def get_session_affinity(self, session_id):
+        """ Determine the affinity of a given session for another session. """
+        affinities = self.redis.hgetall('session_affinities')
+        return affinities.get(session_id)
+
+    def session_ending_at(self, message):
         """
             Given a (t, info) pair serving as a notification, get the
             best matching session which ends as close as possible to it.
             If there is no such session "close enough", returns None.
         """
+        session_id = message['session_id']
+        result = self.session_affinity(session_id)
+        if result != None:
+            return result
+
+        t = message['time']
+        info = message['info']
+
+        # First of all, try to find a session using spatial matching.
+        # If this fails, we will fall back to temporal matching.
         if self._has_position(info):
-            return self._session_ending_at_with_position(t, info['X'],
-                                                         info['Y'], info['Z'])
-        else:
-            return self._session_ending_at_without_position(t)
+            result = self._session_ending_at_with_position(t, info['X'],
+                                                           info['Y'], info['Z'])
+            if result is not None:
+                self.set_session_affinity(session_id, result)
+                return result
+
+        result = self._session_ending_at_without_position(t)
+        if result is not None:
+            self.set_session_affinity(session_id, result)
+        return result
 
     def _has_position(self, info):
         """
