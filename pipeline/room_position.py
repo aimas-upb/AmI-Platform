@@ -104,7 +104,9 @@ class RoomPosition(PDU):
             sid = message['session_id']
             time = message['created_at']
             self.session_tracker.track_event(sid, time, {'skeleton_in_room': skeleton_in_room})
-            self.session_tracker.track_event(sid, time, {'subject_position': position_message})
+            # Keep it simple and put X, Y, Z as top-level keys for this
+            # measurement of the current tracking session.
+            self.session_tracker.track_event(sid, time, position_message)
 
         dashboard_message = {
             'created_at': message['created_at'],
