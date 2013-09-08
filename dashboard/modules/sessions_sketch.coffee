@@ -28,9 +28,9 @@ define ['cs!widget/trace_sketch'], (TraceSketch) ->
                 @sessions[session_id] = []
                 for measurement in session_data
                     @sessions[session_id].push(
-                        X: measurement.subject_position.X
-                        Y: measurement.subject_position.Y
-                        Z: measurement.subject_position.Z
+                        X: measurement.X
+                        Y: measurement.Y
+                        Z: measurement.Z
                         created_at: measurement.time
                     )
 
