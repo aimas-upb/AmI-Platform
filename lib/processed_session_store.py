@@ -67,13 +67,9 @@ class ProcessedSessionStore(SessionStore):
             best matching session which ends as close as possible to it.
             If there is no such session "close enough", returns None.
         """
-        session_id = message['session_id']
-        result = self.session_affinity(session_id)
-        if result != None:
-            return result
-
         t = message['time']
         info = message['info']
+        session_id = message['session_id']
 
         # First of all, try to find a session using spatial matching.
         # If this fails, we will fall back to temporal matching.
@@ -87,7 +83,13 @@ class ProcessedSessionStore(SessionStore):
         result = self._session_ending_at_without_position(t)
         if result is not None:
             self.set_session_affinity(session_id, result)
-        return result
+            return result
+        else:
+            result = self.get_session_affinity(session_id)
+            if result != None:
+                logger.info("Session affinity for %s is %s. Going for that." %
+                            (session_id, result))
+            return result
 
     def _has_position(self, info):
         """
