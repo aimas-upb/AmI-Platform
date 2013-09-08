@@ -100,4 +100,10 @@ def _get_session_store(session_type):
 
 if __name__ == '__main__':
     setup_logging()
-    run(app, host='0.0.0.0', port=8000)
+    params = {
+        'host': '0.0.0.0',
+        'port': 8000
+    }
+    if getattr(settings, 'BOTTLE_BACKEND'):
+        params['server'] = getattr(settings, 'BOTTLE_BACKEND')
+    run(app, **params)
