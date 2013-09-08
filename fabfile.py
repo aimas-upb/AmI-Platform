@@ -290,7 +290,7 @@ def play_experiment(name='duminica'):
             # Make sure we're only fetching the dump if the file doesn't
             # already exist.
             # TODO(andrei): check the integrity of the file as well via md5
-            if str(run('ls -la /tmp/*.txt | grep "%s" | wc -l' % file_name)).strip() == '0':
+            if str(run('ls -la /tmp/ | grep "%s" | wc -l' % file_name)).strip() == '0':
                 # Fetch the dump from the remote location and place it just
                 # where the experiment system thinks it recorded it.
                 run('wget %s -O %s' % (url, file_name))
