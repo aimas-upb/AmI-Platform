@@ -8,23 +8,17 @@ App.DataSourceConfig = {
                 refresh: 'periodic',
                 refresh_interval: 2000
             },
-            '/latest_kinect_skeleton': {
-                type: 'api',
-                url: App.general.FRONTEND_URL + '/latest_kinect_skeleton/{{sensor_id}}',
-                refresh: 'periodic',
-                refresh_interval: 2000
-            },
             '/latest_subject_positions': {
                 type: 'api',
                 url: App.general.FRONTEND_URL + '/latest_subject_positions/{{sensor_id}}',
                 refresh: 'periodic',
-                refresh_interval: 1
+                refresh_interval: 100
             },
             '/sessions': {
                 type: 'api',
-                url: App.general.FRONTEND_URL + '/sessions/{{type}}?N=100',
+                url: App.general.FRONTEND_URL + '/sessions/{{type}}?N=100&max_age=30',
                 refresh: 'periodic',
-                refresh_interval: 10000
+                refresh_interval: 3000
             },
         },
 };

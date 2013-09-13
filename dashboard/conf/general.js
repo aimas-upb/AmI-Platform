@@ -11,7 +11,7 @@ App.general = {
 
     // Throw exceptions and don't catch them with our wrapper
     // so that we can debug them easier.
-    THROW_UNCAUGHT_EXCEPTIONS: true,
+    PASS_THROUGH_EXCEPTIONS: true,
 
     // Don't use precompiled templates
     USE_PRECOMPILED_TEMPLATES: false,

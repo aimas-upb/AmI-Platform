@@ -7,6 +7,14 @@ define [], () ->
             @data = {}
             @default_value = {}
 
+        parse: (response) =>
+            ###
+                Only pass on the objects attribute from the response,
+                the rest of the it being meta information.
+                Fallback to an empty array.
+            ###
+            return response
+
         setDefaultValue: (default_value) =>
             ###
                 Sets the default values for this RawData.
@@ -27,11 +35,13 @@ define [], () ->
                 Get the value of data. If return_default_data is false we ignore
                 the default values. An use-case is the date-filter.
             ###
-            result = if return_default_data then _.clone(@default_value) else {}
+            result = if return_default_data
+                Utils.deepClone @default_value
+            else {}
             _.extend(result, @data)
 
         toJSON: =>
-            _.clone(@data)
+            Utils.deepClone @data
 
         get: (key) =>
             ###
@@ -59,7 +69,7 @@ define [], () ->
             return this
 
         _internal_set: (dict, options) =>
-            previousData = _.clone(@data)
+            previousData = Utils.deepClone @data
 
             if options.reset or options.new_data
                 @data = {}
@@ -96,7 +106,7 @@ define [], () ->
             ###
                 unset an attribute
             ###
-            previousData = _.clone(@data)
+            previousData = Utils.deepClone @data
 
             for k, v of dict
                 if k of @data

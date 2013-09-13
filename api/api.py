@@ -48,11 +48,13 @@ def get_latest_kinect_skeleton(sensor_id = 'daq-01'):
 
 @app.route('/sessions/:session_type', method='GET')
 @query_param('N', int, default=100)
-def get_session_list(session_type, N):
+@query_param('max_age', int, default=30)
+def get_session_list(session_type, N, max_age):
     try:
         store = _get_session_store(session_type)
         return {'sessions': store.get_all_sessions_with_measurements(N=N,
-                                                                     max_sessions=100)}
+                                                                     max_sessions=100,
+                                                                     max_age=max_age)}
     except:
         logger.exception("Failed to get sessions from Redis")
         return {'sessions': {}}
@@ -98,4 +100,10 @@ def _get_session_store(session_type):
 
 if __name__ == '__main__':
     setup_logging()
-    run(app, host='0.0.0.0', port=8000)
+    params = {
+        'host': '0.0.0.0',
+        'port': 8000
+    }
+    if getattr(settings, 'BOTTLE_BACKEND'):
+        params['server'] = getattr(settings, 'BOTTLE_BACKEND')
+    run(app, **params)

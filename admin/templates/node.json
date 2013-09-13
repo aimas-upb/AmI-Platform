@@ -1,0 +1,3 @@
+{
+    "ami_api::hostname": "{{hostname}}"
+}

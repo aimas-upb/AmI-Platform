@@ -1,6 +1,7 @@
 define ['cs!widget'], (Widget) ->
 
     class NewItemCountWidget extends Widget
+
         subscribed_channels: ['/items', '/filters']
         template_name: 'templates/new-items-count.hjs'
         events:
@@ -30,7 +31,6 @@ define ['cs!widget'], (Widget) ->
             @refreshChannel('/items')
             return false
 
-
         get_items_buffer: (type, params...) =>
             ###
                 This function is subscribed to the events of the mention buffer.
@@ -39,27 +39,24 @@ define ['cs!widget'], (Widget) ->
             ###
             translated = @_translateEventParams('collection', type, params...)
             if translated and translated.collection
-                # Check that the items from the buffer are actually not
-                # part of the underlying collection (a.k.a. they are truly new).
-                # Duplicated items sometimes arrive due to a race in DataSource.
-                length = 0
-                for item in translated.collection.models
-                    if not translated.collection.collection.get(item.id)
-                        length = length + 1
+                # - translated.collection points to the buffer
+                # - translated.collection.collection points to the collection
+                #     of the buffer (thus the original collection)
+                length = translated.collection.collection.new_items_in_buffer()
+                displayed_length = (if length <= 100 then length else '> 100')
+
                 if length > 0
-                    @el.show()
-                    if length > 100
-                        length = '> 100'
+                    @view.$el.show()
                     items = @multiple_items
                     if length == 1 and @single_item?
                         items = @single_item
-
-                    # Modify page title to let the user know there are some new items
-                    Utils.setTitle(count: length)
-                    @renderLayout({result: length, timespan: new Date(), items: items})
+                    @renderLayout(
+                        result: displayed_length
+                        timespan: new Date()
+                        items: items
+                    )
                 else
-                    Utils.setTitle(count: 0)
-                    @el.hide()
+                    @view.$el.hide()
 
         get_items: (params) =>
             ###
@@ -76,7 +73,7 @@ define ['cs!widget'], (Widget) ->
                 Whenever the user selects a new value for filters,
                 hide the current item count because it's invalid.
             ###
-            @el.hide()
+            @view.$el.hide()
 
         destroy: =>
             super()

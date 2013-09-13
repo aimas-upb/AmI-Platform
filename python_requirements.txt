@@ -14,3 +14,5 @@ mock==1.0.1
 nose-cov==1.6
 httpretty==0.5.12
 WebTest==2.0.6
+numpy==1.7.1
+bjoern==1.3.2

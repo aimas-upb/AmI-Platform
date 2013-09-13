@@ -1,0 +1,10 @@
+KESTREL_SERVERS=['<%= scope.lookupvar('code_settings::kestrel_hostname') %>:<%= scope.lookupvar('code_settings::kestrel_port') %>']
+MONGO_SERVER='<%= scope.lookupvar('code_settings::mongo_hostname') %>:<%= scope.lookupvar('code_settings::mongo_port') %>'
+REDIS_SERVER='<%= scope.lookupvar('code_settings::redis_hostname') %>'
+REDIS_PORT=<%= scope.lookupvar('code_settings::redis_port') %>
+
+REDIS_DASHBOARD_DB=0
+REDIS_SESSION_DB=1
+REDIS_PROCESSED_SESSION_DB=2
+
+BOTTLE_BACKEND = 'bjoern'

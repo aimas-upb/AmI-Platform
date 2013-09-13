@@ -64,6 +64,7 @@ extern map<XnUserID, string> g_session_ids;
 #define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 10 //ms
 #define MIN_DELAY_BETWEEN_RGB_MEASUREMENT 1000
 #define MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT 1000
+#define MIN_CONFIDENCE_FOR_SKELETON 10
 
 int getFirstTrackedPlayer()
 {
@@ -498,7 +499,7 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
  * system.
  */
 
-#import <fstream>
+#include <fstream>
 static void SaveImage(char *img, int width, int height, const char* player_name, const char* sensor_type, DataThrottle* throttle) {
 #if USE_MEMCACHE
     size_t outlen, outlen2;
@@ -797,13 +798,45 @@ void transformDepthImageIntoTexture(const xn::DepthMetaData& dmd,
     free(pDepthHist);
 }
 
+static XnSkeletonJoint all_joints[ ] = {
+		XN_SKEL_HEAD,
+		XN_SKEL_LEFT_ELBOW,
+		XN_SKEL_LEFT_FOOT,
+		XN_SKEL_LEFT_HAND,
+		XN_SKEL_LEFT_HIP,
+		XN_SKEL_LEFT_KNEE,
+		XN_SKEL_LEFT_SHOULDER,
+		XN_SKEL_NECK,
+		XN_SKEL_RIGHT_ELBOW,
+		XN_SKEL_RIGHT_FOOT,
+		XN_SKEL_RIGHT_HAND,
+		XN_SKEL_RIGHT_HIP,
+		XN_SKEL_RIGHT_KNEE,
+		XN_SKEL_RIGHT_SHOULDER,
+		XN_SKEL_TORSO
+};
+
+static XnConfidence computeSkeletonConfidence(XnUserID player) {
+	XnConfidence total = 0.0f;
+	for (int i = 0; i < sizeof(all_joints) / sizeof(XnSkeletonJoint); ++i) {
+		XnSkeletonJointPosition joint;
+		g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, all_joints[i], joint);
+		total += joint.fConfidence;
+	}
+
+	return total;
+}
+
 void drawTrackedUsers() {
     XnUserID aUsers[15];
     XnUInt16 nUsers = 15;
     g_UserGenerator.GetUsers(aUsers, nUsers);
+
     for (int i = 0; i < nUsers; ++i)
     {
-        if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
+        XnConfidence totalConfidence = computeSkeletonConfidence(aUsers[i]);
+
+    	if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]) && totalConfidence >= MIN_CONFIDENCE_FOR_SKELETON)
         {
             DrawJoints(aUsers[i]);
             if (skeleton_throttle.CanSend()) {
