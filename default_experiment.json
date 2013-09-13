@@ -23,35 +23,35 @@
 
         {
          "Name": "crunch_01",
-         "manifest": "crunch_01.pp",
+         "manifest": "crunch.pp",
          "type": "crunch",
          "modules": "ami-router,ami-mongo-writer,ami-room-position,ami-dashboard"
         },
 
         {
          "Name": "crunch_02",
-         "manifest": "crunch_01.pp",
+         "manifest": "crunch.pp",
          "type": "crunch",
          "modules": "ami-head-crop"
         },
 
         {
          "Name": "crunch_03",
-         "manifest": "crunch_01.pp",
+         "manifest": "crunch.pp",
          "type": "crunch",
          "modules": "ami-face-recognition"
         },
 
         {
          "Name": "crunch_04",
-         "manifest": "crunch_01.pp",
+         "manifest": "crunch.pp",
          "type": "crunch",
          "modules": "ami-upgrade_face_samples,ami-room,ami-ip-power"
         },
 
         {
          "Name": "crunch_05",
-         "manifest": "crunch_01.pp",
+         "manifest": "crunch.pp",
          "type": "crunch",
          "modules": "ami-recorder,ami-session_processor"
         }
