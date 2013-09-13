@@ -130,7 +130,7 @@ def run_tests():
     # TODOs: 1. move this profile to a separate file
     #        2. append all manifests in a single file: test.pp
     machine = {"Name": "tests",
-               "manifest": "mongo.pp,redis.pp,kestrel.pp,crunch.pp",
+               "manifest": "test.pp",
                "type": "test",
                "modules": "ami-router,ami-head-crop,ami-face-recognition,"
                           "ami-room,ami-ip-power,ami-text-to-speech"
@@ -141,13 +141,13 @@ def run_tests():
     if not test_instance:
         # TODO: Change the machine_type back to 'm1.medium'/'m1.large' when
         # done launching/terminating test instances.
-        hostnames = execute('open_machine', machine_type='m1.small', count=1)['<local-only>']
-        tag_instance(hostnames[0], machine)
+        hostnames = execute('open_machines', machine_type='m1.small', count=1)['<local-only>']
+        test_hostname = hostnames[0]
+
+        tag_instance(test_hostname, machine)
         execute('bootstrap_machines')
-        """
         execute('configure_hiera_for_machines')
-        execute('provision_machines')
-        """
+        execute('provision_machines', branch_name=str(local('git rev-parse --abbrev-ref HEAD')))
 
     """
     # TODO: create 'run_all_tests' task
@@ -227,7 +227,7 @@ def open_machines(machine_type='m1.small',
     return public_hostnames
 
 @task
-def provision_machines():
+def provision_machines(branch_name=None):
     hostnames = [instance.public_dns_name for instance in get_all_instances()]
 
     # Provision the machines in parallel. The manifest for each machine
@@ -248,7 +248,7 @@ def provision_machines():
     # Afterwards, run deploy task on each of them.
     with settings(parallel=True):
         execute('generate_services_file', hosts=crunching_hostnames)
-        execute('deploy_ami_services_on_crunch_node', hosts=crunching_hostnames)
+        execute('deploy_ami_services_on_crunch_node', hosts=crunching_hostnames, branch_name=branch_name)
 
 @task
 def refresh_code_on_machines():
@@ -275,6 +275,19 @@ def reprovision_machines():
     # is assumed to always be successful in order to speed things up for
     # reprovisioning.
     execute('provision_machines')
+
+
+@task
+def run_all_tests():
+    """Runs quick and slow tests on an already launched test instance."""
+    test_instance = get_instance_by_tags({'type': 'test'})
+    if not test_instance:
+        print("Could not find a test instance to run the tests.")
+        return
+
+    with settings(host_string=test_instance.public_dns_name):
+        run('./run_quick_tests.sh')
+
 
 @task
 def play_experiment(name='duminica'):
@@ -343,18 +356,19 @@ def play_experiment(name='duminica'):
             run('python experiment.py play %s' % name)
 
 @task
-def deploy_ami_services_on_crunch_node():
-    run('cd /home/ami/AmI-Platform; fab deploy:fresh=True')
+def deploy_ami_services_on_crunch_node(branch_name=None):
+    run('cd /home/ami/AmI-Platform; fab deploy:fresh=True,branch=%s' % branch_name)
 
 @task
-def deploy(fresh=False):
+def deploy(fresh=False, branch_name=None):
     with cd('/home/ami/AmI-Platform'):
         # Make sure we have the latest repo version if "fresh" parameter
         # is specified. This will pull the latest version of the code.
         if fresh:
-            branch = str(local('git rev-parse --abbrev-ref HEAD'))
+            branch_name = branch_name or str(local('git rev-parse --abbrev-ref HEAD'))
+            local('git checkout %s' % branch_name)
             local('git reset --hard HEAD')
-            local('git pull origin %s' % branch)
+            local('git pull origin %s' % branch_name)
             local('git reset --hard HEAD')
             local('git submodule init')
             local('git submodule update')
@@ -457,10 +471,14 @@ def generate_hiera_datasources():
     local('rm -rf /tmp/hiera')
     local('mkdir -p /tmp/hiera/node')
 
+    redis_hostname = get_instance_by_tags({'Name': 'tests'}) or get_instance_by_tags({'Name': 'sessions'})
+    mongo_hostname = get_instance_by_tags({'Name': 'tests'}) or get_instance_by_tags({'Name': 'measurements'})
+    kestrel_hostname = get_instance_by_tags({'Name': 'tests'}) or get_instance_by_tags({'Name': 'queues'})
+
     common_context = {
-        'mongo_hostname': get_instance_by_tags({'Name': 'measurements'}).public_dns_name,
-        'redis_hostname': get_instance_by_tags({'Name': 'sessions'}).public_dns_name,
-        'kestrel_hostname': get_instance_by_tags({'Name': 'queues'}).public_dns_name
+        'redis_hostname': redis_hostname.public_dns_name,
+        'mongo_hostname': mongo_hostname.public_dns_name,
+        'kestrel_hostname': kestrel_hostname.public_dns_name
     }
     render_template('admin/templates/common.json',
                     common_context,
