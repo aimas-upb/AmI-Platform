@@ -146,9 +146,11 @@ def run_tests():
 
         tag_instance(test_hostname, machine)
         execute('bootstrap_machines')
+        """
         execute('configure_hiera_for_machines')
-        execute('provision_machines', branch_name=str(local('git rev-parse --abbrev-ref HEAD')))
-
+        execute('reprovision_machines',
+                branch_name=str(local('git rev-parse --abbrev-ref HEAD')))
+        """
     """
     # TODO: create 'run_all_tests' task
     execute('run_all_tests', name=name)
@@ -227,7 +229,7 @@ def open_machines(machine_type='m1.small',
     return public_hostnames
 
 @task
-def provision_machines(branch_name=None):
+def provision_machines():
     hostnames = [instance.public_dns_name for instance in get_all_instances()]
 
     # Provision the machines in parallel. The manifest for each machine
@@ -248,28 +250,31 @@ def provision_machines(branch_name=None):
     # Afterwards, run deploy task on each of them.
     with settings(parallel=True):
         execute('generate_services_file', hosts=crunching_hostnames)
-        execute('deploy_ami_services_on_crunch_node', hosts=crunching_hostnames, branch_name=branch_name)
+        execute('deploy_ami_services_on_crunch_node', hosts=crunching_hostnames)
 
 @task
-def refresh_code_on_machines():
+def refresh_code_on_machines(branch_name=None):
     """ Refresh the current version of the code on the machines. """
     hostnames = [instance.public_dns_name for instance in get_all_instances()]
 
     with settings(parallel=True):
-        execute('refresh_code', hosts=hostnames)
+        execute('refresh_code', hosts=hostnames, branch_name=branch_name)
 
 @task
-def refresh_code():
+def refresh_code(branch_name=None):
     with cd('/home/ami/AmI-Platform'):
-            branch = str(run('git rev-parse --abbrev-ref HEAD'))
-            run('git reset --hard HEAD')
-            run('git pull origin %s' % branch)
-            run('git reset --hard HEAD')
+        if not branch_name:
+            branch_name = str(run('git rev-parse --abbrev-ref HEAD'))
+        run('git fetch')
+        run('git checkout %s' % branch_name)
+        run('git reset --hard HEAD')
+        run('git pull origin %s' % branch_name)
+        run('git reset --hard HEAD')
 
 @task
-def reprovision_machines():
+def reprovision_machines(branch_name=None):
     # Pull latest version of the code on the machines
-    execute('refresh_code_on_machines')
+    execute('refresh_code_on_machines', branch_name=branch_name)
 
     # Execute per-node provisioning only (excluding bootstrap). Bootstrap
     # is assumed to always be successful in order to speed things up for
@@ -356,8 +361,8 @@ def play_experiment(name='duminica'):
             run('python experiment.py play %s' % name)
 
 @task
-def deploy_ami_services_on_crunch_node(branch_name=None):
-    run('cd /home/ami/AmI-Platform; fab deploy:fresh=True,branch=%s' % branch_name)
+def deploy_ami_services_on_crunch_node():
+    run('cd /home/ami/AmI-Platform; fab deploy:fresh=True')
 
 @task
 def deploy(fresh=False, branch_name=None):
