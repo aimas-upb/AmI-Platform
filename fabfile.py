@@ -14,7 +14,7 @@ from core.ec2 import (get_tags_for_machine, get_instance_by_tags,
                       get_all_instances, get_crunch_running, tag_instance)
 
 env.connection_attempts = 5
-env.key_filename = env.key_filename or '/Users/aismail/.ssh/ami-keypair.pem'
+env.key_filename = env.key_filename or '~/.ssh/ami-keypair.pem'
 # By default, we will connect to the hosts with the ami user (the most
 # notable exception being the bootstrap process, when only the ubuntu user
 # in the EC2 ami image exists).
@@ -69,8 +69,9 @@ def render_template(template_file, context, target_file=None):
         else:
             return output
 
+
 @task
-def new_service(name, file = None, queue = None, class_name = None):
+def new_service(name, file=None, queue=None, class_name=None):
     """ Installs a new service with the given name. """
 
     if service_already_exists(name):
@@ -123,6 +124,38 @@ def new_service(name, file = None, queue = None, class_name = None):
 
 
 @task
+def run_tests():
+    # Some tests need all machine types in order to test the pipeline
+    # end-to-end.
+    # TODOs: 1. move this profile to a separate file
+    #        2. append all manifests in a single file: test.pp
+    machine = {"Name": "tests",
+               "manifest": "mongo.pp,redis.pp,kestrel.pp,crunch.pp",
+               "type": "test",
+               "modules": "ami-router,ami-head-crop,ami-face-recognition,"
+                          "ami-room,ami-ip-power,ami-text-to-speech"
+                }
+
+    # If a test instance is not already running, launch a new one.
+    test_instance = get_instance_by_tags(machine)
+    if not test_instance:
+        # TODO: Change the machine_type back to 'm1.medium'/'m1.large' when
+        # done launching/terminating test instances.
+        hostnames = execute('open_machine', machine_type='m1.small', count=1)['<local-only>']
+        tag_instance(hostnames[0], machine)
+        execute('bootstrap_machines')
+        """
+        execute('configure_hiera_for_machines')
+        execute('provision_machines')
+        """
+
+    """
+    # TODO: create 'run_all_tests' task
+    execute('run_all_tests', name=name)
+    """
+
+
+@task
 def run_experiment(name='duminica.txt',
                    experiment_profile='default_experiment.json'):
 
@@ -158,7 +191,7 @@ def run_experiment(name='duminica.txt',
 
 @task
 def open_machines(machine_type='m1.small',
-                  manifest='crunch_01.pp',
+                  manifest='crunch.pp',
                   ami_id='ami-d0f89fb9',
                   count=1):
 
@@ -492,7 +525,7 @@ def bootstrap_machine():
     run('sudo dpkg -i /tmp/puppetlabs-release-precise.deb')
     run('sudo apt-get -y update')
 
-    # we are running masterless puppet to simplifiy automatic setup and teardown
+    # we are running masterless puppet to simplify automatic setup and teardown
     run('sudo apt-get -y install puppet')
     run('sudo puppet module install -f puppetlabs/apt')
     run('sudo puppet module install -f puppetlabs/gcc')
@@ -513,7 +546,7 @@ def bootstrap_machine():
     run('sudo puppet apply /tmp/bootstrap.pp')
 
 @task
-def provision_machine(manifest='crunch_01.pp'):
+def provision_machine(manifest='crunch.pp'):
     # Retrieve EC2 tags for this machine, and see if there is a manifest tag
     # among them. If yes, that one has priority over what gets specified as
     # a parameter to this function.
