@@ -11,12 +11,12 @@ from utils import json_dumps
 from kestrel_connection import KestrelConnection
 import settings
 
-"""
-    Processing Data Unit for our AmI lab pipelines.
-"""
-class PDU(object):
 
-    PRINT_STATS_INTERVAL = 30 # Print flow stats every X seconds
+class PDU(object):
+    """ Processing Data Unit for our AmI lab pipelines. """
+
+    # Print flow stats every X seconds
+    PRINT_STATS_INTERVAL = 30
     MESSAGE_SAMPLING_RATIO = 10
 
     TIME_TO_SLEEP_ON_BUSY = 0.05
@@ -34,7 +34,7 @@ class PDU(object):
         self.debug_mode = kwargs.get('debug', False)
         self.logger = logging.getLogger(self.__module__)
 
-    def log(self, message, level = logging.INFO):
+    def log(self, message, level=logging.INFO):
         """ Log a message to stdout. Includes class name & current time. """
         self.logger.log(level, message)
 
@@ -50,7 +50,7 @@ class PDU(object):
 
     def send_to(self, queue, message):
         """ Send a message to another queue. """
-        self.log("Enqueueing message to %s" % queue, level = logging.INFO)
+        self.log("Enqueueing message to %s" % queue, level=logging.INFO)
         self.queue_system.add(queue, json.dumps(message))
 
     def _start_running(self):

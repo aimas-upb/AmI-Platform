@@ -36,6 +36,7 @@ class TestAirConditioningWillBeTurnedOnForAndrei(PipelineTest):
         ok_(len(ip_power) > 0, "Andrei's presence should trigger at least "
                                "one action for the ip-power module")
 
-        for msg in ip_power:
-            eq_(msg.get('cmd'), 'on', "Andrei's presence should trigger a port"
-                                      " of the ip power switch to be on")
+        on_commands = [msg for msg in ip_power if msg.get('cmd') == 'on']
+        self.assertGreaterEqual(len(on_commands), 1, "Andrei's presence "
+                                "should trigger a port of the ip power switch "
+                                "to be on")

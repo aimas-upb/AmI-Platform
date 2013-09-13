@@ -4,7 +4,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
-from experiment_file import ExperimentFile
+from core.experiment_file import ExperimentFile
 
 
 class MeasurementsPlayer(object):
@@ -24,7 +24,7 @@ class MeasurementsPlayer(object):
             if not measurement_start:
                 measurement_start = measurement['created_at']
 
-            logger.info('Sending a message %s' % measurement['sensor_id'])
+            logger.info('Sending a message %s', measurement['sensor_id'])
             nb_messages += 1
             playback_delta = int(time.time()) - playback_start
             measurement_delta = (measurement['created_at'] - measurement_start) / 1000.0
@@ -45,4 +45,3 @@ class MeasurementsPlayer(object):
         logger.info('Done replaying file with %s messages', nb_messages)
 
         self.experiment_file.close()
-

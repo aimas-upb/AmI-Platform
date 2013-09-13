@@ -42,8 +42,8 @@ def crop_face_from_image(image):
     cropped_image = image.crop(cropping_rect)
 
     # Save both images and log this so we can debug more easily
-    temp_path_full_image = random_file_name('jpg')
-    temp_path_face_image = random_file_name('jpg')
+    temp_path_full_image = random_file_name('jpg', 'HC_FULL_')
+    temp_path_face_image = random_file_name('jpg', 'HC_FACE_')
     image.save(temp_path_full_image)
     cropped_image.save(temp_path_face_image)
     logger.info("Saved full image at %s" % temp_path_full_image)

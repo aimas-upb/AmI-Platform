@@ -8,18 +8,17 @@ from lib.image import base64_to_image
 logger = logging.getLogger(__name__)
 
 
-def save_image(image, width, height):
+def save_image(image, width, height, prefix=None, decoder_name=None):
     """Given an image of width x height dimensions, flip it horizontally and
     save it to disk.
 
     Returns:
         the saved image path.
     """
-    image = base64_to_image(image, width, height)
-    temp_path = random_file_name('jpg', "FR_")
+    image = base64_to_image(image, width, height, decoder_name=decoder_name)
+    temp_path = random_file_name('jpg', prefix=prefix)
     logger.info("Generated random path to save image: %s" % temp_path)
 
-    image = image.rotate(180)
     image.save(temp_path)
 
     logger.info("Saved image to disk at path %s" % temp_path)

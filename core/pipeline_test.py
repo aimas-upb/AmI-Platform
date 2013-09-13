@@ -1,11 +1,12 @@
 import json
 import logging
-import time
 import threading
+import time
 from unittest import TestCase
 
 from core.kestrel_mock import KestrelMock
 from core.measurements_player import MeasurementsPlayer
+from lib.log import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,6 @@ class PipelineTest(TestCase):
 
     PDUs = []
     DATA_FILE = None
-    DELAY_UNTIL_MESSAGES_PROPAGATE = 30
 
     def setUp(self):
         """ Set-up of the pipeline test:
@@ -26,7 +26,7 @@ class PipelineTest(TestCase):
         self._setup_queue_system()
         self._setup_player()
         self._setup_pdus()
-        logging.basicConfig()
+        setup_logging()
 
     def _test_pipeline(self):
         """ Each such test class will contain only one test method,
@@ -41,10 +41,20 @@ class PipelineTest(TestCase):
         self._player_thread.start()
         self._player_thread.join()
 
-        # Wait for another 30 seconds to give the measurements time to propagate
-        # through the pipeline. Then we will abruptly close down all the
-        # PDUs (with a thread.join with small timeout)
-        time.sleep(self.DELAY_UNTIL_MESSAGES_PROPAGATE)
+        # Wait for the measurements to propagate through the pipeline.
+        # Then we will abruptly close down all the PDUs
+        # (with a thread.join with small timeout)
+        # We should wait for all PDU's to process their messages and not wait
+        # for a fixed timeframe.
+        non_empty_queues = self._get_non_empty_queues()
+        while(non_empty_queues):
+            logger.info("%d queues still have messages", len(non_empty_queues))
+            time.sleep(1)
+            non_empty_queues = self._get_non_empty_queues()
+
+        # Even though a PDU does not have any pending messages on its QUEUE,
+        # we should wait for it to finish processing the current message.
+        time.sleep(10)
 
         # Close down the PDUs forcibly
         self._close_down_pdus()
@@ -137,3 +147,8 @@ class PipelineTest(TestCase):
 
     def alive_pdus(self):
         return filter(lambda t: t.isAlive(), self._thread_pool)
+
+    def _get_non_empty_queues(self):
+        """Returns True if at least one PDU input queue has a message."""
+        return [pdu for pdu in self._pdu_instances
+                if self.queue_contents(pdu.QUEUE)]
