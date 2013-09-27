@@ -1,4 +1,3 @@
-from factory import Factory
 from random import choice
 import time
 

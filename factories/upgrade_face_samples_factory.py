@@ -1,5 +1,3 @@
-from factory import Factory
-
 from core.constants import IMAGE_WIDTH, IMAGE_HEIGHT
 from factories import utils
 
