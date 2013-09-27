@@ -146,8 +146,8 @@ def run_tests():
 
         tag_instance(test_hostname, machine)
         execute('bootstrap_machines')
-        """
         execute('configure_hiera_for_machines')
+        """
         execute('reprovision_machines',
                 branch_name=str(local('git rev-parse --abbrev-ref HEAD')))
         """
@@ -291,7 +291,8 @@ def run_all_tests():
         return
 
     with settings(host_string=test_instance.public_dns_name):
-        run('./run_quick_tests.sh')
+        run('cd /home/ami/AmI-Platform/ && ./run-quick-tests.sh')
+        run('cd /home/ami/AmI-Platform/ && ./run-slow-tests.sh')
 
 
 @task
