@@ -72,7 +72,6 @@ class ProcessedSessionStoreTest(TestCase):
         ensure the check is done temporally and not spatially.
 
         """
-
         num_sessions = random.randint(10, 20)
         t = int(time.time() * 1000)
         threshold = ProcessedSessionStore.TIME_MATCHING_THRESHOLD_MS
@@ -82,7 +81,10 @@ class ProcessedSessionStoreTest(TestCase):
         for _ in xrange(num_sessions):
             self._create_new_session(min_t=old_time_min, max_t=old_time_max)
 
-        eq_(self.store.session_ending_at(t, {}), None,
+        message = {'time': t,
+                   'info': {'X': None, 'Y': None, 'Z': None},
+                   'session_id': None}
+        eq_(self.store.session_ending_at(message), None,
             "No stale session should be returned")
 
         # Add some sessions with positional matching
@@ -95,7 +97,10 @@ class ProcessedSessionStoreTest(TestCase):
                                      min_y=Y, max_y=Y,
                                      min_z=Z, max_z=Z)
 
-        eq_(self.store.session_ending_at(t, {'X': X, 'Y': Y, 'Z': Z}), None,
+        message = {'time': t,
+                   'info': {'X': X, 'Y': Y, 'Z': Z},
+                   'session_id': None}
+        eq_(self.store.session_ending_at(message), None,
             "No stale session should be returned")
 
     def test_new_session_is_returned_with_temporal_match(self):
@@ -112,14 +117,20 @@ class ProcessedSessionStoreTest(TestCase):
         good_sid = self._create_new_session(min_t=t - threshold + 1,
                                             max_t=t)
 
-        eq_(self.store.session_ending_at(t, {}), good_sid,
+        message = {'time': t,
+                   'info': {'X': None, 'Y': None, 'Z': None},
+                   'session_id': None}
+        eq_(self.store.session_ending_at(message), good_sid,
             "The good session (having fresh updated_at) should be returned")
 
         X = random.uniform(100, 500)
         Y = random.uniform(100, 500)
         Z = random.uniform(100, 500)
 
-        eq_(self.store.session_ending_at(t, {'X': X, 'Y': Y, 'Z': Z}), None,
+        message = {'time': t,
+                   'info': {'X': X, 'Y': Y, 'Z': Z},
+                   'session_id': None}
+        eq_(self.store.session_ending_at(message), None,
             "No session should be returned even if they are fresh because "
             "they have no positional data")
 
@@ -150,10 +161,16 @@ class ProcessedSessionStoreTest(TestCase):
                                            t - positional_threshold - 10)
             self.store.set(good_sid, old_timestamp, {'X': X, 'Y': Y, 'Z': Z})
 
-        eq_(self.store.session_ending_at(t, {}), good_sid,
+        message = {'time': t,
+                   'info': {'X': X, 'Y': Y, 'Z': Z},
+                   'session_id': None}
+        eq_(self.store.session_ending_at(message), good_sid,
             "The good session (having fresh updated_at) should be returned")
 
-        eq_(self.store.session_ending_at(t, {'X': X, 'Y': Y, 'Z': Z}), None,
+        message = {'time': t,
+                   'info': {'X': X, 'Y': Y, 'Z': Z},
+                   'session_id': None}
+        eq_(self.store.session_ending_at(message), None,
             "Good session should not be returned because it has old "
             "positional data")
 
@@ -189,10 +206,16 @@ class ProcessedSessionStoreTest(TestCase):
 
             self.store.set(good_sid, new_timestamp, info)
 
-        eq_(self.store.session_ending_at(t, {}), good_sid,
+        message = {'time': t,
+                   'info': {'X': None, 'Y': None, 'Z': None},
+                   'session_id': None}
+        eq_(self.store.session_ending_at(message), good_sid,
             "The good session (having fresh updated_at) should be returned")
 
-        eq_(self.store.session_ending_at(t, {'X': X, 'Y': Y, 'Z': Z}), None,
+        message = {'time': t,
+                   'info': {'X': X, 'Y': Y, 'Z': Z},
+                   'session_id': None}
+        eq_(self.store.session_ending_at(message), None,
             "Good session should not be returned because it has new but "
             "far away positional data")
 
@@ -228,9 +251,15 @@ class ProcessedSessionStoreTest(TestCase):
 
             self.store.set(good_sid, new_timestamp, info)
 
-        eq_(self.store.session_ending_at(t, {}), good_sid,
+        message = {'time': t,
+                   'info': {'X': None, 'Y': None, 'Z': None},
+                   'session_id': None}
+        eq_(self.store.session_ending_at(message), good_sid,
             "The good session (having fresh updated_at) should be returned")
 
-        eq_(self.store.session_ending_at(t, {'X': X, 'Y': Y, 'Z': Z}), good_sid,
+        message = {'time': t,
+                   'info': {'X': X, 'Y': Y, 'Z': Z},
+                   'session_id': None}
+        eq_(self.store.session_ending_at(message), good_sid,
             "Good session should be returned because it has both new "
             "and near positional data")
