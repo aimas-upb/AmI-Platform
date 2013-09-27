@@ -8,10 +8,9 @@ from lib.kinect import crop_head_using_skeleton
 from lib.log import setup_logging
 from lib.opencv import crop_face_from_image
 from lib.session_tracker import SessionTracker
-from lib.s3 import save_image
 
 logger = logging.getLogger(__name__)
-MAX_TIME = 5000
+MAX_TIME = 5000 # milliseconds
 
 
 def _crop_head_using_skeleton(last_image, last_skeleton):
@@ -37,11 +36,6 @@ def _crop_head_using_face_detection(last_image):
 
 
 def crop_head(message):
-    if message['type'] == 'image_rgb':
-        cropped_head = _crop_head_using_face_detection(message['image_rgb'])
-        if cropped_head:
-            return image_to_base64(cropped_head)
-
     last_image = message['hack']['last_image']
     last_image_at = message['hack']['last_image_at']
     last_skeleton = message['hack']['last_skeleton']
@@ -124,7 +118,6 @@ class HeadCrop(ParallelPDU):
     def _send_to_recognition(self, image):
         """ Send a given image to face recognition. """
         self.send_to('face-recognition', {'head_image': image})
-        save_image(image['image'], image['width'], image['height'], prefix="TO_FR_HEADCROP_")
 
 if __name__ == "__main__":
     setup_logging()
