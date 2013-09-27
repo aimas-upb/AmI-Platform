@@ -1,6 +1,4 @@
-class test {
-    class {"kestrel": }
-    class { "session_store": }
-    class { "measurement_store": }
-    class { "cruncher": }
-}
+class { "cruncher": }
+class { "kestrel": }
+class { "measurement_store": }
+class { "session_store": }

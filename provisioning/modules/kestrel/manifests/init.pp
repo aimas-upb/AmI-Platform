@@ -16,8 +16,9 @@ class kestrel ($max_ram='1024m') {
 
     ->
 
-    package { "unzip":
-        ensure => present
+    if ! defined ("unzip") {
+    package { 'unzip':
+        ensure => present,
     }
 
     ->
