@@ -61,6 +61,10 @@ def crop_head(message):
                         "and image because they are too far apart: %r secs." %
                         (abs(last_skeleton_at - last_image_at) / 1000))
             cropped_head = _crop_head_using_face_detection(last_image)
+    else:
+        logger.info("Cannot crop head using correlation between skeleton "
+                    "and image because we have no skeleton so far.")
+        cropped_head = _crop_head_using_face_detection(last_image)
 
     if cropped_head:
         return image_to_base64(cropped_head)
