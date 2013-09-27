@@ -26,7 +26,7 @@ def get_random_3D_skeleton():
 
 
 def get_random_angle():
-    return uniform(-PI, PI),
+    return uniform(-PI, PI)
 
 
 def get_random_sensor_position():
