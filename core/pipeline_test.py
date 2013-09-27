@@ -46,11 +46,9 @@ class PipelineTest(TestCase):
         # (with a thread.join with small timeout)
         # We should wait for all PDU's to process their messages and not wait
         # for a fixed timeframe.
-        non_empty_queues = self._get_non_empty_queues()
-        while(non_empty_queues):
-            logger.info("%d queues still have messages", len(non_empty_queues))
+        while(not self._all_input_queues_empty):
+            logger.info("There still are non-empty queues")
             time.sleep(1)
-            non_empty_queues = self._get_non_empty_queues()
 
         # Even though a PDU does not have any pending messages on its QUEUE,
         # we should wait for it to finish processing the current message.
@@ -148,7 +146,10 @@ class PipelineTest(TestCase):
     def alive_pdus(self):
         return filter(lambda t: t.isAlive(), self._thread_pool)
 
-    def _get_non_empty_queues(self):
-        """Returns True if at least one PDU input queue has a message."""
-        return [pdu for pdu in self._pdu_instances
-                if self.queue_contents(pdu.QUEUE)]
+    def _all_input_queues_empty(self):
+        """Returns False if at least one PDU input queue has a message."""
+        for pdu in self._pdu_instances:
+            queue = self._queue_system._queues[pdu.QUEUE]
+            if not queue.empty():
+                return False
+        return True
