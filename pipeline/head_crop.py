@@ -51,7 +51,7 @@ def crop_head(message):
     # try to crop the face. For this, we need to have
     # at least one skeleton and one image.
     if last_skeleton is not None:
-        if abs(last_image_at - last_skeleton_at) < MAX_TIME:
+        if abs(last_image_at - last_skeleton_at) < MAX_TIME/1000:
             logger.info("Trying to crop head using correlation between "
                         "skeleton and RGB image: %r secs." %
                         (abs(last_skeleton_at - last_image_at) / 1000))
