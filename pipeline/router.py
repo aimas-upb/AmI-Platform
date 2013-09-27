@@ -33,13 +33,6 @@ class Router(PDU):
         if message['type'] in ['image_rgb', 'skeleton']:
             self.send_to('head-crop', message)
 
-        if message['type'] == 'image_rgb':
-            save_image(message['image_rgb']['image'],
-                       int(message['image_rgb']['width']),
-                       int(message['image_rgb']['height']),
-                       prefix='RAW_%s_%s_' % (message['sensor_id'],
-                                              message['created_at']), decoder_name='jpg')
-
         # If there is at least one active experiment, send them to
         # recorder. Otherwise, prevent bandwidth waste :)
         active_experiments = Experiment.get_active_experiments()

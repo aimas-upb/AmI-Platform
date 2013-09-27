@@ -7,7 +7,6 @@ def get_random_image(width, height):
     """Returns a random width x height image base64 encoded."""
     return os.urandom(height * width * 4 / 3).encode('hex')
 
-
 def get_random_hash(length):
     """Returns a random has of a given length."""
     return os.urandom(length).encode('hex')
