@@ -12,12 +12,12 @@ class repo_dependencies::python_dependencies {
 
     # Needed by PIL Python package (to include the jpeg decoder)
     package { "libjpeg8-dev":
-        endure => present,
+        ensure => present,
     }
 
-    exec { "nu_conteaza_acest_titlu":
-        command => 'sudo ln -s /usr/lib/x86_64-linux-gnu/libjpeg.so /usr/lib',
-        timeout => 0
+    file { '/usr/lib/x86_64-linux-gnu/libjpeg.so':
+       ensure => 'link',
+       target => '/usr/lib',
     }
 
     # Needed by bjoern backend for bottle framework
@@ -36,5 +36,6 @@ class repo_dependencies::python_dependencies {
     Package["python-pip"] -> Exec["install-python-packages"]
     Package["python-dev"] -> Exec["install-python-packages"]
     Package["libev-dev"] -> Exec["install-python-packages"]
+    Package["libjpeg8-dev"] -> Exec["install-python-packages"]
 
 }
