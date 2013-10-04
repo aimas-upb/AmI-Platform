@@ -124,7 +124,7 @@ def new_service(name, file=None, queue=None, class_name=None):
 
 
 @task
-def run_tests():
+def run_tests(branch_name=None):
     # Some tests need all machine types in order to test the pipeline
     # end-to-end.
     # TODOs: 1. move this profile to a separate file
@@ -147,10 +147,7 @@ def run_tests():
         tag_instance(test_hostname, machine)
         execute('bootstrap_machines')
         execute('configure_hiera_for_machines')
-        """
-        execute('reprovision_machines',
-                branch_name=str(local('git rev-parse --abbrev-ref HEAD')))
-        """
+        execute('reprovision_machines', branch_name=branch_name)
     """
     # TODO: create 'run_all_tests' task
     execute('run_all_tests', name=name)
