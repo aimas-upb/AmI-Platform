@@ -2,7 +2,6 @@ from lib.opencv import crop_face_from_image
 import os
 from core.constants import PROJECT_PATH
 from PIL import Image
-from termcolor import cprint
 from unittest import TestCase
 from lib.s3 import upload_to_s3
 
@@ -33,15 +32,14 @@ class TestHeadCrop(TestCase):
             image = Image.open("%s/%s" % (image_folder, image_file))
             cropped_head = crop_face_from_image(image)
             if cropped_head:
-                cprint(' OK ', 'green'),
+                print(' OK '),
                 cropped_head_path = "%s/results/%s" % (image_folder, image_file)
                 cropped_head.save(cropped_head_path)
                 self.recognize(cropped_head_path)
                 count = count + 1
             else:
-                cprint(' FAIL', 'red')
-        cprint(" > DONE! Found %d faces in %d images." %
-               (count, len(images)), 'yellow')
+                print(' FAIL')
+        print(" > DONE! Found %d faces in %d images." % (count, len(images)))
 
     def remove_dir_contents(self, folder_path):
         for the_file in os.listdir(folder_path):
@@ -62,12 +60,12 @@ class TestHeadCrop(TestCase):
             tags = response['photos'][0]['tags']
             if tags:
                 matches = tags[0]['uids']
-                cprint("Matches: %r" % matches, 'green')
-                cprint(" => %s" % self._get_best_match(matches), 'blue')
+                print("Matches: %r" % matches)
+                print(" => %s" % self._get_best_match(matches))
             else:
-                cprint("No matches!", 'red')
+                print("No matches!")
         except Exception as e:
-            cprint(e, 'red')
+            print(e)
 
     def _get_best_match(self, matches):
         """Args:
