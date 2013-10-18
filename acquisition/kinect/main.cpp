@@ -23,12 +23,14 @@
 // Includes
 //---------------------------------------------------------------------------
 #include <stdlib.h>
-
 #include <XnOpenNI.h>
 #include <XnCodecIDs.h>
 #include <XnCppWrapper.h>
 #include "SceneDrawer.h"
+#include <XnLog.h>
 #include <XnPropNames.h>
+#include <XnTypes.h>
+
 #if USE_MEMCACHE
     #include <libmemcached/memcached.h>
 #endif
@@ -45,6 +47,11 @@ xn::DepthGenerator g_DepthGenerator;
 xn::UserGenerator g_UserGenerator;
 xn::ImageGenerator g_ImageGenerator;
 xn::Player g_Player;
+std::string g_deviceSerial;
+std::string g_busId;
+std::string g_deviceId;
+bool g_useSpecifiedDevice;
+
 #if USE_MEMCACHE
 memcached_st* g_MemCache;
 #endif
@@ -192,6 +199,22 @@ void glInit (int * pargc, char ** argv)
         exit(nRetVal);												\
     }
 
+
+bool deviceMatches(const std::string& usbInfo) {
+  /* format of usb info is like: 045e/02ae@1/8 */
+  size_t posA = usbInfo.find_first_of("@");
+  if (posA != std::string::npos) {
+    size_t posSlash = usbInfo.find_first_of("/", posA);
+    if (posSlash != std::string::npos) {
+      std::string busId = usbInfo.substr(posA + 1, posSlash - posA -1);
+      std::string deviceId = usbInfo.substr(posSlash + 1);      
+      return busId == g_busId && deviceId == g_deviceId;
+    }
+  }
+  return false;
+}
+
+
 void initFromContextFile() {
     /*
         Initialize Context from XML file + lookup generators of the needed type:
@@ -202,36 +225,74 @@ void initFromContextFile() {
         Errors in the XML file, lack thereof or lack of generators of the mentioned types
         will stop the program altogether.
     */
+  
 
+  printf("xml file is: %s\n", getKinectXMLConfig());
     XnStatus nRetVal = XN_STATUS_OK;
     xn::EnumerationErrors errors;
 
-    if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
-    {
-        XnChar strError[1024];
-        errors.ToString(strError, 1024);
-        printf("%s\n", strError);
-        exit(1);
-    }
-    else if (nRetVal != XN_STATUS_OK)
-    {
-        printf("Open failed: %s\n", xnGetStatusString(nRetVal));
-        exit(1);
-    }
+    if (g_useSpecifiedDevice) {
+      xnLogInitFromXmlFile(getKinectXMLConfig());
+    
+      nRetVal = g_Context.Init();
+      if (nRetVal != XN_STATUS_OK) {
+	printf("Open failed: %s\n", xnGetStatusString(nRetVal));
+	exit(1);
+      }
 
-    nRetVal = g_Context.InitFromXmlFile(getKinectXMLConfig(), g_scriptNode, &errors);
-	if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
-	{
-		XnChar strError[1024];
-		errors.ToString(strError, 1024);
-		printf("%s\n", strError);
-		exit(1);
+      // find devices
+      xn::NodeInfoList list;
+      nRetVal = g_Context.EnumerateProductionTrees(XN_NODE_TYPE_DEVICE, NULL, list, &errors);
+      if (nRetVal != XN_STATUS_OK) {
+	printf("Enumerate devices failed: %s\n", xnGetStatusString(nRetVal));
+	exit(1);
+      }
+
+      for (xn::NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it) {
+	xn::NodeInfo deviceNodeInfo = *it;
+	xn::Device deviceNode;
+	deviceNodeInfo.GetInstance(deviceNode);
+	XnBool bExists = deviceNode.IsValid();
+	if (!bExists) {
+	  g_Context.CreateProductionTree(deviceNodeInfo, deviceNode);
+	  // this might fail.
 	}
-	else if (nRetVal != XN_STATUS_OK)
-	{
-		printf("Open failed: %s\n", xnGetStatusString(nRetVal));
-		exit(1);
+	if (deviceNode.IsValid() 
+	  && deviceNode.IsCapabilitySupported(XN_CAPABILITY_DEVICE_IDENTIFICATION)) {
+	  deviceNodeInfo.GetAdditionalData();
+	  const XnChar* ci = deviceNodeInfo.GetCreationInfo();
+	  if (deviceMatches(std::string(ci))) {	    
+	    // now run the rest of the XML
+	    nRetVal = g_Context.RunXmlScriptFromFile(getKinectXMLConfig(), g_scriptNode, &errors);
+	    if (nRetVal != XN_STATUS_OK) {
+	      printf("run xml script from file failed: %s\n", xnGetStatusString(nRetVal));
+	      exit(1);
+	    }
+	  } else {
+	    // release the device if we created it
+	    if (!bExists && deviceNode.IsValid()) {
+	      deviceNode.Release();
+	    }    
+	  }	  
 	}
+      }
+
+    } else {
+
+      nRetVal = g_Context.InitFromXmlFile(getKinectXMLConfig(), g_scriptNode, &errors);
+      if (nRetVal == XN_STATUS_NO_NODE_PRESENT)
+	{
+	  XnChar strError[1024];
+	  errors.ToString(strError, 1024);
+	  printf("%s\n", strError);
+	  exit(1);
+	}
+      else if (nRetVal != XN_STATUS_OK)
+	{
+	  printf("Open failed: %s\n", xnGetStatusString(nRetVal));
+	  exit(1);
+	}
+    }
 
     if (g_Context.FindExistingNode(XN_NODE_TYPE_DEPTH, g_DepthGenerator) != XN_STATUS_OK) {
         printf("XML file should contain a depth generator\n");
@@ -320,11 +381,30 @@ void openglMainLoop(int argc, char **argv) {
 #endif
 }
 
+void parseUsbDevice(int argc, char ** argv) {
+  if (argc > 1) {
+    g_useSpecifiedDevice = true;
+    g_deviceSerial = argv[1];
+    g_busId = argv[2];
+    g_deviceId = argv[3];
+    printf("Selected device: bus:%s, device:%s\n", g_busId.c_str(), g_deviceId.c_str());
+  } else {
+    g_deviceSerial = "";
+    g_useSpecifiedDevice = false;
+  }
+}
+
+
+/** First cl argument is the bus id of the device, second is the device id. 
+    Both are optional
+*/
 int main(int argc, char **argv)
 {
     XnStatus nRetVal = XN_STATUS_OK;
 
     base64_init();
+    parseUsbDevice(argc, argv);
+    initEnvironment(g_deviceSerial);
     SceneDrawerInit();
     initFromContextFile();
     registerUserCallbacks();

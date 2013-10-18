@@ -1,6 +1,7 @@
 ami-router
 ami-mongo-writer
 ami-sensor-kinect
+ami-sensor-kinect-1
 ami-head-crop
 ami-face-recognition
 ami-ip-power
