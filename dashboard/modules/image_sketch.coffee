@@ -18,9 +18,9 @@ define ['cs!widget/sketch'], (Sketch) ->
 
         setup: ->
             @frameRate(5)
-            @size(640, 480)
+            @size(608, 456)
             @colorMode(@RGB, 255)
 
         draw: ->
             return unless @widget.kinect_image?
-            @image(@widget.kinect_image, 0, 0, 640, 480)
+            @image(@widget.kinect_image, 0, 0, 608, 456)
