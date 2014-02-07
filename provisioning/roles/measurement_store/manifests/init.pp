@@ -1,7 +1,6 @@
 class measurement_store {
 
-    class { 'mongodb':
-        enable_10gen => true,
-    }
+ 	class { 'mongodb::globals': manage_package_repo => true }
+    class { 'mongodb':}
 
 }
