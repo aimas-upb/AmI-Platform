@@ -4,7 +4,7 @@
          "manifest": ["mongo.pp", "redis.pp", "kestrel.pp"],
          "type": "storage",
 		 "services": ["mongo", "redis", "kestrel"],      
-         "modules": ""
+         "modules": "ami-router"
         }
 ]
 

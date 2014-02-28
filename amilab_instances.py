@@ -1,8 +1,8 @@
 class Instance(object):
     
-    def __init__(self, name):
-        self.public_dns_name = name
-        self.private_dns_name = name
+    def __init__(self, public_name, private_name):
+        self.public_dns_name = public_name
+        self.private_dns_name = private_name
         self.tags = {}
         
     def matches_tags(self, tags):
@@ -11,11 +11,12 @@ class Instance(object):
                 return False
         return True
 
-instances = [Instance('ami-crunch-08.local')]
+instances = [Instance('ami-crunch-08.local', 'ami-crunch-08.labs.cs.pub.ro')]
 
 def get_instance_by_name(hostname):
     for i in instances:
-        if i.public_dns_name == hostname:
+        #we don't understand how public/private names are used
+        if i.public_dns_name == hostname or i.private_dns_name == hostname:
             return i
     return None
 
