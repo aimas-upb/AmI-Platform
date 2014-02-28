@@ -11,7 +11,7 @@ class Instance(object):
                 return False
         return True
 
-instances = [Instance('ami-crunch-08.local'), Instance('ami-crunch-09.local')]
+instances = [Instance('ami-crunch-08.local')]
 
 def get_instance_by_name(hostname):
     for i in instances:

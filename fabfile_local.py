@@ -23,6 +23,8 @@ env.key_filename = env.key_filename or '/home/ami/.ssh/id_rsa.pub'
 # in the EC2 ami image exists).
 env.user = 'ami'
 
+git_branch = 'f/%23269-Create-fab-file-version-for-deploying-on-the-ami-lab-servers'
+
 logger = logging.getLogger(__name__)
 
 def get_services():
@@ -489,7 +491,7 @@ def configure_hiera_for_machine():
     run('sudo mv /home/ami/hiera /etc/puppet')
     run('sudo chown -R root:root /etc/puppet/hiera')
 
-    run('sudo wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/hiera.yaml -O /etc/puppet/hiera.yaml')
+    run('sudo wget https://raw.github.com/ami-lab/AmI-Platform/%s/provisioning/hiera.yaml -O /etc/puppet/hiera.yaml' % git_branch)
     # Make sure we overwrite whatever is present in /etc/hiera.yaml so that
     # the command line tool gets the same configuration as the tool embedded
     # within Puppet.
@@ -525,11 +527,11 @@ def bootstrap_machine():
 
     # Fetch puppet config file - most notable change is modulepath which points
     # to local repo dir as well.
-    run('cd /etc/puppet; sudo rm puppet.conf; sudo wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/puppet.conf')
+    run('cd /etc/puppet; sudo rm puppet.conf; sudo wget https://raw.github.com/ami-lab/AmI-Platform/%s/provisioning/puppet.conf' % git_branch)
 
     # Fetch & apply bootstrap manifest - fetch the repo with the rest of the
     # manifests in the correct dir with the correct permissions.
-    run('cd /tmp; wget https://raw.github.com/ami-lab/AmI-Platform/master/provisioning/bootstrap.pp')
+    run('cd /tmp; wget https://raw.github.com/ami-lab/AmI-Platform/%s/provisioning/bootstrap.pp' % git_branch)
     run('sudo puppet apply /tmp/bootstrap.pp')
 
 @task
@@ -542,7 +544,8 @@ def provision_machine(manifest='crunch_01.pp'):
         manifest = tags['manifest']
 
     # Run the actual manifest for provisioning this node from the repo
-    run("sudo puppet apply /home/ami/AmI-Platform/provisioning/nodes/%s" % manifest)
+    for m in manifest: 
+        run("sudo puppet apply /home/ami/AmI-Platform/provisioning/nodes/%s" % m)
 
 @task
 def ssh(name):

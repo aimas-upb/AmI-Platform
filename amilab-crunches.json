@@ -1,16 +1,9 @@
 [
         {
-         "Name": "queues",
-         "manifest": "kestrel.pp",
-         "type": "kestrel",
-         "services": ["kestrel"],
-         "modules": "" 
-        },
-        {
          "Name": "storage",
-         "manifest": "mongo_redis.pp",
+         "manifest": ["mongo.pp", "redis.pp", "kestrel.pp"],
          "type": "storage",
-		 "services": ["mongo", "redis"],      
+		 "services": ["mongo", "redis", "kestrel"],      
          "modules": ""
         }
 ]

@@ -17,6 +17,7 @@ vcsrepo { "/home/ami/AmI-Platform":
     provider => git,
     source   => "git://github.com/ami-lab/AmI-Platform.git",
     user     => "ami",
+    revision => "f/#269-Create-fab-file-version-for-deploying-on-the-ami-lab-servers"
 }
 
 ->
