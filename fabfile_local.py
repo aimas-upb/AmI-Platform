@@ -355,7 +355,7 @@ def deploy(fresh=False):
         local('sudo pip install -r python_requirements.txt')
 
         # Compile kinect data acquisition
-        local('cd acquisition/kinect; sudo make clean; sudo make')
+        local('cd acquisition/kinect; make clean; make')
 
         # Clean up all pyc's. The safe way to go when you delete a file
         # from the repo.
