@@ -1,0 +1,4 @@
+check process ami-posture_classifier
+	with pidfile /var/run/ami-posture_classifier.pid
+	start = "/usr/sbin/service ami-posture_classifier start"
+	stop = "/usr/sbin/service ami-posture_classifier stop"
