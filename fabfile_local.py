@@ -16,7 +16,7 @@ from amilab_instances import (get_tags_for_machine, get_all_instances, tag_insta
 #                      get_all_instances, get_crunch_running, tag_instance)
 
 env.connection_attempts = 5
-env.key_filename = env.key_filename or '/home/ami/.ssh/id_rsa.pub'
+env.key_filename = env.key_filename or '/home/ami/AmI-Platform/provisioning/key/id_rsa_amilab'
 # By default, we will connect to the hosts with the ami user (the most
 # notable exception being the bootstrap process, when only the ubuntu user
 # in the EC2 ami image exists).
@@ -128,36 +128,20 @@ def new_service(name, file = None, queue = None, class_name = None):
 
 @task
 def run_experiment(name='duminica.txt',
-                   experiment_profile='default_experiment.json'):
+                   experiment_profile='amilab-crunches.json'):
 
     # Load up which machines are needed from the experiment profile
     machines = json.load(open(experiment_profile, 'rt'))
 
     # Only open new machines if it's necessary
     opened_instances = get_all_instances()
-    if len(opened_instances) == 0:
-        # Open exactly the desired number of machines. Sometimes EC2 fails
-        # weirdly to open the requested number of machines (don't know why)
-        # so I'm putting in a retry mechanism.
-        machines_to_open = len(machines)
-        machines_opened = 0
-        machine_hostnames = []
-        while machines_opened < machines_to_open:
-            hostnames = execute('open_machines',
-                                count=machines_to_open - machines_opened)['<local-only>']
-            machine_hostnames.extend(hostnames)
-            machines_opened += len(hostnames)
-    else:
-        hostnames = [instance.public_dns_name for instance in opened_instances]
+    hostnames = [instance.public_dns_name for instance in opened_instances]
 
     # Attach tags to machines. This meta-data is used for provisioning and
     # for the lifecycle management of machines as well.
     for hostname, machine_meta_data in zip(hostnames, machines):
         tag_instance(hostname, machine_meta_data)
 
-    execute('bootstrap_machines')
-    execute('configure_hiera_for_machines')
-    execute('provision_machines')
     execute('play_experiment', name=name)
 
 @task
@@ -267,7 +251,6 @@ def reprovision_machines():
 
 @task
 def play_experiment(name='duminica'):
-
     # File name where the experiment should be downloaded on the recorder
     # host. If it exists, it will just be played back, instead of re-downloaded.
     file_name = '/tmp/%s.txt' % name

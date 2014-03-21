@@ -1,10 +1,18 @@
 [
         {
          "Name": "storage",
-         "manifest": ["mongo.pp", "redis.pp", "kestrel.pp"],
+         "manifest": ["mongo.pp", "redis.pp", "kestrel.pp", "crunch_01.pp"],
          "type": "storage",
 		 "services": ["mongo", "redis", "kestrel"],      
-         "modules": "ami-router"
+         "modules": "ami-router,ami-dashboard,ami-api,ami-mongo-writer,ami-room-position,ami-session_processor,ami-recorder"
+        },
+        
+        {
+         "Name": "ami-daq-01-vrt",
+         "manifest": [ "crunch_01.pp"],
+         "type": "daq",
+		 "services": [],      
+         "modules": "ami-sensor-kinect"
         }
 ]
 

@@ -11,7 +11,11 @@ class Instance(object):
                 return False
         return True
 
-instances = [Instance('ami-crunch-08.local', 'ami-crunch-08.labs.cs.pub.ro')]
+instances = [
+             Instance('ami-crunch-08.local', 'ami-crunch-08.labs.cs.pub.ro'),
+             #Instance('ami-daq-06.local', 'ami-daq-06.labs.cs.pub.ro')
+             Instance('ami-daq-01-vrt.local', 'ami-daq-01-vrt.labs.cs.pub.ro')
+            ]
 
 def get_instance_by_name(hostname):
     for i in instances:
@@ -48,8 +52,7 @@ def get_instance_by_tags(tags):
 
 def get_crunch_running(module_name):
     """ Gets the crunch node running a given module. """
-    crunch_hostnames = [instance.public_dns_name for instance in
-                        get_instances_by_tags({'type': 'crunch'})]
+    crunch_hostnames = [instance.public_dns_name for instance in instances]
     for crunch_hostname in crunch_hostnames:
         tags = get_tags_for_machine(crunch_hostname)
         if 'modules' in tags:

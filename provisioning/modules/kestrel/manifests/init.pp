@@ -23,7 +23,7 @@ class kestrel ($max_ram='1024m') {
     ->
 
     exec { "unzip_kestrel_archive":
-        command => "/usr/bin/unzip kestrel-2.4.1.zip",
+        command => "/usr/bin/unzip -o kestrel-2.4.1.zip",
         cwd => "/usr/local"
      }
 

@@ -1,0 +1,10 @@
+[
+        {
+         "Name": "ami-daq-06",
+         "manifest": [ "crunch_01.pp"],
+         "type": "daq",
+		 "services": [],      
+         "modules": "ami-sensor-kinect"
+        }
+]
+
