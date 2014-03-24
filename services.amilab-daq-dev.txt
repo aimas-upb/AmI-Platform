@@ -1,2 +1,3 @@
 ami-sensor-kinect
 ami-sensor-kinect-1
+ami-posture_classifier
