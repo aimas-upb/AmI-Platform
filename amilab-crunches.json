@@ -8,7 +8,7 @@
         },
         
         {
-         "Name": "ami-daq-01-vrt",
+         "Name": "ami-daq-06",
          "manifest": [ "crunch_01.pp"],
          "type": "daq",
 		 "services": [],      

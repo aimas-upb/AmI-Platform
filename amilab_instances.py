@@ -13,8 +13,8 @@ class Instance(object):
 
 instances = [
              Instance('ami-crunch-08.local', 'ami-crunch-08.labs.cs.pub.ro'),
-             #Instance('ami-daq-06.local', 'ami-daq-06.labs.cs.pub.ro')
-             Instance('ami-daq-01-vrt.local', 'ami-daq-01-vrt.labs.cs.pub.ro')
+             Instance('ami-daq-06.local', 'ami-daq-06.labs.cs.pub.ro')
+             #Instance('ami-daq-01-vrt.local', 'ami-daq-01-vrt.labs.cs.pub.ro')
             ]
 
 def get_instance_by_name(hostname):

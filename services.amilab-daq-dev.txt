@@ -1,2 +1,0 @@
-ami-sensor-kinect
-ami-sensor-kinect-1
