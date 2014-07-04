@@ -70,7 +70,7 @@ class SessionStore(object):
 
     def get_all_sessions_with_measurements(self,
                                            N=100,
-                                           keys=['subject_position', 'time'],
+                                           keys=['X', 'Y', 'Z', 'time'],
                                            max_sessions=None,
                                            max_age=None):
         """ Retrieve all the sessions with their last N measurements which have

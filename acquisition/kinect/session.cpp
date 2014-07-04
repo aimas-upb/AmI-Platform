@@ -23,7 +23,7 @@ string generateSessionIdFromPlayerId(XnUserID player) {
 
     char* playerID = (char*)malloc(MAX_PLAYER_LEN * sizeof(char));
     snprintf(playerID, MAX_PLAYER_LEN, "%d", player);
-    char* sensorID = getSensorID();
+    const char* sensorID = getSensorID();
 
     int len = strlen(sensorID) + strlen(playerID) + HASH_LEN  + strlen("__0");
     char *sessionID = (char*) malloc(len * sizeof(char));

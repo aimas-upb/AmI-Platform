@@ -1,0 +1,4 @@
+check process ami-sensor-kinect-1
+	with pidfile /var/run/ami-sensor-kinect-1.pid
+	start = "/usr/sbin/service ami-sensor-kinect-1 start"
+	stop = "/usr/sbin/service ami-sensor-kinect-1 stop"

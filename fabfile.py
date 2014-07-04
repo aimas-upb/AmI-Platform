@@ -7,15 +7,18 @@ import time
 import boto
 from fabric.api import env, local, put, run, task
 from fabric.context_managers import settings, cd
-from fabric.operations import open_shell
 from fabric.tasks import execute
 from jinja2 import Template
 
 from core.ec2 import (get_tags_for_machine, get_instance_by_tags,
-                      get_all_instances, get_instances_by_tags,
-                      get_crunch_running, tag_instance)
+                      get_all_instances, get_crunch_running, tag_instance)
 
 env.connection_attempts = 5
+env.key_filename = env.key_filename or '/Users/aismail/.ssh/ami-keypair.pem'
+# By default, we will connect to the hosts with the ami user (the most
+# notable exception being the bootstrap process, when only the ubuntu user
+# in the EC2 ami image exists).
+env.user = 'ami'
 
 logger = logging.getLogger(__name__)
 
@@ -120,9 +123,7 @@ def new_service(name, file = None, queue = None, class_name = None):
 
 
 @task
-def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
-                   name='cloud_experiment',
-                   file_name='/tmp/experiment.txt',
+def run_experiment(name='duminica.txt',
                    experiment_profile='default_experiment.json'):
 
     # Load up which machines are needed from the experiment profile
@@ -153,7 +154,6 @@ def run_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps
     execute('bootstrap_machines')
     execute('configure_hiera_for_machines')
     execute('provision_machines')
-    execute('copy_experiment', url=url, file_name=file_name, name=name)
     execute('play_experiment', name=name)
 
 @task
@@ -200,8 +200,7 @@ def provision_machines():
     # Provision the machines in parallel. The manifest for each machine
     # will be taken from env.hostname_to_manifest, because it's the only sane
     # way I found in fab to do the provisioning in parallel.
-    with settings(parallel=True, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+    with settings(parallel=True):
         execute('provision_machine', hosts=hostnames)
 
     # Determine the crunching hostnames - these are generally modules of
@@ -214,9 +213,7 @@ def provision_machines():
 
     # For crunch nodes, generate settings_local.py files and services.txt files.
     # Afterwards, run deploy task on each of them.
-    with settings(parallel=True, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        execute('generate_settings_local_file', hosts=crunching_hostnames)
+    with settings(parallel=True):
         execute('generate_services_file', hosts=crunching_hostnames)
         execute('deploy_ami_services_on_crunch_node', hosts=crunching_hostnames)
 
@@ -225,8 +222,7 @@ def refresh_code_on_machines():
     """ Refresh the current version of the code on the machines. """
     hostnames = [instance.public_dns_name for instance in get_all_instances()]
 
-    with settings(parallel=True, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+    with settings(parallel=True):
         execute('refresh_code', hosts=hostnames)
 
 @task
@@ -248,9 +244,34 @@ def reprovision_machines():
     execute('provision_machines')
 
 @task
-def copy_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dumps/diana.txt',
-                    name='cloud_experiment',
-                    file_name='/tmp/experiment.txt'):
+def play_experiment(name='duminica'):
+
+    # File name where the experiment should be downloaded on the recorder
+    # host. If it exists, it will just be played back, instead of re-downloaded.
+    file_name = '/tmp/%s.txt' % name
+    # URL from S3 where the experiment should be found. Note that for now
+    # we are using S3 to host the experiments on a standard bucket.
+    url = 'https://s3.amazonaws.com/ami-lab-experiments/%s.txt' % name
+
+    # Connect to MongoDB host and erase all measurements so far. This will
+    # prevent then from accumulating and filling up the disk
+    mongo_instance = get_instance_by_tags({'Name': 'measurements'})
+    if mongo_instance is None:
+        print("Could not find MongoDB instance where measurements are stored.")
+        return
+
+    with settings(host_string=mongo_instance.public_dns_name):
+        run('mongo measurements --eval "db.docs.remove();"')
+
+    # Connect to Redis host and clean up all the state gathered so far.
+    # This will make sure that the experiment runs on a blank state.
+    redis_instance = get_instance_by_tags({'Name': 'sessions'})
+    if redis_instance is None:
+        print("Could not find Redis instance where sessions are stored.")
+        return
+
+    with settings(host_string=redis_instance.public_dns_name):
+        run('redis-cli flushall')
 
     # Search among the crunch nodes the one on which ami-recorder is running
     recorder_hostname = get_crunch_running('ami-recorder')
@@ -259,32 +280,30 @@ def copy_experiment(url='https://raw.github.com/ami-lab/AmI-Platform/master/dump
               "ami-recorder module, thus we have nowhere to run the experiment")
         return
 
-    with settings(host_string=recorder_hostname, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+    with settings(host_string=recorder_hostname):
         with cd('/home/ami/AmI-Platform'):
-            # Start and stop the experiment immediately just to create a
-            # record in MongoDB in order to fool the experiment system :)
-            run('python experiment.py --file %s start %s' %
-                (file_name, name))
-            run('python experiment.py stop %s' % name)
 
-            # Fetch the dump from the remote location and place it just
-            # where the experiment system thinks it recorded it.
-            run('wget %s -O %s' % (url, file_name))
+            # Only create the experiment record in MongoDB if it isn't there
+            # already. Otherwise, just stay put :)
+            #
+            # We don't need to check whether the experiment actually corresponds
+            # to the correct file, since the file name is currently generated
+            # automatically from the experiment name.
+            if str(run('python experiment.py list | grep %s | wc -l' % file_name)).strip() == '0':
+                # Start and stop the experiment immediately just to create a
+                # record in MongoDB in order to fool the experiment system :)
+                run('python experiment.py --file %s start %s' %
+                    (file_name, name))
+                run('python experiment.py stop %s' % name)
 
-@task
-def play_experiment(name='cloud_experiment'):
+            # Make sure we're only fetching the dump if the file doesn't
+            # already exist.
+            # TODO(andrei): check the integrity of the file as well via md5
+            if str(run('ls -la /tmp/ | grep "%s.txt" | wc -l' % name)).strip() == '0':
+                # Fetch the dump from the remote location and place it just
+                # where the experiment system thinks it recorded it.
+                run('wget %s -O %s' % (url, file_name))
 
-    # Search among the crunch nodes the one on which ami-recorder is running
-    recorder_hostname = get_crunch_running('ami-recorder')
-    if recorder_hostname is None:
-        print("Something is misconfigured. No crunch node is running the "
-              "ami-recorder module, thus we have nowhere to run the experiment")
-        return
-
-    with settings(host_string=recorder_hostname, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        with cd('/home/ami/AmI-Platform'):
             # This will cause the experiment measurements to be pumped
             # in the kestrel queues, thus triggering the whole processing
             # along the pipeline
@@ -396,44 +415,6 @@ def generate_services_file():
         run('echo "%s" >> %s' % (module, file_path))
 
 @task
-def generate_settings_local_file():
-    """ Given a crunch node, generate a settings.py file pointing the modules
-    running on it to the correct resources (redis/kestrel/mongodb/etc). """
-
-    mongo = get_instance_by_tags({'Name': 'measurements'})
-    if not mongo:
-        print("Could not find measurements DB in the cloud!")
-        return
-
-    redis = get_instance_by_tags({'Name': 'sessions'})
-    if not redis:
-        print("Could not find sessions DB in the cloud!")
-        return
-
-    kestrel = get_instance_by_tags({'Name': 'queues'})
-    if not kestrel:
-        print("Could not find queues machine in the cloud!")
-        return
-
-    # Render the settings_local.py file template to a string.
-    context = {
-        'kestrel_server': kestrel.public_dns_name,
-        'kestrel_port': 22133,
-        'mongo_server': mongo.public_dns_name,
-        'mongo_port': 27017,
-        'redis_server': redis.public_dns_name,
-        'redis_port': 6379,
-    }
-    content = render_template('admin/templates/settings.py', context).split('\n')
-
-    # Afterwards, string is written line by line using echo to the remote
-    # host.
-    file_path = '/home/ami/AmI-Platform/core/settings_local.py'
-    run('echo "" > %s' % file_path)
-    for line in content:
-        run('echo "%s" >> %s' % (line, file_path))
-
-@task
 def generate_hiera_datasources():
     """ Hiera datasources are hierarchical configurations to be applied by
     puppet automatically in its template files. We need them for provisioning
@@ -442,7 +423,16 @@ def generate_hiera_datasources():
 
     local('rm -rf /tmp/hiera')
     local('mkdir -p /tmp/hiera/node')
-    local('cp provisioning/common.json /tmp/hiera/common.json')
+
+    common_context = {
+        'mongo_hostname': get_instance_by_tags({'Name': 'measurements'}).public_dns_name,
+        'redis_hostname': get_instance_by_tags({'Name': 'sessions'}).public_dns_name,
+        'kestrel_hostname': get_instance_by_tags({'Name': 'queues'}).public_dns_name
+    }
+    render_template('admin/templates/common.json',
+                    common_context,
+                    '/tmp/hiera/common.json')
+
     for instance in instances:
         context = {'hostname': instance.public_dns_name}
         render_template('admin/templates/node.json',
@@ -460,8 +450,7 @@ def configure_hiera_for_machines():
     # copy the files in a folder only accessible by root, we copy them in a
     # folder accessible by the ami user, and then use sudo to move it around
     # locally.
-    with settings(parallel=True, user='ami',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+    with settings(parallel=True):
         execute('configure_hiera_for_machine', hosts=hostnames)
 
 @task
@@ -493,8 +482,7 @@ def bootstrap_machines():
     # Provision the machines in parallel. The manifest for each machine
     # will be taken from env.hostname_to_manifest, because it's the only sane
     # way I found in fab to do the provisioning in parallel.
-    with settings(parallel=True, user='ubuntu',
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
+    with settings(parallel=True, user='ubuntu'):
         execute('bootstrap_machine', hosts=hostnames)
 
 @task
@@ -544,9 +532,14 @@ def ssh(name):
     if instance is None:
         return
 
-    with settings(user='ami', host_string=instance.public_dns_name,
-                  key_filename='/Users/aismail/.ssh/ami-keypair.pem'):
-        open_shell()
+    # Use command-line SSH instead of fab's open_shell which is troublesome
+    # and ignore host-related warnings.
+    # http://stackoverflow.com/questions/9299651/warning-permanently-added-to-the-list-of-known-hosts-message-from-git
+    local('ssh -i %s '
+          '-o StrictHostKeyChecking=no '
+          '-o UserKnownHostsFile=/dev/null '
+          '-o LogLevel=quiet '
+          'ami@%s' % (env.key_filename, instance.public_dns_name))
 
 @task
 def host(name):

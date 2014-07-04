@@ -10,13 +10,17 @@ define ['cs!widget/sketch'], (Sketch) ->
                 in the image that has to be displayed.
             ###
             return unless params.type == 'change'
-            image_data = "data:image/jpeg;base64," + params.model.get('image_rgb/image')
+            base64_image_data = params.model.get('image_rgb/image')
+            if not base64_image_data
+                return
+            image_data = "data:image/jpeg;base64," + base64_image_data
             @kinect_image = @processing.loadImage(image_data)
 
         setup: ->
             @frameRate(5)
-            @size(640, 480)
+            @size(608, 456)
             @colorMode(@RGB, 255)
 
         draw: ->
-            @image(@widget.kinect_image, 0, 0, 640, 480)
+            return unless @widget.kinect_image?
+            @image(@widget.kinect_image, 0, 0, 608, 456)

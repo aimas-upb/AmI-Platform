@@ -1,2 +1,3 @@
 ami-head-crop
 ami-face-recognition
+ami-session_processor
