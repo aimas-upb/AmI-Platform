@@ -63,10 +63,10 @@ elif args.operation == 'list':
         print "No active experiments"
     else:
         print "Experiments:" 
-        print "%20s %20s %20s" % ("name", "file", "active")
-        print "--------------------------------------------------------------"
+        print "%-25s | %-40s | %-7s" % ("name", "file", "active")
+        print "-" * 78 
         for e in experiments:
-            print "%20s %20s %20s" % (e.name, e.file, e.active)
+            print "%-25s | %-40s | %-7s" % (e.name, e.file, e.active)
 
 elif args.operation == 'start':
     # See if there is an existing Experiment with that name
