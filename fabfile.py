@@ -70,7 +70,7 @@ def render_template(template_file, context, target_file=None):
             return output
 
 @task
-def new_service(name, file = None, queue = None, class_name = None):
+def new_service(name, file = None, queue = None, class_name = None, template = 'PDU'):
     """ Installs a new service with the given name. """
 
     if service_already_exists(name):
@@ -90,11 +90,16 @@ def new_service(name, file = None, queue = None, class_name = None):
     }
 
     # Generate dumb code file
-    print "Generating code file %s" % file
-    render_template('admin/templates/service-code.py',
-                    context,
-                    file)
-
+    if template == 'PDU':
+        print "Generating code file %s" % file
+        render_template('admin/templates/service-code.py',
+                        context,
+                        file)
+    elif template is None:
+        print "No template given"
+    else:
+        print "Unknown template given: %s" % template 
+        
     # Generate monit script - make sure that the service is never down
     print "Generating monit script scripts/monit/%s" % name
     render_template('admin/templates/service-monit',
