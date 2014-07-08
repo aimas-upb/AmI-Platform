@@ -6,16 +6,19 @@ import time
 
 from core import DAU
 from lib.log import setup_logging
+from lib.dashboard_cache import DashboardCache
 
 class Arduino(DAU):
 
     QUEUE = 'measurements'
     DATA_SAMPLING_FREQUENCY = None #set to None as this DAU does not work by polling
     REQUIRED_KEYS = ['temperature', 'sensor_id', 'created_at', 'sensor_type', 'distance', 'luminosity']
+    ENVIRONMENT_LIMIT = 1000
     
     def __init__(self, **kwargs):
         super(Arduino, self).__init__(**kwargs)
         self.server = None
+        self.dashboard_cache = DashboardCache()
     
     class TCPRequestHandler(SocketServer.BaseRequestHandler):
         def __init__(self, arduino, request, client_address, server):
@@ -54,6 +57,17 @@ class Arduino(DAU):
         #TODO get this values in a list by sensor_id
         data['sensor_position'] = {'X': 0, 'Y': 0, 'Z': 0, 'alpha': 0, 'beta': 0, 'gamma': 0}
         self.send_to(self.QUEUE, data)
+        
+        len = self.dashboard_cache.lpush(sensor_id=data['sensor_id'],
+            sensor_type=data['sensor_type'],
+            measurement_type=data['type'],
+            measurement=json.dumps(data))
+        if len > 2 * self.ENVIRONMENT_LIMIT:
+            self.dashboard_cache.ltrim(sensor_id=data['sensor_id'],
+               sensor_type=data['sensor_type'],
+               measurement_type=data['type'],
+               start=0,
+               stop=self.ENVIRONMENT_LIMIT)
         pass
     
     def transform_data(self, data):
