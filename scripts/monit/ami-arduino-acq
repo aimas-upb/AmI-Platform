@@ -1,0 +1,4 @@
+check process ami-arduino-acq
+	with pidfile /var/run/ami-arduino-acq.pid
+	start = "/usr/sbin/service ami-arduino-acq start"
+	stop = "/usr/sbin/service ami-arduino-acq stop"

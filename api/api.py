@@ -18,6 +18,7 @@ session_store = SessionStore()
 processed_session_store = ProcessedSessionStore()
 
 POSITIONS_LIMIT = 100
+ENVIRONMENT_LIMIT = 1000
 
 if getattr(settings, 'SERVE_DASHBOARD_VIA_API', False):
     @app.route('/static/<filepath:path>')
@@ -58,6 +59,21 @@ def get_session_list(session_type, N, max_age):
     except:
         logger.exception("Failed to get sessions from Redis")
         return {'sessions': {}}
+
+@app.route('/latest_environment/:sensor_id', method='GET')
+def get_latest_environment(sensor_id = 'K1-A'):
+    try:
+        result = dashboard_cache.lrange(sensor_id=sensor_id,
+                                        sensor_type='arduino',
+                                        measurement_type='environment',
+                                        start=0,
+                                        stop=ENVIRONMENT_LIMIT)
+        return {'data': result}
+
+    except:
+        logger.exception("Failed to get list of latest environment data from "
+                         "Redis")
+        return {}
 
 @app.route('/latest_subject_positions/:sensor_id', method='GET')
 def get_latest_subject_positions(sensor_id = 'daq-01'):
