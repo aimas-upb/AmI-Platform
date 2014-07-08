@@ -28,6 +28,8 @@ class Router(PDU):
 
         self.send_to('mongo-writer', message)
 
+        self.log('sensor type %s' % message['sensor_type'])
+
         # Images & skeletons should be sent to head-crop
         if message['type'] in ['image_rgb', 'skeleton']:
             self.send_to('head-crop', message)
@@ -42,7 +44,7 @@ class Router(PDU):
         if (message['sensor_type'] == 'kinect' and
             message['type'] == 'skeleton'):
                 self.send_to('room-position', message)
-                self.send_to('posture-recognition', message)
+                self.send_to('posture-classifier', message)
 
         # Only send to dashboard if it's a Kinect RGB image
         if (message['sensor_type'] == 'kinect' and
