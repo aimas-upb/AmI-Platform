@@ -37,7 +37,8 @@ function plotChart(series, sensorsIds, chartId) {
                 y: 25
             }
         },
-        legend: { 
+        legend: {
+            position: "nw",
             labelFormatter: function(label, series) {
                 // series is the series object for the label
                 if(label.lastIndexOf("#", 0) === 0)
@@ -55,15 +56,16 @@ function plotChart(series, sensorsIds, chartId) {
         // check data continuity here (check timestamp)
         var continuousData = [];
         var currentTime = new Date().getTime();
-        for(var i = 0; i < series[sensorsIds[sensorIdx]].length; i++) {
-            // console.log("dif: " + " = " + (currentTime - series[sensorsIds[sensorIdx]][i][0]));
-            if(currentTime - series[sensorsIds[sensorIdx]][i][0] < DECAY)
-                continuousData.push(series[sensorsIds[sensorIdx]][i]);
+        if(series[sensorsIds[sensorIdx]] != null && series[sensorsIds[sensorIdx]] != []) {
+            for(var i = 0; i < series[sensorsIds[sensorIdx]].length; i++) {
+                if(currentTime - series[sensorsIds[sensorIdx]][i][0] < DECAY)
+                    continuousData.push(series[sensorsIds[sensorIdx]][i]);
+            }
+            
+            dataSeries.data = continuousData;
+            dataSeries.label = sensorsIds[sensorIdx];
+            dataSeriesCollection.push(dataSeries);
         }
-        
-        dataSeries.data = continuousData;
-        dataSeries.label = sensorsIds[sensorIdx];
-        dataSeriesCollection.push(dataSeries);
     }
 
     var plotObj = $.plot($(chartId), dataSeriesCollection, options);
