@@ -157,6 +157,8 @@
                                         <span class="caret"></span>
                                     </button>
                                     <ul id="tempSensorGroup" class="dropdown-menu dropdown-messages">
+                                        <li name="TOGGLE"><a href="#"><i class="fa fa-square-o fa-fw"></i>All sensors</a></li>
+                                        <li class="divider"></li>
                                         <li name="K1-A"><a href="#"><i class="fa fa-square-o fa-fw"></i>K1-A</a></li>
                                         <li name="K1-B"><a href="#"><i class="fa fa-square-o fa-fw"></i>K1-B</a></li>
                                         <li class="divider"></li>
@@ -212,6 +214,8 @@
                                         <span class="caret"></span>
                                     </button>
                                     <ul id="humidSensorGroup" class="dropdown-menu dropdown-messages">
+                                        <li name="TOGGLE"><a href="#"><i class="fa fa-square-o fa-fw"></i>All sensors</a></li>
+                                        <li class="divider"></li>
                                         <li name="K1-A"><a href="#"><i class="fa fa-square-o fa-fw"></i>K1-A</a></li>
                                         <li name="K1-B"><a href="#"><i class="fa fa-square-o fa-fw"></i>K1-B</a></li>
                                         <li class="divider"></li>
@@ -267,6 +271,8 @@
                                         <span class="caret"></span>
                                     </button>
                                     <ul id="lumSensorGroup" class="dropdown-menu dropdown-messages">
+                                        <li name="TOGGLE"><a href="#"><i class="fa fa-square-o fa-fw"></i>All sensors</a></li>
+                                        <li class="divider"></li>
                                         <li name="K1-A"><a href="#"><i class="fa fa-square-o fa-fw"></i>K1-A</a></li>
                                         <li name="K1-B"><a href="#"><i class="fa fa-square-o fa-fw"></i>K1-B</a></li>
                                         <li class="divider"></li>
@@ -330,6 +336,7 @@
 
 	<script type="text/javascript">
 		var envSensorBaseUrl = "http://ami-crunch-01.local/api/latest_environment/";
+        // var envSensorBaseUrl = "http://localhost/sb-admin-v2/data/";
 
 		var defaultSensor = 'K1-A';
 		var selectedSensors = [];
@@ -348,14 +355,41 @@
         var lumSensorGroup = $("ul#lumSensorGroup");
         var allSensorGroup = tempSensorGroup.add(humidSensorGroup.add(lumSensorGroup));
 
+        var allSensorsToggle = false;
+
 		$('li',allSensorGroup).on('click',function (e) {
-			sensorId = $(e.target).text();  
-            toggleSensorButtons(sensorId);
+            console.log("[INFO] Target text: " + $(e.target).text());
+            if($(e.target).text() == "All sensors") {
+                console.log("[INFO] All sensors selected");
+                if(allSensorsToggle == false) {
+                    // selectedSensors = [];
+                    // for(envSensorId in envSensorIds)
+                    //     selectedSensors.push(envSensorIds[envSensorId]);
+                    for(envSensorId in envSensorIds) {
+                        if($.inArray(envSensorIds[envSensorId],selectedSensors) == -1)
+                            toggleSensorButtons(envSensorIds[envSensorId]);
+                    }
+                    allSensorsToggle = true;
+                    $("i",$(e.target)).removeClass("fa-square-o").addClass("fa-check-square-o");
+                } else {
+
+                    for(envSensorId in envSensorIds) {
+                            toggleSensorButtons(envSensorIds[envSensorId]);
+                    }
+                    allSensorsToggle = false;
+                    selectedSensors = [];
+                    $("i",$(e.target)).removeClass("fa-check-square-o").addClass("fa-square-o");
+                }
+            } else {
+                sensorId = $(e.target).text();
+                toggleSensorButtons(sensorId);
+            }
 
 			if(selectedSensors.length == 0) {
                 toggleSensorButtons(defaultSensor);
 			}
 
+            console.log("[INFO] Selected sensors: " + selectedSensors);
             plotChart(temperatureData,selectedSensors,"#temp-chart");
             plotChart(humidityData,selectedSensors,"#humid-chart");
             plotChart(luminosityData,selectedSensors,"#lum-chart");
@@ -367,7 +401,7 @@
             if(sensorIdx == -1) {
                 selectedSensors.push(sensorId);
                 for(var i = 0; i < sensorButtons.length; i++) {
-                    $("i",$(sensorButtons[i])).removeClass("fa-square-o").addClass("fa-check-square-o")
+                    $("i",$(sensorButtons[i])).removeClass("fa-square-o").addClass("fa-check-square-o");
                 }
             } else {
                 selectedSensors.splice(sensorIdx,1);
