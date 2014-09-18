@@ -12,19 +12,25 @@
   - DOM mutation events
   - polling (for those browsers written in Redmond :P)
 
-  spawning
-  ========
-  TODO: explain it.
-
 ###
 
-define ['cs!mozaic_module', 'cs!pubsub'], (Module) ->
+define [
+    'cs!mozaic_module'
+    'cs!pubsub'
+    'cs!channels_utils'
+], (
+    Module
+    PubSub
+    channels_utils
+) ->
     checkDOMInterval = 200
+
     class WidgetStarter extends Module
         ###
             Monitors the DOM for the appearance of new widgets.
             Loads them up whenever they appear.
-            When new widgets are marked as delayed (i.e with Constanst.DELAY_WIDGET class)
+            When new widgets are marked as delayed
+            (i.e with Constants.DELAY_WIDGET data attribute)
             the starter delayes their execution untill the class is removed.
 
             waiting_list: dictionary of channels, every value
@@ -60,7 +66,6 @@ define ['cs!mozaic_module', 'cs!pubsub'], (Module) ->
                         delete @widgets[widget]
             )
 
-
         wasDelayedNode: (mutation) ->
             ###
             # Checks if the mutation object passed as argument is caused by the removal of class.
@@ -71,19 +76,45 @@ define ['cs!mozaic_module', 'cs!pubsub'], (Module) ->
             # @reference http://www.w3.org/TR/DOM-Level-3-Events/#events-mutationevents
             ###
 
+            nodeClassName = mutation.target?.className
+            # The className can be a SVGAnimatedString because that's what a
+            # SVG dom element returns for className
+            # Reference: https://developer.mozilla.org/en-US/docs/Web/API/SVGAnimatedString
+            nodeClassName = if nodeClassName?.baseVal? then nodeClassName.baseVal else nodeClassName
+
+            # MutationRecord is passed from MutationObserver
+            # See the initialize method
             isMutationRecord =
                 mutation.type is 'attributes' and
-                mutation.attributeName is 'class' and
-                mutation.target?.className?.indexOf('mozaic-widget') isnt -1 and # Must be widget.
-                mutation.oldValue?.indexOf(Constants.DELAY_WIDGET) isnt -1 and # Should have been delayed
-                mutation.target?.className?.indexOf(Constants.DELAY_WIDGET) is -1 # Should not be delayed anymore
+                mutation.attributeName is Constants.DELAY_WIDGET and
+                nodeClassName? and
+                # Must be widget.
+                nodeClassName.indexOf('mozaic-widget') isnt -1 and
+                mutation.oldValue? and
+                # Should have been delayed
+                mutation.oldValue is 'true' and
+                # Should not be delayed anymore
+                # The newValue won't come in the MutationRecord
+                # https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver
+                # and we'll take it from the target element
+                not (mutation.target.getAttribute(mutation.attributeName) is 'true')
 
-            isMutationEvent = # for DOM Mutation Events
-                mutation.attrChange is 1 and # MODIFICATION type change.
-                mutation.attrName is 'class' and # Changed attr should be a class.
-                mutation.newValue?.indexOf('mozaic-widget') isnt -1 and # Element should be a widget.
-                mutation.newValue?.indexOf(Constants.DELAY_WIDGET) is -1 and # Element should no longer be delayed.
-                mutation.prevValue?.indexOf(Constants.DELAY_WIDGET) isnt -1 # Element was previously marked as delayed.
+            # This is needed to support the deprecated MutationEvents
+            # which were replaced by MutationOberver
+            # It seems to be used by older versions of IE (older than 11)
+            # https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver
+            isMutationEvent =
+                # MODIFICATION type change
+                mutation.attrChange is 1 and
+                mutation.attrName is Constants.DELAY_WIDGET and
+                nodeClassName? and
+                # Must be widget
+                nodeClassName.indexOf('mozaic-widget') isnt -1 and
+                mutation.prevValue? and
+                # Should have been delayed
+                mutation.prevValue is 'true' and
+                # Should not be delayed anymore
+                not (mutation.newValue is 'true')
 
             return isMutationRecord or isMutationEvent
 
@@ -107,7 +138,7 @@ define ['cs!mozaic_module', 'cs!pubsub'], (Module) ->
                     subtree: true
                     attributes: true # Listen for attribute changes as well.
                     attributeOldValue: true # Pass in the old attribute value, we need it to check if it had Constants.DELAY_WIDGET class.
-                    attributeFilter: ['class'] # Pass only class attribute changes
+                    attributeFilter: [Constants.DELAY_WIDGET] # Pass only class attribute changes
 
             else if document.addEventListener?
                 document.addEventListener "DOMNodeInserted", (e) =>
@@ -130,7 +161,7 @@ define ['cs!mozaic_module', 'cs!pubsub'], (Module) ->
                     $('.mozaic-widget').each (idx, el) ->
                         $el = $(el)
                         # Do nothing if the widget is either already initialized or delayed
-                        if $el.hasClass('mozaic-initialized') or $el.hasClass(Constants.DELAY_WIDGET)
+                        if $el.attr(Constants.INITIALIZED_WIDGET) is 'true' or $el.attr(Constants.DELAY_WIDGET) is 'true'
                             return
 
                         setTimeout ->
@@ -149,20 +180,23 @@ define ['cs!mozaic_module', 'cs!pubsub'], (Module) ->
                 iserted node. If it is an injected widget, then initialize
                 it
             ###
+            widgets = []
 
-            list = []
-            # If the current element is an mozaic-widget but it's not delayed.
-            if $el.hasClass('mozaic-widget') and not $el.hasClass(Constants.DELAY_WIDGET)
-                list.push($el)
-            # Find all its children widgets and turn the pseudo-list
-            # returned by the jQuery API into a real list. Filter out delayed widgets.
-            $inserted_elements = $el.find(".mozaic-widget").not(".#{Constants.DELAY_WIDGET}")
-            list.push(element) for element in $inserted_elements
+            # If the current element is an mozaic-widget but it's not delayed
+            if $el.hasClass('mozaic-widget') and
+               not ($el.attr(Constants.DELAY_WIDGET) is "true")
+                widgets.push($el)
 
-            # Initialize all the widgets by calling setTimeout(0)
-            return @initializeNewWidgets(list)
+            # Find all its children widgets, while filtering out delayed
+            # widgets
+            for mozaic_widget_el in $el.find(".mozaic-widget:not([#{Constants.DELAY_WIDGET}='true'])")
+                widgets.push($(mozaic_widget_el))
+
+            # Shouldn't try to initialize an empty list
+            @initializeNewWidgets(widgets) if widgets.length
 
         checkRemovedNode: ($el) ->
+
             markForGarbageCollection = @markForGarbageCollection
             # If the removed element is a widget, garbage collect it.
             # Be careful, some widgets are removed from the DOM
@@ -171,8 +205,8 @@ define ['cs!mozaic_module', 'cs!pubsub'], (Module) ->
             if $el.hasClass('mozaic-widget')
                 markForGarbageCollection($el)
             # Find all its children widgets and garbage collect them
-            $el.find('.mozaic-widget').each (idx, el) ->
-                markForGarbageCollection(el)
+            for child_widget_el in $el.find('.mozaic-widget')
+                markForGarbageCollection(child_widget_el)
 
             false
 
@@ -191,7 +225,7 @@ define ['cs!mozaic_module', 'cs!pubsub'], (Module) ->
                 which will immediately cause it to start ignoring data events.
             ###
             guid = $(el).data('guid')
-            return unless guid or @destroyed_widgets[guid]
+            return if not guid or @destroyed_widgets[guid]
 
             # First mark it as detached
             loader.mark_as_detached(guid)
@@ -205,26 +239,35 @@ define ['cs!mozaic_module', 'cs!pubsub'], (Module) ->
             else
                 @widgets_for_gc.push(guid)
 
-        initializeNewWidgets: (list) =>
+        initializeNewWidgets: (widgets) =>
             ###
-                Function for initializing the new widgets.
-
-                The difference between this and a plain old for is that
-                tries hard to let the rendering threads take what's theirs
-                by calling setTimeout(0) for each step of the iteration.
-
-                Initialilly, this function was recursive. Because of the
-                maximum call stack error when reimplementing the system for
-                IE7, it has been refactored to be non-recursive and use a
-                setTimeout(0) instead
+                Asynchrounous batch initializing of new widgets
             ###
+            while $widget = widgets.shift()
+                # Ignore widget if one its ancestors has already been detached
+                # from DOM (this prevents race coditions where a parent widget
+                # would be detached from DOM, and only after it being marked
+                # for GC would its children start coming up and being picked up
+                # by the widget starter---children that shouldn't init anymore)
+                # $.contains seems like the fastest way to go:
+                # http://stackoverflow.com/a/11943707/128816
+                unless $.contains(document.documentElement, $widget[0])
+                    logger.warn("Detached widget #{$widget.data('widget')} " +
+                                "is trying to initialize")
+                    return
+                do ($widget) =>
+                    # Prevent from a widget to be picked up more than once by
+                    # the widget starter
+                    return if $widget.data('guid')
+                    # Set the GUID synchronously so that the widget can be
+                    # picked up instantly in case it get removed from the DOM
+                    # very quickly and needs to be GCed
+                    @addGuidToWidget($widget)
 
-            while widget = list.shift()
-                do (widget) =>
-                    setTimeout =>
-                            @initializeWidget $(widget)
-                        , 0
-
+                    # Initialize the widget asynchronously in order to avoid
+                    # hogging the browser (expecially IE) by having too many
+                    # recursive calls or even reaching a maximum call stack
+                    setTimeout((=> @initializeWidget($widget)), 0)
 
         startWidget: (params) =>
             ###
@@ -265,27 +308,37 @@ define ['cs!mozaic_module', 'cs!pubsub'], (Module) ->
         loadWidget: (params) =>
             loader.load_widget(params.name, params.widget_id, params)
 
+        addGuidToWidget: ($el) ->
+            ###
+                Generate and attach a GUID to a widget DOM element
+            ###
+            # Tag the widget's DOM element with its GUID in order to track and
+            # identify that element at any time (even before a widget class is
+            # instantiated)
+            $el.attr('data-guid', _.uniqueId('widget-'))
+
         initializeWidget: ($el) =>
-            if $el.hasClass('mozaic-initialized')
+            if $el.attr(Constants.INITIALIZED_WIDGET) is 'true'
                 return false
             # First thing, mark the widget as initialized
-            $el.addClass('mozaic-initialized')
-
-            # Generate a unique GUID as an id for the widget.
-            widget_id = _.uniqueId('widget-')
+            $el.attr(Constants.INITIALIZED_WIDGET, true)
 
             name = $el.data('widget')
 
-            # Write the GUID to the DOM so that for debugging purposes
-            $el.attr('data-guid', widget_id)
+            # The widget GUID was generated and attached before the
+            # asynchronous initializing of the widget begun
+            widget_id = $el.data('guid')
 
             # Extract widget initialization parameters from the DOM
-            params = $.parseJSON($el.attr('data-params')) or {}
+            params = $.parseJSON($el.attr('data-params') or '{}')
             params['el'] = $el
             params['name'] = name
             params['widget_id'] = widget_id
 
             $el.addClass("widget-#{name}")
+
+            # We need to translate global channels into their true uid here
+            params.channels = channels_utils.translateGlobalChannels(params.channels)
 
             # Start the widget
             @startWidget(params)

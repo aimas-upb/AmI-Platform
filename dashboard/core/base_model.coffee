@@ -8,14 +8,7 @@ define [], () ->
         # and overwritten in the model, if they exist.
         sync_with_server: []
 
-        initialize: ->
-            # Add global unsyncable attributes on top of model specific ones
-            # TODO: This is commented out for now because the stream wizard
-            # depends on it. We should find a way to wire this property through
-            # our local channels without sending it to the server
-            #@unsyncable_attributes.push('form')
-
-        validate: (attributes, options) ->
+        validate: (attributes, options) =>
             ###
                 Check to see if the model is already in collection and
                 log this as a warning message
@@ -33,7 +26,40 @@ define [], () ->
 
             return false
 
-        url: ->
+        set: (key, value, options) =>
+            ###
+                The global Backbone Model setter is extended in order to
+                provide an internal system for custom individual setter
+                listeners. Contrary to listening to the change event, these
+                handlers are called even when an attribute is silently set.
+            ###
+            # Backbone Model supports both single and mass-assignments, the
+            # call can be key-value based, for one attribute only, or receive
+            # an object, whose keys and values are set individually
+            attrs = {}
+            if _.isString(key)
+                attrs[key] = value
+            else if _.isObject(key)
+                attrs = key
+
+            unless _.isEmpty(attrs)
+                for k, v of attrs
+                    method = "set_#{k}"
+                    if _.isFunction(this[method])
+                        # Send all attributes and options to each listener
+                        # along with the value because they might make a
+                        # difference to some
+                        this[method](v, attrs, options)
+
+            # Do the actual assignment after the custom listeners, in order
+            # to be able to compare new values with old ones
+            super(arguments...)
+
+            # The current object needs to be returned after set according to
+            # the Backbone Model interface
+            return this
+
+        url: =>
             ###
                 Returns the url of the model or the url of the collection
                 if the model has not been saved yet.
@@ -54,14 +80,14 @@ define [], () ->
                     return @urlRoot
             throw('Set a collection or the urlRoot property on the model')
 
-        getNested: (path) ->
+        getNested: (path) =>
             ###
                 @path {String}  Object path e.g. 'user/name'
                 @return {Mixed}
             ###
             return Utils.getNestedAttr(this, path)
 
-        getSchema: (schema_name = 'default') ->
+        getSchema: (schema_name = 'default') =>
             throw('Implement this in your model for form support')
 
         postCreate: (model) =>
@@ -100,7 +126,7 @@ define [], () ->
             ###
             return
 
-        save: (key, value, options) ->
+        save: (key, value, options) =>
             ###
                 Overwrite the save method to provide a way to
                 black list unwanted local attributes.
@@ -146,13 +172,13 @@ define [], () ->
                 # Set the old value back
                 @set(attribute, unsynced_values[i], { silent: true })
 
-        destroy: (options) =>
+        destroy: (options = {}) =>
             ###
                 Overwrite the destroy method to provide an easy hook
                 for models to execute code after the model is successfully
                 deleted.
             ###
-            options = _.clone(options) or {}
+            options = Utils.deepClone options
             old_success = options.sucess or =>
             options.success = (model, response) =>
                                   @postDelete(model)
@@ -160,4 +186,10 @@ define [], () ->
                                   old_success(model, response)
             super(options)
 
-    return BaseModel
+        getCollectionIndex: =>
+            ###
+                Get the index at which a models is situated inside its parent
+                collection
+            ###
+            return null unless @collection?
+            return _.indexOf(@collection.models, this)

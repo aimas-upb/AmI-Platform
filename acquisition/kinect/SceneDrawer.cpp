@@ -26,6 +26,9 @@
 #include <time.h>
 #include <string>
 #include <sstream>
+#include <sys/time.h>
+#include <time.h>
+#include <map>
 
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/ostream_iterator.hpp>
@@ -33,8 +36,6 @@
 
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
-
-
 
 #include "SceneDrawer.h"
 #include "context.h"
@@ -58,10 +59,32 @@ using namespace std;
 
 extern xn::UserGenerator g_UserGenerator;
 extern xn::DepthGenerator g_DepthGenerator;
+extern map<XnUserID, string> g_session_ids;
 
 #define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 10 //ms
 #define MIN_DELAY_BETWEEN_RGB_MEASUREMENT 1000
 #define MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT 1000
+#define MIN_CONFIDENCE_FOR_SKELETON 10
+
+int getFirstTrackedPlayer()
+{
+    int player = -1;
+
+    XnUserID aUsers[15];
+    XnUInt16 nUsers = 15;
+    g_UserGenerator.GetUsers(aUsers, nUsers);
+
+    for (int i = 0; i < nUsers; ++i)
+    {
+        if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
+        {
+            player = aUsers[i];
+            break;
+        }
+    }
+    return player;
+}
+
 
 class DataThrottle {
 public:
@@ -103,18 +126,19 @@ static void SendCompleted(util::Runnable* r, void* arg) {
     dt->running = false;
 }
 
+
 class Send : public util::Runnable {
 public:
     char* buffer;
-    int send_count;
-    int send_size;
 
-    Send(char* b) : buffer(b), send_count(0), send_size(0) {}
+    Send(char* b) : buffer(b) {}
     ~Send() {
         free(buffer);
     }
 
     void Run() {
+        static int send_count = 0;
+        static int send_size = 0;
         memcached_return rc;
         size_t len = strlen(buffer);
         rc = memcached_set(g_MemCache,
@@ -129,7 +153,7 @@ public:
             // Only print successful sends once in a while - avoid log pollution
             send_count = send_count + 1;
             send_size = send_size + len;
-            if (send_count % 100 == 0) {
+            if (send_count % 10 == 0) {
                 printf("Sent %5.3f KB to Kestrel across the latest %d messages\n",
                        send_size / 1024.0, send_count);
                 send_size = 0;
@@ -400,8 +424,11 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
 
     char *context = get_context();
 
-    timespec t;
-     clock_gettime(CLOCK_REALTIME, &t);
+    struct timeval tim;
+    gettimeofday(&tim, NULL);
+
+    printf("Created at: %ld\n", tim.tv_sec*1000 + tim.tv_usec/1000);
+
     snprintf((char*)buf, 10000,
         "{\"created_at\": %ld,"
         "\"context\": \"%s\","
@@ -409,23 +436,25 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
         "\"sensor_id\": \"%s\","
         "\"sensor_position\": %s,"
         "\"player\": \"%d\", "
+        "\"session_id\": \"%s\", "
         "\"type\": \"skeleton\", "
         "\"skeleton_3D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}, "
         "\"skeleton_2D\": {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s}}",
 
-        t.tv_sec,
+        tim.tv_sec*1000 + tim.tv_usec/1000,
         get_context(),
-         getSensorID(),
-         getSensorPosition(),
-         player, //player_name,
-         head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
-         left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
-         left_foot, right_foot,
+        getSensorID(),
+        getSensorPosition(),
+        player,
+        g_session_ids[player].c_str(),
+        head, neck, left_shoulder, right_shoulder, left_elbow, right_elbow,
+        left_hand, right_hand, torso, left_hip, right_hip, left_knee, right_knee,
+        left_foot, right_foot,
 
-         head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
-         right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
-         right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
-
+        head_2d, neck_2d, left_shoulder_2d, right_shoulder_2d, left_elbow_2d,
+        right_elbow_2d, left_hand_2d, right_hand_2d, torso_2d, left_hip_2d,
+        right_hip_2d, left_knee_2d, right_knee_2d, left_foot_2d, right_foot_2d);
+    
     worker.AddMessage(new Send(buf), &SendCompleted, &skeleton_throttle);
 
     free(head);
@@ -469,6 +498,8 @@ static void SaveSkeleton(XnUserID player, const char* player_name, const char* s
  * Kestrel, a message-queue system used to communicate with the rest of the
  * system.
  */
+
+#include <fstream>
 static void SaveImage(char *img, int width, int height, const char* player_name, const char* sensor_type, DataThrottle* throttle) {
 #if USE_MEMCACHE
     size_t outlen, outlen2;
@@ -479,9 +510,19 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
     compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
     compression_params.push_back(95);
 
-    cv::Mat mat(height, width, CV_8UC3, img);
+    cv::Mat rgb(height, width, CV_8UC3, img);
+    cv::Mat mat(height, width, CV_8UC3);
+    cv::cvtColor(rgb, mat, CV_RGB2BGR);
+
     vector<unsigned char> c_buf;
     cv::imencode(".jpg", mat, c_buf, compression_params);
+
+    std::ofstream file;
+    file.open("image.jpg");
+
+    std::copy(c_buf.begin(), c_buf.end(),  boost::archive::iterators::ostream_iterator<char>(file));
+    file.close();
+
     std::basic_stringstream<unsigned char> os;
 
     using namespace boost::archive::iterators;
@@ -507,27 +548,52 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
 
     printf("SaveImage: width = %d, height = %d\n", width, height);
 
-    timespec t;
-    clock_gettime(CLOCK_REALTIME, &t);
+    struct timeval tim;
+    gettimeofday(&tim, NULL);
 
+    printf("Created at: %ld\n", tim.tv_sec*1000 + tim.tv_usec/1000);
+
+    int player = getFirstTrackedPlayer();
+    if (player > -1)
+    {
+        snprintf(buf, buf_size,
+            "{\"created_at\": %ld,"
+            "\"context\": \"%s\","
+            "\"sensor_type\": \"kinect\","
+            "\"sensor_id\": \"%s\","
+            "\"sensor_position\": %s,"
+                "\"session_id\": \"%s\","
+            "\"type\": \"%s\","
+            "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
+            tim.tv_sec*1000 + tim.tv_usec/1000,
+            context,
+            getSensorID(),
+            getSensorPosition(),
+            g_session_ids[player].c_str(),
+            sensor_type,
+            sensor_type,
+            encoded.c_str(), width, height);
+    }
+    else
+    {
     snprintf(buf, buf_size,
-        "{\"created_at\": %ld,"
-        "\"context\": \"%s\","
-        "\"sensor_type\": \"kinect\","
-        "\"sensor_id\": \"%s\","
-        "\"sensor_position\": %s,"
-        "\"type\": \"%s\","
-        "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
-        t.tv_sec,
-        context,
-        getSensorID(),
-        getSensorPosition(),
-        sensor_type,
-        sensor_type,
-        encoded.c_str(), width, height);
+                "{\"created_at\": %ld,"
+                "\"context\": \"%s\","
+                "\"sensor_type\": \"kinect\","
+                "\"sensor_id\": \"%s\","
+                "\"sensor_position\": %s,"
+                "\"type\": \"%s\","
+                "\"%s\": {\"encoder_name\": \"jpg\", \"image\": \"%s\", \"width\": %d, \"height\": %d }}",
+                tim.tv_sec*1000 + tim.tv_usec/1000,
+                context,
+                getSensorID(),
+                getSensorPosition(),
+                sensor_type,
+                sensor_type,
+                encoded.c_str(), width, height);
+    }
 
-        printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
-
+    printf("sensor_type: %s, %d, %d \n", sensor_type, width, height);
 
     worker.AddMessage(new Send(buf), &SendCompleted, throttle);
 
@@ -732,19 +798,51 @@ void transformDepthImageIntoTexture(const xn::DepthMetaData& dmd,
     free(pDepthHist);
 }
 
+static XnSkeletonJoint all_joints[ ] = {
+		XN_SKEL_HEAD,
+		XN_SKEL_LEFT_ELBOW,
+		XN_SKEL_LEFT_FOOT,
+		XN_SKEL_LEFT_HAND,
+		XN_SKEL_LEFT_HIP,
+		XN_SKEL_LEFT_KNEE,
+		XN_SKEL_LEFT_SHOULDER,
+		XN_SKEL_NECK,
+		XN_SKEL_RIGHT_ELBOW,
+		XN_SKEL_RIGHT_FOOT,
+		XN_SKEL_RIGHT_HAND,
+		XN_SKEL_RIGHT_HIP,
+		XN_SKEL_RIGHT_KNEE,
+		XN_SKEL_RIGHT_SHOULDER,
+		XN_SKEL_TORSO
+};
+
+static XnConfidence computeSkeletonConfidence(XnUserID player) {
+	XnConfidence total = 0.0f;
+	for (int i = 0; i < sizeof(all_joints) / sizeof(XnSkeletonJoint); ++i) {
+		XnSkeletonJointPosition joint;
+		g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, all_joints[i], joint);
+		total += joint.fConfidence;
+	}
+
+	return total;
+}
+
 void drawTrackedUsers() {
     XnUserID aUsers[15];
     XnUInt16 nUsers = 15;
     g_UserGenerator.GetUsers(aUsers, nUsers);
+
     for (int i = 0; i < nUsers; ++i)
     {
-        if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]))
+        XnConfidence totalConfidence = computeSkeletonConfidence(aUsers[i]);
+
+    	if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]) && totalConfidence >= MIN_CONFIDENCE_FOR_SKELETON)
         {
             DrawJoints(aUsers[i]);
             if (skeleton_throttle.CanSend()) {
                  SaveSkeleton(aUsers[i], "player1", "kinect1");
-                             skeleton_throttle.MarkSend();
-                        }
+                 skeleton_throttle.MarkSend();
+            }
             DrawSkeleton(aUsers[i]);
         }
     }
@@ -800,9 +898,11 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
 
     if (rgb_throttle.CanSend()) {
         SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
+    rgb_throttle.MarkSend();
     }
     if (depth_throttle.CanSend()) {
         SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
+    depth_throttle.MarkSend();
     }
 
     drawDepthMap(depthTexID, dmd, pDepthTexBuf);
@@ -811,3 +911,4 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
     frames += 1;
     printf("Drawn %d frames so far\n", frames);
 }
+

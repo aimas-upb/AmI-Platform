@@ -11,24 +11,16 @@ define ['cs!layout'], (Layout) ->
                 Run widget's defined pre processors if there are some before
                 the widget is rendered.
             ###
-            if @pre_render?
-                for process, options of @pre_render
-                    ContextProcessors.process(process, @view.$el, options) if @view?
+            for process, options of @pre_render
+                ContextProcessors.process(process, @view.$el, options) if @view?
 
         postRender: ->
             ###
                 Run widget's defined post processors if there are some after
                 the widget is rendered.
             ###
-
-        setView: (view) ->
-            @view = view
-            # DEPRECATED: The @el is set only for backwards compatiblity
-            # since some dated widgets depend on it. @view.$el should be
-            # used insteand.
-            @el = view.$el
-            # Translate and delegate dom events to view
-            view.delegateEvents(@_getTranslatedDomEvents(@events))
+            for process, options of @post_render
+                ContextProcessors.process(process, @view.$el, options) if @view?
 
         renderLayout: (layout_params = {}, stringify = true) ->
             ###
@@ -40,19 +32,27 @@ define ['cs!layout'], (Layout) ->
                 return
             @preRender()
 
-            @layout = new Layout(@template_name, layout_params)
-            @layout.renderHTML(@view.$el, stringify)
+            layout = new Layout(@template_name, layout_params)
+            layout.renderHTML(@view.$el, stringify, =>
+                if @view.$el.data('wrapped') is true
+                    @view.$el.parent().css('height': '')
+            )
 
             # DOM element parsing must be done as early as possible after
             # layout.renderHTML(). The logic is that if I try to use those
             # elements in a handler for /new_widget_rendered, for example,
             # it will crash.
+            @_cleanupDomElements()
             @_parseDomElements()
 
-            if @never_rendered
-                @never_rendered = false
-                pipe = loader.get_module('pubsub')
-                pipe.publish('/new_widget_rendered', @params['widget_id'], @params['name'])
+            # We can manually trigger the /new_widget_rendered signal
+            # using @widgetRenderedOnDemand method where needed
+            unless (@rendered_signal_sent or @WIDGET_RENDERED_ON_DEMAND)
+                @triggerNewWidgetRendered()
+            # Trigger the /widget_rendered event every time the widget
+            # renders. The /new_widget_rendered on the other hand is
+            # triggered only once.
+            @triggerWidgetRendered()
 
             ###
                 Execute postRender widget method after the widget
@@ -60,7 +60,11 @@ define ['cs!layout'], (Layout) ->
             ###
             @postRender()
 
-            # Stop profiler. It was started at the beginning of `constructor`
-            # To check out the results, in the console, do: loader.get_module('profiler').getFullReport();
-            if App.general.ENABLE_PROFILING
-                @profiler.stop @params.name
+        triggerWidgetRendered: ->
+            pipe = loader.get_module('pubsub')
+            pipe.publish('/widget_rendered', @params['widget_id'], @params['name'])
+
+        triggerNewWidgetRendered: ->
+            pipe = loader.get_module('pubsub')
+            pipe.publish('/new_widget_rendered', @params['widget_id'], @params['name'])
+            @rendered_signal_sent = true

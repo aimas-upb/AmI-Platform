@@ -13,10 +13,13 @@ import kestrel
 
 from core.measurements_player import MeasurementsPlayer
 from core import settings
+from lib.log import setup_logging
+
 
 def we_are_frozen():
     # All of the modules are built-in to the interpreter, e.g., by py2exe
     return hasattr(sys, "frozen")
+
 
 def module_path():
     encoding = sys.getfilesystemencoding()
@@ -27,7 +30,7 @@ def module_path():
 from models.experiment import Experiment
 
 logger = logging.getLogger(__name__)
-logging.basicConfig()
+setup_logging()
 
 parser = argparse.ArgumentParser(description='Manage experiments')
 parser.add_argument('--file',
@@ -37,19 +40,38 @@ parser.add_argument('--filters',
                     default='{}',
                     help='Key-value filters for measurements')
 parser.add_argument('operation',
-                    help='Operation to perform (start/stop)')
+                    help='Operation to perform (start/stop/delete/play/list)')
 parser.add_argument('name',
+                    nargs='?',
+                    default=None,
                     help='Experiment name')
 
 args = parser.parse_args()
 
-if args.operation not in ['start', 'stop', 'delete', 'play']:
+if args.operation not in ['start', 'stop', 'delete', 'play', 'list']:
     logger.error("Invalid operation: %s" % args.operation)
+
+elif args.operation in ['start', 'stop', 'delete', 'play'] and args.name is None:
+    logger.error("Operation: %s needs the name of the experiment" % args.operation)
+
+elif args.operation == 'list':
+        # See if there is an existing Experiment with that name
+    connect('experiments', host=settings.MONGO_SERVER)
+    experiments = sorted(Experiment.objects, lambda x,y: y.active - x.active)
+
+    if len(experiments) == 0:
+        print "No active experiments"
+    else:
+        print "Experiments:" 
+        print "%-25s | %-40s | %-7s" % ("name", "file", "active")
+        print "-" * 78 
+        for e in experiments:
+            print "%-25s | %-40s | %-7s" % (e.name, e.file, e.active)
 
 elif args.operation == 'start':
     # See if there is an existing Experiment with that name
     try:
-        connect('experiments')
+        connect('experiments', host=settings.MONGO_SERVER)
         e = Experiment.objects.get(name=args.name)
         logger.error("There is already an experiment with the name %s!" %
                      args.name)
@@ -66,7 +88,7 @@ elif args.operation == 'start':
 
 elif args.operation == 'stop':
     try:
-        connect('experiments')
+        connect('experiments', host=settings.MONGO_SERVER)
         e = Experiment.objects.get(name=args.name)
         if not e.active:
             logger.error("The experiment %s is not active!" % args.name)
@@ -78,7 +100,7 @@ elif args.operation == 'stop':
 
 elif args.operation == 'delete':
     try:
-        connect('experiments')
+        connect('experiments', host=settings.MONGO_SERVER)
         e = Experiment.objects.get(name=args.name)
         e.delete(safe=True)
     except DoesNotExist:
@@ -86,7 +108,7 @@ elif args.operation == 'delete':
 
 elif args.operation == 'play':
     try:
-        connect('experiments')
+        connect('experiments', host=settings.MONGO_SERVER)
         file_name = Experiment.objects.get(name=args.name).file
         connection = kestrel.Client(settings.KESTREL_SERVERS)
         f = lambda m: connection.add('measurements', m)

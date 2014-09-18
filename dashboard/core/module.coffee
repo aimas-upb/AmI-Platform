@@ -3,10 +3,16 @@ define [], () ->
         ###
             Base Mozaic module
 
-            Its only current function is to wrap all of its methods
+            Wraps all of its methods
             into an anonymous function that catches all thrown
             exceptions. The caught execptions are handled in
             conformity with the application settings. @see #_wrapMethod
+
+            Allows child classes to add mixins to their prototypes, using
+            the `@includeMixin()` static method.
+
+            Allows for easy inheritance of class properties using
+            `@extendHash()` static method.
 
             Note: it cannot be defined as `module` because
             require.js already has an internal module with that
@@ -17,9 +23,9 @@ define [], () ->
             @_bindMethodsFromMixins()
             @_wrapInstance()
 
-        initialize: ->
+        initialize: =>
 
-        destroy: ->
+        destroy: =>
 
         _bindMethodsFromMixins: =>
             ###
@@ -29,7 +35,7 @@ define [], () ->
                 if _.isFunction(v) and v.fromMixin? and v.fromMixin
                     @[k] = _.bind(v, this)
 
-        _wrapInstance: =>
+        _wrapInstance: ->
             ###
                 Wrap instance object with an error handler that
                 prevents the interpreter from stopping execution
@@ -41,31 +47,17 @@ define [], () ->
                 # been wrapped
                 if _.isFunction(member) and not member.__wrapped__
                     @[key] = @_wrapMethod(this, member)
+                    # Mark wrapper method
+                    @[key].__wrapped__ = true
 
-        _wrapMethod: (instance, method) =>
+        _wrapMethod: (instance, method) ->
             ###
                 Pass own instance reference instead of using the
                 fat arrow to prevent from creating two new functions
                 with every wrapped one.
             ###
-            # Mark method as wrapped
-            method.__wrapped__ = true
-            return () ->
-                if App.general.THROW_UNCAUGHT_EXCEPTIONS
-                    # Let any possible uncaught exception run its course
-                    result = method.apply(instance, arguments)
-                else
-                    # Catch any thrown exceptions from within the wrapper
-                    # method, but throw it back again if it happens to be
-                    # an authentication exception (aka _unauthorized_)
-                    try
-                        result = method.apply(instance, arguments)
-                    catch error
-                        if error.message == '__UNAUTHORIZED__'
-                            throw error
-                        # Log all caught errors
-                        logger.error error
-                return result
+            return Mozaic.wrap ->
+                return method.apply(instance, arguments)
 
         @includeMixin: (klass) ->
             ###
@@ -82,3 +74,20 @@ define [], () ->
             # This one is for Ovidiu, so that we don't do return MyClass
             # for classes with mixins enabled :)
             return this
+
+
+        @extendProperty: (property, extensions) ->
+            ###
+                Defines a hash of values that will extend those of the
+                prototype property with the same name. If the property is not
+                defined, then this method will set it, so you can use it to
+                set prototype properties as well.
+
+                @param {String} property - the name of the prototype property
+                        to create/extend. Ex: subscribed_channels, events, etc.
+                @param {Object} extensions - the values to be appended to the
+                        existing prototype property.
+
+                Note! Currently only one-level deep extends are supported.
+            ###
+            @::[property] = _.extend {}, @::[property], extensions

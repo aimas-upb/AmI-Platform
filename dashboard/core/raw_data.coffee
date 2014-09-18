@@ -7,6 +7,14 @@ define [], () ->
             @data = {}
             @default_value = {}
 
+        parse: (response) =>
+            ###
+                Only pass on the objects attribute from the response,
+                the rest of the it being meta information.
+                Fallback to an empty array.
+            ###
+            return response
+
         setDefaultValue: (default_value) =>
             ###
                 Sets the default values for this RawData.
@@ -27,11 +35,13 @@ define [], () ->
                 Get the value of data. If return_default_data is false we ignore
                 the default values. An use-case is the date-filter.
             ###
-            result = if return_default_data then _.clone(@default_value) else {}
+            result = if return_default_data
+                Utils.deepClone @default_value
+            else {}
             _.extend(result, @data)
 
         toJSON: =>
-            _.clone(@data)
+            Utils.deepClone @data
 
         get: (key) =>
             ###
@@ -56,13 +66,19 @@ define [], () ->
                 dict[k] = v
             @_internal_set(dict, options)
 
+            return this
+
         _internal_set: (dict, options) =>
+            previousData = Utils.deepClone @data
+
             if options.reset or options.new_data
                 @data = {}
 
             # Alter the internal data
             for k, v of dict
                 @data[k] = v
+
+            changed_attributes = @_getChanged(previousData)
 
             # Before triggering reset/change events
             # we need to handle datasource logic when fetching channel data
@@ -76,22 +92,32 @@ define [], () ->
                 # If this was a complete reset of the RawData,
                 # trigger the reset event
                 if options.reset
-                    @trigger('reset', @)
+                    # The changed attributes are ALL the attributes in this
+                    # case, but it might be OK to have a consistent signature,
+                    # but also, since the events are async, it might be helpful
+                    # to know these attributes in the event callback since the
+                    # model could already have been altered at that point
+                    @trigger('reset', @, changed_attributes)
                 # Otherwise, trigger the change event.
                 else
-                    @trigger('change', @)
+                    @trigger('change', @, changed_attributes)
 
         unset: (dict, options={}) =>
             ###
                 unset an attribute
             ###
+            previousData = Utils.deepClone @data
+
             for k, v of dict
                 if k of @data
                     delete @data[k]
 
+            changed_attributes = @_getChanged(previousData)
+
             if (options.silent != true)
-                @trigger('change', @)
-            @
+                @trigger('change', @, changed_attributes)
+
+            return this
 
         fetch: (options = {}) =>
             ###
@@ -133,15 +159,21 @@ define [], () ->
                 # Trigger a no_data event when the response is empty
                 if _.isEmpty(data)
                     @trigger('no_data', @)
-            # Trigger an invalidate event before performing the
-            # actual request
-            @trigger('invalidate', @)
+
+            error_callback = (xhr, response_status, error_string) =>
+                # Trigger an 'error' event when the request results in an error
+                # (including 3xx redirect and excluding 304 timeout)
+                # This is important because we need to have a response from
+                # widgets on error events.
+                @trigger('error', this, this, xhr.status)
+
             # Make the actual AJAX request
             call_params =
                 url: @url
                 dataType: 'json'
                 data: params
                 success: success_callback
+                error: error_callback
                 type: options.type || 'GET'
 
             # If we are passed contentType, pass it through
@@ -149,5 +181,18 @@ define [], () ->
                 call_params.contentType = options.contentType
 
             $.ajax(call_params)
+
+        _getChanged: (previousData) ->
+            ###
+                Compare a previous set of data and establish the changed
+                attributes between the two
+            ###
+            changed = {}
+            # Get the union of all attribute keys from both the previous and
+            # the current data set
+            for k in _.union(_.keys(previousData), _.keys(@data))
+                # Only mark attributes with different values as changed
+                changed[k] = @data[k] if @data[k] isnt previousData[k]
+            return changed
 
     return RawData

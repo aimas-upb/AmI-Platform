@@ -60,7 +60,7 @@ define [], () ->
             ###
             '/' + channels_utils.splitChannel(channel)[0]
 
-        widgetMethodForChannel: (widget, channel_key, skip_check = false) ->
+        widgetMethodForChannel: (channel_key) ->
             ###
                 Returns the name of the widget method that is bound
                 to a given channel's events.
@@ -89,4 +89,108 @@ define [], () ->
                 return true if channel_name == ch_name
             false
 
-    return channels_utils
+        createGlobalChannel: (alias, params, type) ->
+            ###
+               Creates a global channel of the given type with the given params
+               under the given alias. Global channels will have the "eternal"
+               flag on - a.k.a. they will never be garbage collected even though
+               there are no widgets subscribed to them.
+
+               The channel_alias -> channel_id mapping should be stored
+               in the Mozaic global object.
+
+               The result of the function is the channel id of the newly created
+               channel because we might need to use it right away.
+            ###
+
+            # By default, if not type is specified, alias is the type of channel
+            type = type or alias
+            params = params or {}
+
+            # Make sure that Mozaic.global_channels key exists
+            Mozaic.globalChannels = Mozaic.globalChannels or {}
+
+            # Prevent double creation of the same global channel
+            if alias of Mozaic.globalChannels
+                logger.error("Trying to create global channel for already " +
+                             "existing alias: #{alias}")
+                return null
+
+            # Create a new channel, and store the uid in the global mapping
+            channel_params = {}
+            channel_params[type] = _.extend({}, params, {'__eternal__': true})
+            [channel_uid] = Utils.newDataChannels(channel_params)
+            Mozaic.globalChannels[alias] = channel_uid
+
+            return channel_uid
+
+        getGlobalChannel: (alias) ->
+            # Make sure that Mozaic.global_channels key exists
+            Mozaic.globalChannels = Mozaic.globalChannels or {}
+
+            # Sanity check for retrieving an unknown global channel
+            if not (alias of Mozaic.globalChannels)
+                logger.error("Trying to retrieve inexisting " +
+                             "global channel: #{alias}")
+                return null
+
+            return Mozaic.globalChannels[alias]
+
+        getAllGlobalChannels: ->
+            ###
+                Retrieve all global channels.
+            ###
+            return Mozaic.globalChannels
+
+        isGlobal: (channel) ->
+            ###
+                Returns true iff a channel is global.
+            ###
+            return _.str.startsWith(channel, 'GLOBAL/')
+
+        removeGlobalPrefix: (channel) ->
+            ###
+                Removes the 'GLOBAL' prefix from a given channel.
+            ###
+            return channel['GLOBAL'.length..]
+
+        translateGlobalChannel: (channel) ->
+            ###
+                Given a global channel of the form:
+
+                GLOBAL/social_profiles
+
+                extract the name of the alias from the channel and translate
+                it into the actual channel id of that alias.
+            ###
+
+            # Nothing to translate, it's not a global channel
+            if not channels_utils.isGlobal(channel)
+                return channel
+
+            # Remove the 'GLOBAL' prefix and then use the translateChannel
+            # api with a mapping containing a single element.
+            channel_without_prefix = channels_utils.removeGlobalPrefix(channel)
+
+            # Split the channel into its components, and perform translation
+            channel_key = channels_utils.getChannelKey(channel_without_prefix)
+            channel_uid = channels_utils.getGlobalChannel(channel_key)
+            if not channel_uid
+                return null
+
+            return channel_uid
+
+        translateGlobalChannels: (channel_mapping) ->
+            ###
+                Translate a bunch of global channels given in the format
+                of widget.channel_mapping.
+            ###
+
+            result = {}
+
+            for channel, channel_guid of channel_mapping
+                if channels_utils.isGlobal(channel_guid)
+                    channel_guid = channels_utils.translateGlobalChannel(channel_guid)
+                result[channel] = channel_guid
+
+            return result

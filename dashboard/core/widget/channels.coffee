@@ -21,6 +21,7 @@ define ['cs!channels_utils'], (channels_utils) ->
 
             pipe = loader.get_module('pubsub')
             pipe.publish('/add', translated_channel, dict)
+            return null
 
         modifyChannel: (channel, dict, options = {}) ->
             ###
@@ -82,7 +83,7 @@ define ['cs!channels_utils'], (channels_utils) ->
 
             pipe = loader.get_module('pubsub')
             pipe.publish('/modify', replaced_channel, dict, _.pick(options, 'update_mode','sync','silent', 'filter'))
-
+            return null
 
         deleteChannel: (channel, options = {sync: true}) ->
             ###
@@ -97,6 +98,7 @@ define ['cs!channels_utils'], (channels_utils) ->
 
             pipe = loader.get_module('pubsub')
             pipe.publish('/delete', translated_channel, options)
+            return null
 
         scrollChannel: (channel) ->
             ###
@@ -107,6 +109,7 @@ define ['cs!channels_utils'], (channels_utils) ->
 
             pipe = loader.get_module('pubsub')
             pipe.publish('/scroll', [translated_channel])
+            return null
 
         refreshChannel: (channel, params = null, already_translated = false) ->
             ###
@@ -119,6 +122,7 @@ define ['cs!channels_utils'], (channels_utils) ->
                 dict = {}
                 dict[channel] = params
                 @refreshChannels(dict, already_translated)
+            return null
 
         refreshChannels: (channels, already_translated = false) ->
             ###
@@ -147,3 +151,76 @@ define ['cs!channels_utils'], (channels_utils) ->
                         translated_channels[@channel_mapping[k]] = v
                 pipe = loader.get_module('pubsub')
                 pipe.publish('/refresh', translated_channels)
+            return null
+
+        subscribeToChannel: (channel, type, params) =>
+            ###
+                Subscribes the current widget to a new channel. There are
+                2 main use-cases here:
+
+                1) conditionally decide whether to subscribe to notifications
+                   to a channel that is passed on inject
+
+                   @subscribeToChannel('/social_profiles')
+
+                2) create a new channel and subscribe to it immediately.
+
+                   @subscribeToChannel('/social_profiles_for_posting',
+                                       '/social_profiles',
+                                       {'parent_id': 1234})
+
+                For the second use-case, note that the local alias of the
+                widget might be different from the channel type name as defined
+                in datasource.js (social_profiles_for_posting vs.
+                social_profiles).
+            ###
+
+            # Prevent widgets from subscribing 2 times to the same
+            # channel. The behaviour is unpredictable in this case.
+            # However, we do support use-cases like this:
+            #
+            # subscribed_channels: ['/mentions', '/mentions/123']
+            if _.contains(@subscribed_channels, channel)
+                logger.warn("Widget #{@params.widget_id} is already " +
+                            "subscribed to #{channel}")
+                return null
+
+            # Prevent widgets from subscribing to global channels at
+            # runtime. It should not be their decision to be subscribed
+            # to channels like this, but rather that of the one who injects
+            # the widget. Widgets should be kept reusable to the max.
+            if channels_utils.isGlobal(channel)
+                logger.error("Widget #{@params.widget_id} is not allowed to " +
+                             "subscribe to global channel #{channel} at runtime")
+                return null
+
+            # Use-case # 2 - subscribe to a newly created channel. What
+            # differs in this case is that we need to create a channel
+            # and add it to channel mapping.
+            if type?
+                # Make sure that the channel we're trying to create doesn't
+                # already exist in channel_mapping.
+                if channel of @channel_mapping
+                    logger.error("Widget #{@params.widget_id} already has " +
+                                 "channel #{channel} in its channel mapping")
+                    return null
+
+                channel_params = {}
+                channel_params[type] = params
+                [channel_uid] = Utils.newDataChannels(channel_params)
+                @channel_mapping[channel] = channel_uid
+            else
+                # Check that the channel is indeed in the channel mapping.
+                if not (channel of @channel_mapping)
+                    logger.error("Widget @{params.widget_id} wants to " +
+                                 "subscribe to channel #{channel} not " +
+                                 "present in channel_mapping!")
+                    return null
+
+            # Now we only need to add the channel to subscribed-channels,
+            # no matter what.
+            @subscribed_channels.push(channel)
+            logger.info("Widget #{@params.widget_id} is successfully "
+                        "subscribed to #{channel}")
+
+            return @channel_mapping[channel]

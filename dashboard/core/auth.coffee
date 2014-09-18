@@ -1,6 +1,4 @@
 define ['cs!interceptor', 'cs!constants', 'cs!utils', 'cs!collection/current_user_data'], (Interceptor, Constants, Utils, CurrentUserData) ->
-    window.Mozaic = window.Mozaic or {}
-    window.ajaxRequests = []
 
     class Auth
         constructor: ->
@@ -10,8 +8,6 @@ define ['cs!interceptor', 'cs!constants', 'cs!utils', 'cs!collection/current_use
             Interceptor.addAjaxSendRequestCallback((e, xhr, settings) =>
                 if window.Mozaic.stopping_ajax_requests
                     xhr.abort()
-                else
-                    window.ajaxRequests.push(xhr)
             )
 
         login: (username, password, callback) =>
@@ -70,10 +66,6 @@ define ['cs!interceptor', 'cs!constants', 'cs!utils', 'cs!collection/current_use
                 complete: complete_callback
                 type: type
 
-        abortExpiredAjaxRequests: () =>
-            while request = ajaxRequests.shift()
-                request.abort()
-
         startWatchingForUnauthorizedApiAnswers: =>
             ###
                 Hooks all AJAX requests in order to detect 401 unauthorized
@@ -125,6 +117,10 @@ define ['cs!interceptor', 'cs!constants', 'cs!utils', 'cs!collection/current_use
                     # user in window.user before setting the new data.
                     if not window.user?
                         window.user = new CurrentUserData()
+                        if App.general.LOGGER_MODULE is 'sentry_logger'
+                            # Register the currently logged-in user with the
+                            # logging service for enhanced exception tracking
+                            logger.setUser(_.pick(data, 'id', 'email'))
                     window.user.set(data)
 
                 user_callback(type, data) if user_callback
@@ -158,7 +154,6 @@ define ['cs!interceptor', 'cs!constants', 'cs!utils', 'cs!collection/current_use
                 or the application bootstrap code in main.js
             ###
             window.Mozaic.stopping_ajax_requests = true
-            @abortExpiredAjaxRequests()
             url = App.general.LOGIN_PAGE
 
             # Encode the URL part added to returnto, and decode it

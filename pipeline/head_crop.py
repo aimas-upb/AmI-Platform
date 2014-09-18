@@ -7,9 +7,10 @@ from lib.image import base64_to_image, image_to_base64
 from lib.kinect import crop_head_using_skeleton
 from lib.log import setup_logging
 from lib.opencv import crop_face_from_image
+from lib.session_tracker import SessionTracker
 
 logger = logging.getLogger(__name__)
-MAX_TIME = 0.1
+MAX_TIME = 10
 
 
 def _crop_head_using_skeleton(last_image, last_skeleton):
@@ -19,7 +20,6 @@ def _crop_head_using_skeleton(last_image, last_skeleton):
                             int(last_image['width']),
                             int(last_image['height']),
                             last_image['encoder_name'])
-    
     skeleton = last_skeleton
 
     return crop_head_using_skeleton(image, skeleton)
@@ -32,7 +32,6 @@ def _crop_head_using_face_detection(last_image):
                             int(last_image['width']),
                             int(last_image['height']),
                             last_image['encoder_name'])
-    
     return crop_face_from_image(image)
 
 
@@ -83,7 +82,6 @@ class HeadCrop(ParallelPDU):
         and crops images (head only) """
 
     QUEUE = 'head-crop'
-    MAX_TIME = 0.1
     POOL_SIZE = 20
     UNFINISHED_TASKS_THRESHOLD = 2 * POOL_SIZE
 
@@ -94,21 +92,21 @@ class HeadCrop(ParallelPDU):
         self.last_image_at = None
         self.last_skeleton = None
         self.last_skeleton_at = None
+        self.session_tracker = SessionTracker()
 
     def process_message(self, message):
         # Step 1 - always update last_image/last_skeleton
-        if message['type'] == 'image_rgb' and\
-            message['sensor_type'] == 'kinect':
-            self.last_image = message['image_rgb']
-            if not 'encoder_name' in self.last_image:
-                self.last_image['encoder_name'] = 'raw'
-                
-            self.last_image_at = time.time()
-            
+        if (message['type'] == 'image_rgb' and
+            message['sensor_type'] == 'kinect'):
+                self.last_image = message['image_rgb']
+                if not 'encoder_name' in self.last_image:
+                    self.last_image['encoder_name'] = 'raw'
+                self.last_image_at = message['created_at']
+
         elif message['type'] == 'skeleton' and\
             message['sensor_type'] == 'kinect':
             self.last_skeleton = message['skeleton_2D']
-            self.last_skeleton_at = time.time()
+            self.last_skeleton_at = message['created_at']
 
         message['hack'] = {}
         message['hack']['last_image'] = copy.copy(self.last_image)
@@ -123,6 +121,9 @@ class HeadCrop(ParallelPDU):
         if cropped_head is not None:
             self.log("Sending an image to face recognition")
             self._send_to_recognition(cropped_head)
+            self.session_tracker.track_event(image_dict['session_id'],
+                                             image_dict['created_at'],
+                                             {"head": cropped_head})
 
     def _send_to_recognition(self, image):
         """ Send a given image to face recognition. """

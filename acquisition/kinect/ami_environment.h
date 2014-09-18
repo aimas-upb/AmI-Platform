@@ -1,10 +1,13 @@
 #ifndef __AMI_ENVIRONMENT__
 #define __AMI_ENVIRONMENT__
 
-char* getKestrelServerIP();
+#include <string>
+
+void initEnvironment(std::string g_envSufix);
+const char* getKestrelServerIP();
 int getKestrelServerPort();
-char* getSensorPosition();
-char* getSensorID();
-char* getKinectXMLConfig();
+const char* getSensorPosition();
+const char* getSensorID();
+const char* getKinectXMLConfig();
 
 #endif

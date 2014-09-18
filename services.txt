@@ -1,6 +1,7 @@
 ami-router
 ami-mongo-writer
 ami-sensor-kinect
+ami-sensor-kinect-1
 ami-head-crop
 ami-face-recognition
 ami-ip-power
@@ -12,3 +13,5 @@ ami-measurements-player
 ami-recorder
 ami-room-position
 ami-dashboard
+ami-session_processor
+ami-arduino-acq

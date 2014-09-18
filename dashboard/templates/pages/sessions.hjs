@@ -1,0 +1,9 @@
+<div class="mozaic-widget"
+    data-widget="sessions_sketch"
+    data-params="{{raw_session_store_params}}"
+    style="display: inline-block;"/>
+
+<div class="mozaic-widget"
+     data-widget="sessions_sketch"
+     data-params="{{processed_session_store_params}}"
+     style="display: inline-block;"/>

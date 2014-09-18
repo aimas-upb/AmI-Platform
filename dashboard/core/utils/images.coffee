@@ -1,4 +1,7 @@
 define [], () ->
+
+    CLASS_IMG_LOADED = 'img-load-success'
+
     images =
         mapDefaultImages: (el, types = {}) ->
             ###
@@ -30,5 +33,3 @@ define [], () ->
             if not Constants.DEFAULT_IMAGES[name]?
                 return false
             return Utils.getStaticUrl(Constants.DEFAULT_IMAGES[name])
-
-    return images

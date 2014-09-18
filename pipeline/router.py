@@ -6,6 +6,7 @@ from core import PDU, settings
 from lib.log import setup_logging
 from models.experiment import Experiment
 
+
 class Router(PDU):
     """ PDU that routes incoming measurements from sensors to the
         actual processing pipelines """
@@ -27,6 +28,8 @@ class Router(PDU):
 
         self.send_to('mongo-writer', message)
 
+        self.log('sensor type %s' % message['sensor_type'])
+
         # Images & skeletons should be sent to head-crop
         if message['type'] in ['image_rgb', 'skeleton']:
             self.send_to('head-crop', message)
@@ -38,12 +41,15 @@ class Router(PDU):
             self.send_to('recorder', message)
 
         # Only send to room position if it's a Kinect skeleton
-        if message['sensor_type'] == 'kinect' and message['type'] == 'skeleton':
-            self.send_to('room-position', message)
+        if (message['sensor_type'] == 'kinect' and
+            message['type'] == 'skeleton'):
+                self.send_to('room-position', message)
+                self.send_to('posture-classifier', message)
 
         # Only send to dashboard if it's a Kinect RGB image
-        if message['sensor_type'] == 'kinect' and message['type'] in ['image_rgb', 'skeleton']:
-            self.send_to('dashboard', message)
+        if (message['sensor_type'] == 'kinect' and
+            message['type'] in ['image_rgb', 'skeleton']):
+                self.send_to('dashboard', message)
 
 if __name__ == "__main__":
     setup_logging()

@@ -1,0 +1,4 @@
+check process newrelic_plugin_agent
+        with pidfile /var/run/newrelic/newrelic_plugin_agent.pid
+        start = "/usr/sbin/service newrelic_plugin_agent start"
+        stop = "/usr/sbin/service newrelic_plugin_agent stop"

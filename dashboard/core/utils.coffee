@@ -37,6 +37,7 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
                 @param (object) options Extra options for injecting the widgets,
                                         here are the available ones:
                     - (string) id The id attribute
+                    - (string) type of DOM element to inject
                     - (string) classes Extra set of classes
                     - (object) data Extra set of data attributes (the `widget`
                                     and `params` keys are reserved for the widget
@@ -52,6 +53,13 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
                                           and ignored when using a container
                     - (object) modalParams A different set of params for the modal
                                            widget itself
+                    - (Boolean) wrappedInject The widgets need to be wrapped in
+                                        an additional container. This feature
+                                        is used when removing from list those
+                                        widgets not visible in viewport. This
+                                        wrapper will help to retain the space
+                                        ocuppied by the widget before was
+                                        removed from DOM
                     - (string) placement Method of injecting:
                         - replace: Inside container, replaces its current contents
                         - before - Outside container, before it
@@ -103,25 +111,71 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
             # Return created widget DOM element on success
             return node
 
-        buildDomElement: (type, id, classes, data) ->
+        buildDomElement: (type, id, classes, data, wrappedInject) ->
             ###
                 Build DOM element based on a specified type, id, list of
                 classes and a data dict. Only the type is required.
             ###
-            node = $("<#{type}></#{type}>")
-            node.attr('id', id) if id
-            node.attr('class', classes) if classes
+            if wrappedInject
+                $injected_element = $("<#{type}><div></div></#{type}>")
+                $widget_node = $injected_element.children(":first")
+            else
+                $widget_node = $("<#{type}></#{type}>")
+                $injected_element = $widget_node
+
+            $widget_node.attr('id', id) if id
+            $widget_node.attr('class', classes) if classes
             unless _.isEmpty(data)
                 for k, v of data
                     # Strings get an extra set of quotes when they get
                     # stringified, so we should only stringify objects
                     v = JSON.stringify(v) if _.isObject(v)
-                    node.attr("data-#{k}", v)
-            return node
+                    $widget_node.attr("data-#{k}", v)
+
+            return $injected_element
+
+        onWidgetRender: (widgetName, parentWidget, onRender) ->
+            ###
+                Run a callback after a specific widget type rendered, that has
+                not been injected manually from a test but rather consequently,
+                from inside a parent widget injected manually.
+
+                The 1st parameter can be left null if looking for more than one
+                type of widget and all widgets will be sent to the onRender
+                callback once rendered. The name of the widget will be sent as
+                a second parameter to the callback for ease of use.
+
+                The 2nd parameter allows us to specify the parent widget
+                instance, in order to make sure we're not intercepting a
+                different widget of the same type loading somewhere else.
+
+                This method subscribes to /new_widget_rendered pubsub events
+                and keeps listening until the onRender callback returns true,
+                this way allowing the user to listen to one or more widgets of
+                a type to load before testing something.
+            ###
+            pipe = loader.get_module('pubsub')
+            f = (widget_id, widget_name) =>
+                widget = loader.widgets[widget_id]
+                # Weirdly enough, the widget might've been already removed
+                return unless widget?
+                return if widgetName and widget_name isnt widgetName
+                return if parentWidget and
+                          not parentWidget.view?.$el.has(widget.view?.$el).length
+
+                # This handler can be removed automatically by returning true
+                # from inside the callback function
+                if onRender(widget, widget_name)
+                    pipe.unsubscribe('/new_widget_rendered', f)
+
+            pipe.subscribe('/new_widget_rendered', f)
+            # return event handler so it can be removed by hand as well, from
+            # the place this was registered
+            return f
 
         injectWidget: (el, widget_name, params, extra_classes = null, clean = null, el_type = null, modal = false, prepend = false, before = false, after = false) ->
             ###
-                !!! DEPRECATED !!!
+                @deprecated
 
                 Utils.inject should be used in favor of this one,
                 but it cannot yet be removed in order to provide backwards
@@ -188,6 +242,47 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
             for prop of obj
                 if obj.hasOwnProperty(prop) and obj[prop] == val
                     return prop
+
+        pathIsExpandable: (path, separator = '/') ->
+            ###
+                Returns true if a given XPath-like expression is expandable.
+                This means that the path will match all the children of the
+                given path.
+            ###
+            return _.str.endsWith(path, '*')
+
+        expandPath: (path, obj, separator = '/') ->
+            ###
+                Expands a given XPath-like expression into 0 or more expressions
+                that match both the path containing wildcards and the
+                underlying object.
+            ###
+
+            # Non-expandable paths are expanded into themselves
+            if not Utils.pathIsExpandable(path)
+                return [path]
+
+            # Otherwise, append to the parent path all children
+            parent_path = _.str.rtrim(path, ['/*', '*'])
+
+            # If path is * then return paths to obj keys
+            if parent_path is ''
+                subset = obj
+            else
+                subset = Utils.getNestedAttr(obj, parent_path)
+
+            # If you try to expand a leaf then the path to
+            # leaf is returned as response
+            return [parent_path] unless _.isObject(subset)
+
+            # Build all the paths
+            paths = _.map _.keys(subset), (key) ->
+                path =_.str.join '/' , parent_path, key
+                # Remove the leading slashes that can occur when you get
+                # all paths from root
+                _.str.ltrim(path, '/')
+
+            return paths
 
         getNestedAttr: (obj, path, separator = '/') ->
             ###
@@ -342,21 +437,20 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
             pipe = loader.get_module('pubsub')
             pipe.publish('/closemodal', {})
 
-        createModuleInstance: (Module, params...) ->
-            #wrap the new Module() instantiation in order to prevent error propagation
-            if !$.isFunction(Module)
-                throw "Trying to instantiate something uninstantiable: " + Module
-                return
-            if App.general.THROW_UNCAUGHT_EXCEPTIONS
-                result = new Module(params...)
+        createModuleInstance: (Module, params, tpl) ->
+            if not _.isFunction(Module)
+                logger.error("Trying to instantiate something uninstantiable",
+                             Module)
             else
-                try
-                    result = new Module(params...)
-                catch error
-                    if error.message == Constants.UNAUTHORIZED_EXCEPTION
-                        throw error
-                    logger.error("Exception trying to instantiate " + Module.name + " with params " + arguments + ":" + error)
-            return result
+                return Mozaic.execute (-> return new Module(params, tpl)),
+                    # Provide attributes for extra context in case of an error
+                    action: 'Instantiating module'
+                    module: Module.name
+                    # Remove jQuery element (there shouldn't be any circular
+                    # dependency in this params so that they can be
+                    # JSON-encoded and logged along with a possible exception
+                    params: _.omit(params, 'el')
+                    template: tpl
 
         mixin: (mixins..., classReference) ->
             ###
@@ -403,6 +497,50 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
                 return value.apply(model, params)
             value
 
+        wrapMethod: (obj, methodName, options = {}) ->
+            ###
+                Add a before or after hook on a function belonging to a
+                specified object, preserving its scope (which means it works
+                even for methods without a fat arrow)
+            ###
+            originalMethod = obj[methodName]
+
+            # Replace the original method with a wrapper function that
+            # intercepts any calls to the original one and passes them on,
+            # while honoring the given before/after callbacks
+            obj[methodName] = ->
+                # Send the intercepted arguments to the callbacks as well, just
+                # in case we might want to use that information
+                options.before(arguments...) if _.isFunction(options.before)
+                returnValue = originalMethod.apply(obj, arguments)
+                options.after(arguments...) if _.isFunction(options.after)
+
+                # Restore original method automatically after first call
+                # (it it hasn't been already restored by hand)
+                if options.restore and _.isFunction(obj[methodName].restore)
+                    obj[methodName].restore()
+
+                # Make sure we preserve the return value
+                return returnValue
+
+            # Create a restore method attached to the wrapped method that
+            # can be called from anywhere, at any time
+            obj[methodName].restore = ->
+                obj[methodName] = originalMethod
+
+            # Return the wrapper method
+            return obj[methodName]
+
+        inPrintMode: ->
+            ###
+                Check if app is opened in print mode
+
+                XXX this can be faked easily by adding the ?print=1 GET
+                parameter, but there's no exploit that can be done by adding it
+                so there's no reason why we shouldn't rely solely on it
+            ###
+            return window.location.href.indexOf('print') != -1
+
         _buildDomElementByWidgetOptions: (options) ->
             ###
                 Build DOM element based on the format of widget options
@@ -410,12 +548,14 @@ define ['cs!utils/urls', 'cs!utils/time', 'cs!utils/dom', 'cs!utils/images', 'cs
             ###
             type = options.type or 'div'
             id = options.id
-            classes = 'uberwidget'
+            classes = 'mozaic-widget'
             classes = "#{classes} #{options.classes}" if options.classes
             data = options.data or {}
             data.widget = options.name
             data.params = options.params or {}
-            node = @buildDomElement(type, id, classes, data)
+            node = @buildDomElement(type, id, classes, data, options.wrappedInject)
+
+        getControllerContainer: -> $('#controller-container')
 
     # Extend Utils with other utils functions (see utils/ dir) in order
     # to keep the same Utils.method() interface.

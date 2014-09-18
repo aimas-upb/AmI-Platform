@@ -1,5 +1,6 @@
 from core import EchoPDU
 
+
 class DummyPDU(EchoPDU):
     def __init__(self, **kwargs):
         kwargs['input_queue'] = 'measurements'

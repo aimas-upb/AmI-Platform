@@ -1,1 +1,2 @@
 ami-upgrade_face_samples
+ami-session_processor

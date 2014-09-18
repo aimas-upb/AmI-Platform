@@ -46,8 +46,10 @@ class ExperimentTestCase(TestCase):
 
     @attr('unit')
     def test_experiment_matches(self):
-        e = Experiment(file = 'file3.txt', filters = {'a': 'b'}, name='test3')
-        ok_(e.matches({'c': 'd', 'a': 'b'}))
+        e = Experiment(file = 'file3.txt', filters = {'a': 'b', 'm': ['e', 'f', 'g']}, name='test3')
+        ok_(not e.matches({'c': 'd', 'a': 'b'}))
+        ok_(not e.matches({'c': 'd', 'a': 'b', 'm':'h'}))
+        ok_(e.matches({'c': 'd', 'a': 'b', 'm':'f'}))
         ok_(not e.matches({'c': 'd'}))
         ok_(not e.matches({'a': 'c'}))
 

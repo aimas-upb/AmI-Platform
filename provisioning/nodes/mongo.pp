@@ -1,0 +1,1 @@
+class { "measurement_store": }

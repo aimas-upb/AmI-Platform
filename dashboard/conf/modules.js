@@ -3,10 +3,16 @@ var App = App || {};
 App.main_modules = App.main_modules || {};
 
 App.the_modules = {
-	'widget/image': 'modules/image',
-	'widget/trace': 'modules/trace',
-	'widget/DashboardController': 'modules/dashboard_controller',
-	'widget/TraceController': 'modules/trace_controller',
+    'constants': 'modules/constants',
+    'widget/sketch': 'modules/sketch',
+
+    'widget/image_sketch': 'modules/image_sketch',
+    'widget/sessions_sketch': 'modules/sessions_sketch',
+    'widget/trace_sketch': 'modules/trace_sketch',
+
+    'widget/DashboardController': 'modules/dashboard_controller',
+    'widget/SessionsController': 'modules/sessions_controller',
+    'widget/TraceController': 'modules/trace_controller',
 };
 
 // This is actually how we check if this is being ran

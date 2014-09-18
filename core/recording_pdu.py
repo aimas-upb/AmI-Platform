@@ -7,6 +7,7 @@ from core import settings
 from lib.log import setup_logging
 from models.experiment import Experiment
 from pdu import PDU
+from utils import json_dumps
 
 class RecordingPDU(PDU):
     '''
@@ -16,9 +17,9 @@ class RecordingPDU(PDU):
 
     ''' Every FILES_PURGE_THRESHOLD seconds, check to see which experiments are
         no longer activated and close the open file associated with it
-    '''    
-    FILES_PURGE_THRESHOLD = 5 * 60     
-    
+    '''
+    FILES_PURGE_THRESHOLD = 5 * 60
+
     def __init__(self, **kwargs):
         super(RecordingPDU, self).__init__(**kwargs)
         self._last_files_purge = time.time()
@@ -37,7 +38,7 @@ class RecordingPDU(PDU):
         experiment_ids = [str(e.id) for e in experiments]
         if len(experiment_ids) > 0:
             self.logger.info("Measurement %r matches experiments %r" %\
-                             (self._json_dumps(message), experiment_ids))
+                             (json_dumps(message), experiment_ids))
 
         # Write the measurement to each experiment file
         for e in experiments:

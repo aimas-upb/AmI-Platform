@@ -15,7 +15,10 @@ define ['cs!channels_utils'], (channels_utils) ->
                 has been initialized with id = 123 in its parameters, and there
                 is a data channel "mention/{{id}}", this will return "mention/123".
             ###
-            (@replaceTokensWithParams(channel) for channel in @subscribed_channels)
+            result = []
+            for channel in @subscribed_channels
+                result.push(@replaceTokensWithParams(channel))
+            return result
 
         _getTranslatedSubscribedChannels: ->
             new_channels = channels_utils.translateChannels(@subscribed_channels, @channel_mapping)
@@ -61,7 +64,12 @@ define ['cs!channels_utils'], (channels_utils) ->
                     logger.warn("Aggregate function #{aggregate_function} does not exist")
                     continue
                 channels = aggregated_channels[aggregate_function]
-                @aggregateChannels(@[aggregate_function], channels)
+                # Wrap callback in order to make sure that the we're always
+                # calling the current method for a given key on the widget,
+                # since members of a class instance can be overridden
+                # dynamically at any point in JavaScript
+                @aggregateChannels((=> this[aggregate_function](arguments...)),
+                                   channels)
 
         aggregateChannels: (callback, channels) ->
             ###
@@ -106,7 +114,7 @@ define ['cs!channels_utils'], (channels_utils) ->
             channel_callbacks = {}
             for channel in channels
                 channel_key = channels_utils.getChannelKey(channel)
-                channel_callbacks[channel] = channels_utils.widgetMethodForChannel(@, channel_key)
+                channel_callbacks[channel] = channels_utils.widgetMethodForChannel(channel_key)
 
             for channel, channel_callback of channel_callbacks
                 do(channel_callbacks, channel, channel_callback, key) =>
