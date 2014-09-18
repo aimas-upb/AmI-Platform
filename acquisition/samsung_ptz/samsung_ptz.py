@@ -22,8 +22,8 @@ def image_to_base64(image):
     return {
         "created_at" : int(time.time()),
         "context" : "",
-        "sensor_type" : "ptz",
-        "sensor_id" : "samsumg_ptz",
+        "sensor_type" : "samsung_ptz",
+        "sensor_id" : "samsung_ptz_01",
         "sensor_position" : [0, 0, 0],
         "type" : "image_rgb",
         "image_rgb": {
@@ -39,16 +39,17 @@ def make_ptz_cam_http_request():
     # 'msubmenu=jpg' is required,
     # resolution: 1 (640x480), 3 (320x240); frate: 1 - 25)
     params = {'msubmenu' : 'mjpg' , 'profile' : '1', 'resolution' : '1',
-              'frate' : '25', 'compression' : '1'}
+              'frate' : '1', 'compression' : '1'}
     username = 'admin'
     password = '4321'
-    camera_url = 'http://172.16.4.118/cgi-bin/video.cgi'
+    camera_url = 'http://172.16.6.5/cgi-bin/video.cgi'
 
     logger.info("Making HTTP request for PTZ camera..")
 
-    requests.get(camera_url,
+    return requests.get(camera_url,
                  params=params,
                  auth=HTTPDigestAuth(username,password),
+                 stream=True,
                  hooks=dict(response=response_hook))
 
 def get_header(chunk):
@@ -87,12 +88,12 @@ def iter_frames():
 
             # Skip empty chunks
             if not chunk:
-                logger.warn("Got empty chunk!")
+                # logger.warn("Got empty chunk!")
                 continue
 
             header = get_header(chunk)
             if header:
-                logger.info("Found header within chunk.")                
+                # logger.info("Found header within chunk.")                
 
                 # If a header has been found, first we complete the last frame
                 content += get_before_header(chunk)
@@ -110,7 +111,7 @@ def iter_frames():
                 frames += 1
                 content = get_after_header(chunk)
             else:
-                logger.info("Chunk without header here")
+                # logger.info("Chunk without header received")
                 content += chunk	# chunk without header
 
     except requests.ConnectionError:
@@ -171,7 +172,9 @@ def iter_chunks(response, amt=None):
 if __name__ == '__main__':
     setup_logging()
     kestrel_client = kestrel.Client(KESTREL_SERVERS)
+
     for image in iter_frames():
         measurement = json.dumps(image)
         kestrel_client.add('measurements', measurement)
         logger.info("Added a frame of size %d" % len(measurement))
+        # print measurement
