@@ -476,7 +476,7 @@
                         plotChart(luminosityData,selectedSensors,"#lum-chart");
 
                         callCounter = envSensorIds.length;
-                        setTimeout(function(){getEnvData()},5000);
+                        setTimeout(getEnvData,5000);
                     }
                 });
 			}
