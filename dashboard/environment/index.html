@@ -475,6 +475,7 @@
                         plotChart(humidityData,selectedSensors,"#humid-chart");
                         plotChart(luminosityData,selectedSensors,"#lum-chart");
 
+                        callCounter = envSensorIds.length;
                         setTimeout(function(){getEnvData()},5000);
                     }
                 });
