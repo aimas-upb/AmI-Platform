@@ -474,11 +474,11 @@
                         plotChart(temperatureData,selectedSensors,"#temp-chart");
                         plotChart(humidityData,selectedSensors,"#humid-chart");
                         plotChart(luminosityData,selectedSensors,"#lum-chart");
+
+                        setTimeout(function(){getEnvData()},5000);
                     }
                 });
 			}
-
-            setTimeout(function(){getEnvData()},5000);
 		}
 
 		function processEnvData(data, sensorId) {
