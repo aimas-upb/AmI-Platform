@@ -335,11 +335,14 @@
     <script src="js/live/flot-arduino.js"></script>
 
 	<script type="text/javascript">
-		var envSensorBaseUrl = "http://ami-crunch-01.local/api/latest_environment/";
-        // var envSensorBaseUrl = "http://localhost/environment/data/";
+		// var envSensorBaseUrl = "http://ami-crunch-01.local/api/latest_environment/";
+        var envSensorBaseUrl = "http://localhost/environment/data/";
 
 		var defaultSensor = 'K1-A';
-		var selectedSensors = [];
+
+		var selectedSensors = JSON.parse(window.localStorage.getItem("selectedSensors"));
+		if(selectedSensors == null)
+			selectedSensors = [];
 
 		var envSensorIds = ['K1-A','K1-B','K2-A','K2-B','K2-C','K3-A','K3-B','K4-A','K4-B','K5-A','K5-B','K6-A','K6-B','K7-A','K7-B','K7-C','K8-A','K9-A','K9-B'];
 
@@ -357,10 +360,11 @@
 
         var allSensorsToggle = false;
 
+        var RETRIEVE_INTERVAL = 5000;
+        var RELOAD_INTERVAL = 3600000;
+
 		$('li',allSensorGroup).on('click',function (e) {
-            console.log("[INFO] Target text: " + $(e.target).text());
             if($(e.target).text() == "All sensors") {
-                console.log("[INFO] All sensors selected");
                 if(allSensorsToggle == false) {
                     for(envSensorId in envSensorIds) {
                         if($.inArray(envSensorIds[envSensorId],selectedSensors) == -1)
@@ -385,6 +389,9 @@
 			if(selectedSensors.length == 0) {
                 toggleSensorButtons(defaultSensor);
 			}
+
+			if(selectedSensors != null && selectedSensors != [])
+				window.localStorage.setItem("selectedSensors",JSON.stringify(selectedSensors));
 
             plotChart(temperatureData,selectedSensors,"#temp-chart");
             plotChart(humidityData,selectedSensors,"#humid-chart");
@@ -442,7 +449,6 @@
             var succededSensorIds = [];
 
 			for (envSensorId in envSensorIds) {
-				// console.log("[INFO] GET data for " + envSensorIds[envSensorId]);
 				var processEnvFor = function (sensorId) { 
 										return function (data) { 
 											succededSensorIds.push(sensorId);
@@ -475,7 +481,9 @@
                         plotChart(luminosityData,selectedSensors,"#lum-chart");
 
                         callCounter = envSensorIds.length;
-                        setTimeout(getEnvData,5000);
+                        
+                        setTimeout(getEnvData,RETRIEVE_INTERVAL);
+                        setTimeout(function(){window.location.reload();}, RELOAD_INTERVAL);
                     }
                 });
 			}
@@ -483,7 +491,6 @@
 
 		function processEnvData(data, sensorId) {
 			if (data != null && data.data != null && data.data != "") {
-				// console.log("[INFO] Parsing " + data.data.length + " records for " + sensorId);
 				for (var i = 0; i < data.data.length; i++) {
 					var currentRecord = $.parseJSON(data.data[i]);
 					
@@ -517,6 +524,7 @@
 		}
 
         getEnvData();
+        
         // setInterval(function () { 
         //         temperatureData = {};
         //         humidityData = {};
