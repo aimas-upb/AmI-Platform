@@ -393,6 +393,7 @@
 			if(selectedSensors != null && selectedSensors != [])
 				window.localStorage.setItem("selectedSensors",JSON.stringify(selectedSensors));
 
+			selectedSensors.sort();
             plotChart(temperatureData,selectedSensors,"#temp-chart");
             plotChart(humidityData,selectedSensors,"#humid-chart");
             plotChart(luminosityData,selectedSensors,"#lum-chart");
@@ -476,6 +477,7 @@
                         if(selectedSensors.length == 0)
                             toggleSensorButtons(defaultSensor);
                         
+                        selectedSensors.sort();
                         plotChart(temperatureData,selectedSensors,"#temp-chart");
                         plotChart(humidityData,selectedSensors,"#humid-chart");
                         plotChart(luminosityData,selectedSensors,"#lum-chart");
