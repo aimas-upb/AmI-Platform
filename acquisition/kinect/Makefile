@@ -28,10 +28,11 @@ USED_LIBS += OpenNI
 USED_LIBS += opencv_core
 USED_LIBS += opencv_imgproc
 USED_LIBS += opencv_highgui
+USED_LIBS += memcached
+USED_LIBS += pthread
 
 DEFINES += USE_MEMCACHE
 DEFINES += MEMCACHE_WORKER_DEBUG
-USED_LIBS += memcached
 
 LIB_DIRS += ./Lib
 include ./Build/CommonCppMakefile
