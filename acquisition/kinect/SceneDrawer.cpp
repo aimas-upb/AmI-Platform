@@ -509,20 +509,21 @@ static void SaveImage(char *img, int width, int height, const char* player_name,
     compression_params.clear();
     compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
     compression_params.push_back(95);
+    vector<unsigned char> c_buf;
 
     cv::Mat rgb(height, width, CV_8UC3, img);
     cv::Mat mat(height, width, CV_8UC3);
     cv::cvtColor(rgb, mat, CV_RGB2BGR);
 
-    vector<unsigned char> c_buf;
+    
     cv::imencode(".jpg", mat, c_buf, compression_params);
 
-    std::ofstream file;
+    /*    std::ofstream file;
     file.open("image.jpg");
 
     std::copy(c_buf.begin(), c_buf.end(),  boost::archive::iterators::ostream_iterator<char>(file));
-    file.close();
-
+    file.close();*/
+    
     std::basic_stringstream<unsigned char> os;
 
     using namespace boost::archive::iterators;
@@ -736,6 +737,48 @@ float* getDepthHistogram(const xn::DepthMetaData& dmd)
     return pDepthHist;
 }
 
+unsigned char* transformDepthImageIntoGrayScale(const xn::DepthMetaData& dmd) {
+  XnUInt16 g_nXRes = dmd.XRes();
+  XnUInt16 g_nYRes = dmd.YRes();
+  unsigned int nX, nY;
+  unsigned int nIndex = 0;
+  const XnDepthPixel* pDepth = dmd.Data();
+  unsigned int nValue = 0;
+  float *pDepthHist = getDepthHistogram(dmd);
+  unsigned int nHistValue = 0;
+
+  unsigned char* result = new unsigned char[3 * g_nYRes * g_nXRes];
+  unsigned char* dest = result;
+  pDepth = dmd.Data();
+  // Prepare the texture map
+  for (nY=0; nY<g_nYRes; nY++)
+    {
+      for (nX=0; nX < g_nXRes; nX++, nIndex++)
+        {
+	  dest[0] = 0;
+	  dest[1] = 0;
+	  dest[2] = 0;
+	  nValue = *pDepth;
+	  // pLabels contains the label for each pixel - zero if there
+	  // is no person, non-zero for the person ID (and each person
+	  // gets a different color).
+	  if (nValue != 0)
+            {
+	      nHistValue = pDepthHist[nValue];
+	      dest[0] = nHistValue;
+	      dest[1] = nHistValue;
+	      dest[2] = nHistValue;
+	    }
+	  pDepth++;
+	  dest += 3;
+        }
+    }
+
+  free(pDepthHist);
+  return result;
+}
+
+
 /*
  * Transforms the depth image into a texture and also colors people detected
  * by the kinect. In order to do this, it gets from the scene meta data
@@ -838,6 +881,7 @@ void drawTrackedUsers() {
 
     	if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]) && totalConfidence >= MIN_CONFIDENCE_FOR_SKELETON)
         {
+
             DrawJoints(aUsers[i]);
             if (skeleton_throttle.CanSend()) {
                  SaveSkeleton(aUsers[i], "player1", "kinect1");
@@ -897,12 +941,14 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
     transformDepthImageIntoTexture(dmd, smd, pDepthTexBuf);
 
     if (rgb_throttle.CanSend()) {
-        SaveImage((char*)dmd.Data(), dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
-    rgb_throttle.MarkSend();
+      unsigned char* depthImage = transformDepthImageIntoGrayScale(dmd);
+      SaveImage((char*)depthImage, dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
+      delete depthImage;
+      rgb_throttle.MarkSend();
     }
     if (depth_throttle.CanSend()) {
-        SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
-    depth_throttle.MarkSend();
+      SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
+      depth_throttle.MarkSend();
     }
 
     drawDepthMap(depthTexID, dmd, pDepthTexBuf);
