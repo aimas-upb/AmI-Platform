@@ -1,0 +1,250 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>How to Create a PDU from Scratch &mdash; AmI-Lab 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="AmI-Lab 1.0 documentation" href="index.html" />
+    <link rel="next" title="AmI-Lab Projects" href="projects_index.html" />
+    <link rel="prev" title="Sensor and Actuator Messages and Queues in AmI-Platform" href="platform_queues.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="how-to-create-a-pdu-from-scratch">
+<h1>How to Create a PDU from Scratch<a class="headerlink" href="#how-to-create-a-pdu-from-scratch" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="purpose-of-this-document">
+<h2>Purpose of This Document<a class="headerlink" href="#purpose-of-this-document" title="Permalink to this headline">¶</a></h2>
+<p>The purpose is two-fold:
+* to describe how the existing Python PDU system works
+* to give tips and tricks on how to create PDUs in a new language that
+interacts with the existing queue system</p>
+</div>
+<div class="section" id="definition-of-a-pdu">
+<h2>Definition of a PDU<a class="headerlink" href="#definition-of-a-pdu" title="Permalink to this headline">¶</a></h2>
+<p>A PDU is a <strong>processing data unit</strong>, a part of a distributed system that
+processes data in real-time from the existing laboratory sensors. These PDUs
+form a directed graph through which messages flow. A message is basically an
+event of the system, and can represent anything:
+* a new measurement has been produced by a sensor
+* a new event has appeared (e.g. door has been opened)</p>
+</div>
+<div class="section" id="why-do-you-need-to-create-pdus">
+<h2>Why do you Need to Create PDUs?<a class="headerlink" href="#why-do-you-need-to-create-pdus" title="Permalink to this headline">¶</a></h2>
+<p>One wants to create PDUs in order to add new functionality to the existing
+platform. Examples of PDUs:
+* PDU that detects the faces in a given image (by using an API)
+* PDU that detects the posture of a skeleton by running a classifier</p>
+</div>
+<div class="section" id="format-of-the-messages-between-pdus">
+<h2>Format of the Messages Between PDUs<a class="headerlink" href="#format-of-the-messages-between-pdus" title="Permalink to this headline">¶</a></h2>
+<p>It&#8217;s nothing more than free-style JSON, serialized to a string.
+In Python, we do that by the <cite>json.dumps</cite> command:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
+
+<span class="n">msg</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;deeply&#39;</span><span class="p">:</span> <span class="s1">&#39;nested&#39;</span><span class="p">},</span> <span class="s1">&#39;dictionary&#39;</span><span class="p">:</span> <span class="s1">&#39;message&#39;</span><span class="p">}</span>
+<span class="n">serialized_msg</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Other than that, the formats of the messages should be traced back to the
+initial chain of PDUs that process them. Because the PDUs form a directed
+graph, a message or piece of information is usually processed through a chain
+of PDUs. The initial message might not be preserved, but it triggers a multitude
+of other messages to be processed by other PDUs. For example:
+* a picture gets produced by the PDU which polls the Kinects for images
+* the picture gets picked up by Router and forwarded to other types of PDUs
+* <cite>mongo_writer</cite> writes the image in MongoDB
+* <cite>head_crop</cite> tries to detect faces in that image
+and so on.</p>
+<p>It&#8217;s pretty clear that the message forwarded from Router to HeadCrop differs in
+format from the message that was initially received by Router, but that is the
+spirit of the graph computation.</p>
+</div>
+<div class="section" id="skeleton-of-a-pdu">
+<h2>Skeleton of a PDU<a class="headerlink" href="#skeleton-of-a-pdu" title="Permalink to this headline">¶</a></h2>
+<p>A PDU has basically the following responsibilities:
+* connect to <a class="reference external" href="https://github.com/twitter/kestrel">Kestrel</a> to the queue where it
+expects to receive its messages
+* read the message from Kestrel and decode it to a dictionary
+* process the message and put some other messages on other queues if needed</p>
+<p>In pseudocode-Python, the skeleton would look something like this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">kestrel_connection</span> <span class="o">=</span> <span class="n">connect_to_kestrel</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+
+<span class="c1"># Basically a PDU runs forever. You can kill the process and restart it</span>
+<span class="c1"># if you want to update the code.</span>
+<span class="k">while</span> <span class="kc">True</span>
+    <span class="c1"># The reading of a message from Kestrel is provided by the Kestrel lient</span>
+    <span class="c1"># library. Depending on your chosen message, google for a Kestrel client</span>
+    <span class="c1"># library. If no good library is available, feel free to choose a Memcache</span>
+    <span class="c1"># client library instead (read below for details)</span>
+    <span class="n">serialized_msg</span> <span class="o">=</span> <span class="n">read_message_from_kestrel</span><span class="p">(</span><span class="n">kestrel_connection</span><span class="p">)</span>
+
+    <span class="c1"># In Python this is equivalent to json.loads</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="n">deserialize_msg</span><span class="p">(</span><span class="n">serialized_msg</span><span class="p">)</span>
+
+    <span class="c1"># This is the actual processing of the message.</span>
+    <span class="c1"># Do whatever you need to do in here: detect images, classify postures, etc.</span>
+    <span class="c1"># One key point of this will be to put messages on other queues, if needed.</span>
+    <span class="n">process_message</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="duality-of-kestrel-and-memcache">
+<h2>Duality of Kestrel and Memcache<a class="headerlink" href="#duality-of-kestrel-and-memcache" title="Permalink to this headline">¶</a></h2>
+<p>Kestrel is a queue system with the following basic operations (well, not only
+these, but these are the ones useful to us): put a message on a queue, retrieve
+a message from that queue.</p>
+<p>As a TCP-level communication protocol, it uses the same protocol as memcached,
+for several reasons:
+* it&#8217;s rich enough semantically-wise
+* there are a bunch of libraries already available to interact with memcached</p>
+<p>For example, in our C++ Kinect acquisition code, we use the &#8220;libmemcached&#8221;
+library, in order to write the images pulled from the Kinect to the Router
+PDU which is written in Java.</p>
+<p>Sample code we use to write to the queue from C++:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1">#include &lt;libmemcached/memcached.h&gt;</span>
+<span class="n">memcached_st</span><span class="o">*</span> <span class="n">g_MemCache</span><span class="p">;</span>
+<span class="n">memcached_return</span> <span class="n">rc</span><span class="p">;</span>
+
+<span class="n">g_MemCache</span> <span class="o">=</span> <span class="n">memcached_create</span><span class="p">(</span><span class="n">NULL</span><span class="p">);</span>
+<span class="n">memcached_server_st</span><span class="o">*</span> <span class="n">servers</span> <span class="o">=</span> <span class="n">NULL</span><span class="p">;</span>
+<span class="n">memcached_return</span> <span class="n">rc</span><span class="p">;</span>
+
+<span class="n">servers</span> <span class="o">=</span> <span class="n">memcached_server_list_append</span><span class="p">(</span><span class="n">servers</span><span class="p">,</span> <span class="n">getKestrelServerIP</span><span class="p">(),</span> <span class="n">getKestrelServerPort</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">rc</span><span class="p">);</span>
+<span class="n">memcached_server_push</span><span class="p">(</span><span class="n">g_MemCache</span><span class="p">,</span> <span class="n">servers</span><span class="p">);</span>
+
+<span class="o">//</span> <span class="n">buffer</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">string</span> <span class="n">containing</span> <span class="n">a</span> <span class="n">serialized</span> <span class="n">JSON</span>
+<span class="o">//</span> <span class="n">In</span> <span class="n">this</span> <span class="n">case</span><span class="p">,</span> <span class="n">we</span> <span class="n">write</span> <span class="n">to</span> <span class="n">the</span> <span class="s2">&quot;measurements queue&quot;</span>
+<span class="n">size_t</span> <span class="nb">len</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="n">buffer</span><span class="p">);</span>
+<span class="n">rc</span> <span class="o">=</span> <span class="n">memcached_set</span><span class="p">(</span><span class="n">g_MemCache</span><span class="p">,</span>
+        <span class="s2">&quot;measurements&quot;</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="s2">&quot;measurements&quot;</span><span class="p">),</span>
+        <span class="n">buffer</span><span class="p">,</span> <span class="nb">len</span><span class="p">,</span>
+        <span class="p">(</span><span class="n">time_t</span><span class="p">)</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="n">uint32_t</span><span class="p">)</span><span class="mi">0</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The beauty of this approach is that we can have any process from any language
+communicate with another process from another language. In our case, we used
+that to our benefit because Python support for Kinect was very poor, while C++
+support was very strong.</p>
+</div>
+<div class="section" id="properties-of-a-pdu">
+<h2>Properties of a PDU<a class="headerlink" href="#properties-of-a-pdu" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>A PDU runs forever</li>
+<li>A PDU reads from a Kestrel queue serialized messages (serialized JSON)
+My recommendation here would be to insert a small sleep between two attempts
+to read the message in order not to bring the CPU usage to 100%.</li>
+<li>A PDU processes the message received and possibly writes messages to other
+queues</li>
+<li>A PDU uses either a Kestrel client library or a Memcache client library in
+order to communicate with the Kestrel server</li>
+</ol>
+</div>
+<div class="section" id="conclusions">
+<h2>Conclusions<a class="headerlink" href="#conclusions" title="Permalink to this headline">¶</a></h2>
+<p>Writing a PDU is very easy once you understand the basic skeleton available in
+the Python pseudo-code above. It should be less than 50 lines of code in any
+language to prototype one.</p>
+<p>In fact, it&#8217;s very similar to any program that you&#8217;ve ever written that
+connects to a socket and receives messages from that socket. Only that in this
+case, it does not use the low-level socket API, but a library that speaks the
+proper protocol.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">How to Create a PDU from Scratch</a><ul>
+<li><a class="reference internal" href="#purpose-of-this-document">Purpose of This Document</a></li>
+<li><a class="reference internal" href="#definition-of-a-pdu">Definition of a PDU</a></li>
+<li><a class="reference internal" href="#why-do-you-need-to-create-pdus">Why do you Need to Create PDUs?</a></li>
+<li><a class="reference internal" href="#format-of-the-messages-between-pdus">Format of the Messages Between PDUs</a></li>
+<li><a class="reference internal" href="#skeleton-of-a-pdu">Skeleton of a PDU</a></li>
+<li><a class="reference internal" href="#duality-of-kestrel-and-memcache">Duality of Kestrel and Memcache</a></li>
+<li><a class="reference internal" href="#properties-of-a-pdu">Properties of a PDU</a></li>
+<li><a class="reference internal" href="#conclusions">Conclusions</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="platform_queues.html" title="previous chapter">Sensor and Actuator Messages and Queues in AmI-Platform</a></li>
+      <li>Next: <a href="projects_index.html" title="next chapter">AmI-Lab Projects</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/platform_pdus.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Alex Sorici.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+      |
+      <a href="_sources/platform_pdus.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
