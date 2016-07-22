@@ -7,6 +7,7 @@ Purpose of This Document
 ------------------------
 
 The purpose is two-fold:
+
 * to describe how the existing Python PDU system works
 * to give tips and tricks on how to create PDUs in a new language that
 interacts with the existing queue system
@@ -18,6 +19,7 @@ A PDU is a **processing data unit**, a part of a distributed system that
 processes data in real-time from the existing laboratory sensors. These PDUs
 form a directed graph through which messages flow. A message is basically an
 event of the system, and can represent anything:
+
 * a new measurement has been produced by a sensor
 * a new event has appeared (e.g. door has been opened)
 
@@ -26,6 +28,7 @@ Why do you Need to Create PDUs?
 
 One wants to create PDUs in order to add new functionality to the existing
 platform. Examples of PDUs:
+
 * PDU that detects the faces in a given image (by using an API)
 * PDU that detects the posture of a skeleton by running a classifier
 
@@ -33,7 +36,7 @@ Format of the Messages Between PDUs
 -----------------------------------
 
 It's nothing more than free-style JSON, serialized to a string.
-In Python, we do that by the `json.dumps` command::
+In Python, we do that by the ``json.dumps`` command::
 
     import json
 
@@ -46,11 +49,12 @@ initial chain of PDUs that process them. Because the PDUs form a directed
 graph, a message or piece of information is usually processed through a chain
 of PDUs. The initial message might not be preserved, but it triggers a multitude
 of other messages to be processed by other PDUs. For example:
+
 * a picture gets produced by the PDU which polls the Kinects for images
 * the picture gets picked up by Router and forwarded to other types of PDUs
-* `mongo_writer` writes the image in MongoDB
-* `head_crop` tries to detect faces in that image
-and so on.
+* ``mongo_writer`` writes the image in MongoDB
+* ``head_crop`` tries to detect faces in that image
+  and so on.
 
 It's pretty clear that the message forwarded from Router to HeadCrop differs in
 format from the message that was initially received by Router, but that is the
@@ -60,12 +64,13 @@ Skeleton of a PDU
 -----------------
 
 A PDU has basically the following responsibilities:
+
 * connect to `Kestrel <https://github.com/twitter/kestrel>`_ to the queue where it 
 expects to receive its messages
 * read the message from Kestrel and decode it to a dictionary
 * process the message and put some other messages on other queues if needed
 
-In pseudocode-Python, the skeleton would look something like this::
+In pseudocode-Python, the skeleton would look something like this:: python
 
     kestrel_connection = connect_to_kestrel(hostname, port)
 
@@ -103,7 +108,7 @@ For example, in our C++ Kinect acquisition code, we use the "libmemcached"
 library, in order to write the images pulled from the Kinect to the Router
 PDU which is written in Java.
 
-Sample code we use to write to the queue from C++::
+Sample code we use to write to the queue from C++:: C
 
     #include <libmemcached/memcached.h>
     memcached_st* g_MemCache;
