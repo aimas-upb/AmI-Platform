@@ -70,7 +70,7 @@ expects to receive its messages
 * read the message from Kestrel and decode it to a dictionary
 * process the message and put some other messages on other queues if needed
 
-In pseudocode-Python, the skeleton would look something like this:: python
+In pseudocode-Python, the skeleton would look something like this::
 
     kestrel_connection = connect_to_kestrel(hostname, port)
 
@@ -108,7 +108,7 @@ For example, in our C++ Kinect acquisition code, we use the "libmemcached"
 library, in order to write the images pulled from the Kinect to the Router
 PDU which is written in Java.
 
-Sample code we use to write to the queue from C++:: C
+Sample code we use to write to the queue from C++::
 
     #include <libmemcached/memcached.h>
     memcached_st* g_MemCache;
