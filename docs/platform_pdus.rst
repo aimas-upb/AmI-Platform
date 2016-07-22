@@ -10,7 +10,8 @@ The purpose is two-fold:
 
 * to describe how the existing Python PDU system works
 * to give tips and tricks on how to create PDUs in a new language that
-interacts with the existing queue system
+  interacts with the existing queue system
+
 
 Definition of a PDU
 -------------------
@@ -23,6 +24,7 @@ event of the system, and can represent anything:
 * a new measurement has been produced by a sensor
 * a new event has appeared (e.g. door has been opened)
 
+
 Why do you Need to Create PDUs?
 -------------------------------
 
@@ -31,6 +33,7 @@ platform. Examples of PDUs:
 
 * PDU that detects the faces in a given image (by using an API)
 * PDU that detects the posture of a skeleton by running a classifier
+
 
 Format of the Messages Between PDUs
 -----------------------------------
@@ -56,6 +59,7 @@ of other messages to be processed by other PDUs. For example:
 * ``head_crop`` tries to detect faces in that image
   and so on.
 
+
 It's pretty clear that the message forwarded from Router to HeadCrop differs in
 format from the message that was initially received by Router, but that is the
 spirit of the graph computation.
@@ -66,9 +70,10 @@ Skeleton of a PDU
 A PDU has basically the following responsibilities:
 
 * connect to `Kestrel <https://github.com/twitter/kestrel>`_ to the queue where it 
-expects to receive its messages
+  expects to receive its messages
 * read the message from Kestrel and decode it to a dictionary
 * process the message and put some other messages on other queues if needed
+
 
 In pseudocode-Python, the skeleton would look something like this::
 
