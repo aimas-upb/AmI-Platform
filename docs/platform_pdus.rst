@@ -39,7 +39,9 @@ Format of the Messages Between PDUs
 -----------------------------------
 
 It's nothing more than free-style JSON, serialized to a string.
-In Python, we do that by the ``json.dumps`` command::
+In Python, we do that by the ``json.dumps`` command.
+
+.. code-block:: python
 
     import json
 
@@ -56,8 +58,7 @@ of other messages to be processed by other PDUs. For example:
 * a picture gets produced by the PDU which polls the Kinects for images
 * the picture gets picked up by Router and forwarded to other types of PDUs
 * ``mongo_writer`` writes the image in MongoDB
-* ``head_crop`` tries to detect faces in that image
-  and so on.
+* ``head_crop`` tries to detect faces in that image and so on.
 
 
 It's pretty clear that the message forwarded from Router to HeadCrop differs in
@@ -75,13 +76,15 @@ A PDU has basically the following responsibilities:
 * process the message and put some other messages on other queues if needed
 
 
-In pseudocode-Python, the skeleton would look something like this::
+In pseudocode-Python, the skeleton would look something like this
+
+.. code-block:: python
 
     kestrel_connection = connect_to_kestrel(hostname, port)
 
     # Basically a PDU runs forever. You can kill the process and restart it
     # if you want to update the code.
-    while True
+    while True:
         # The reading of a message from Kestrel is provided by the Kestrel lient
         # library. Depending on your chosen message, google for a Kestrel client
         # library. If no good library is available, feel free to choose a Memcache
@@ -113,7 +116,9 @@ For example, in our C++ Kinect acquisition code, we use the "libmemcached"
 library, in order to write the images pulled from the Kinect to the Router
 PDU which is written in Java.
 
-Sample code we use to write to the queue from C++::
+Sample code we use to write to the queue from C++
+
+.. code-block:: c
 
     #include <libmemcached/memcached.h>
     memcached_st* g_MemCache;

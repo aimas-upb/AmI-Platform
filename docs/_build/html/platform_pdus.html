@@ -1,75 +1,202 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>How to Create a PDU from Scratch &mdash; AmI-Lab 1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
     
-    <title>How to Create a PDU from Scratch &mdash; AmI-Lab 1.0 documentation</title>
-    
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="AmI-Lab 1.0 documentation" href="index.html" />
-    <link rel="next" title="AmI-Lab Projects" href="projects_index.html" />
-    <link rel="prev" title="Sensor and Actuator Messages and Queues in AmI-Platform" href="platform_queues.html" />
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="AmI-Lab 1.0 documentation" href="index.html"/>
+        <link rel="next" title="AmI-Lab Projects" href="projects_index.html"/>
+        <link rel="prev" title="Sensor and Actuator Messages and Queues in AmI-Platform" href="platform_queues.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
    
-  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  <div class="wy-grid-for-nav">
 
-  </head>
-  <body role="document">
-  
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
+          
+            <a href="index.html" class="icon icon-home"> AmI-Lab
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Hardware Setup</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="hardware_setup.html">Welcome to the Hardware Setup Documentation for AmI-Lab</a></li>
+</ul>
+<p class="caption"><span class="caption-text">AmI Platform</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="platform_description.html">AmI-Platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="platform_queues.html">Sensor and Actuator Messages and Queues in AmI-Platform</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">How to Create a PDU from Scratch</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#purpose-of-this-document">Purpose of This Document</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#definition-of-a-pdu">Definition of a PDU</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#why-do-you-need-to-create-pdus">Why do you Need to Create PDUs?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#format-of-the-messages-between-pdus">Format of the Messages Between PDUs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#skeleton-of-a-pdu">Skeleton of a PDU</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#duality-of-kestrel-and-memcache">Duality of Kestrel and Memcache</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#properties-of-a-pdu">Properties of a PDU</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#conclusions">Conclusions</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Projects</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="projects_index.html">AmI-Lab Projects</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">AmI-Lab</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>How to Create a PDU from Scratch</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/platform_pdus.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   <div class="section" id="how-to-create-a-pdu-from-scratch">
 <h1>How to Create a PDU from Scratch<a class="headerlink" href="#how-to-create-a-pdu-from-scratch" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="purpose-of-this-document">
 <h2>Purpose of This Document<a class="headerlink" href="#purpose-of-this-document" title="Permalink to this headline">¶</a></h2>
-<p>The purpose is two-fold:
-* to describe how the existing Python PDU system works
-* to give tips and tricks on how to create PDUs in a new language that
-interacts with the existing queue system</p>
+<p>The purpose is two-fold:</p>
+<ul class="simple">
+<li>to describe how the existing Python PDU system works</li>
+<li>to give tips and tricks on how to create PDUs in a new language that
+interacts with the existing queue system</li>
+</ul>
 </div>
 <div class="section" id="definition-of-a-pdu">
 <h2>Definition of a PDU<a class="headerlink" href="#definition-of-a-pdu" title="Permalink to this headline">¶</a></h2>
 <p>A PDU is a <strong>processing data unit</strong>, a part of a distributed system that
 processes data in real-time from the existing laboratory sensors. These PDUs
 form a directed graph through which messages flow. A message is basically an
-event of the system, and can represent anything:
-* a new measurement has been produced by a sensor
-* a new event has appeared (e.g. door has been opened)</p>
+event of the system, and can represent anything:</p>
+<ul class="simple">
+<li>a new measurement has been produced by a sensor</li>
+<li>a new event has appeared (e.g. door has been opened)</li>
+</ul>
 </div>
 <div class="section" id="why-do-you-need-to-create-pdus">
 <h2>Why do you Need to Create PDUs?<a class="headerlink" href="#why-do-you-need-to-create-pdus" title="Permalink to this headline">¶</a></h2>
 <p>One wants to create PDUs in order to add new functionality to the existing
-platform. Examples of PDUs:
-* PDU that detects the faces in a given image (by using an API)
-* PDU that detects the posture of a skeleton by running a classifier</p>
+platform. Examples of PDUs:</p>
+<ul class="simple">
+<li>PDU that detects the faces in a given image (by using an API)</li>
+<li>PDU that detects the posture of a skeleton by running a classifier</li>
+</ul>
 </div>
 <div class="section" id="format-of-the-messages-between-pdus">
 <h2>Format of the Messages Between PDUs<a class="headerlink" href="#format-of-the-messages-between-pdus" title="Permalink to this headline">¶</a></h2>
 <p>It&#8217;s nothing more than free-style JSON, serialized to a string.
-In Python, we do that by the <cite>json.dumps</cite> command:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
+In Python, we do that by the <code class="docutils literal"><span class="pre">json.dumps</span></code> command.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
 
 <span class="n">msg</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;deeply&#39;</span><span class="p">:</span> <span class="s1">&#39;nested&#39;</span><span class="p">},</span> <span class="s1">&#39;dictionary&#39;</span><span class="p">:</span> <span class="s1">&#39;message&#39;</span><span class="p">}</span>
 <span class="n">serialized_msg</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
@@ -79,29 +206,32 @@ In Python, we do that by the <cite>json.dumps</cite> command:</p>
 initial chain of PDUs that process them. Because the PDUs form a directed
 graph, a message or piece of information is usually processed through a chain
 of PDUs. The initial message might not be preserved, but it triggers a multitude
-of other messages to be processed by other PDUs. For example:
-* a picture gets produced by the PDU which polls the Kinects for images
-* the picture gets picked up by Router and forwarded to other types of PDUs
-* <cite>mongo_writer</cite> writes the image in MongoDB
-* <cite>head_crop</cite> tries to detect faces in that image
-and so on.</p>
+of other messages to be processed by other PDUs. For example:</p>
+<ul class="simple">
+<li>a picture gets produced by the PDU which polls the Kinects for images</li>
+<li>the picture gets picked up by Router and forwarded to other types of PDUs</li>
+<li><code class="docutils literal"><span class="pre">mongo_writer</span></code> writes the image in MongoDB</li>
+<li><code class="docutils literal"><span class="pre">head_crop</span></code> tries to detect faces in that image and so on.</li>
+</ul>
 <p>It&#8217;s pretty clear that the message forwarded from Router to HeadCrop differs in
 format from the message that was initially received by Router, but that is the
 spirit of the graph computation.</p>
 </div>
 <div class="section" id="skeleton-of-a-pdu">
 <h2>Skeleton of a PDU<a class="headerlink" href="#skeleton-of-a-pdu" title="Permalink to this headline">¶</a></h2>
-<p>A PDU has basically the following responsibilities:
-* connect to <a class="reference external" href="https://github.com/twitter/kestrel">Kestrel</a> to the queue where it
-expects to receive its messages
-* read the message from Kestrel and decode it to a dictionary
-* process the message and put some other messages on other queues if needed</p>
-<p>In pseudocode-Python, the skeleton would look something like this:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">kestrel_connection</span> <span class="o">=</span> <span class="n">connect_to_kestrel</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+<p>A PDU has basically the following responsibilities:</p>
+<ul class="simple">
+<li>connect to <a class="reference external" href="https://github.com/twitter/kestrel">Kestrel</a> to the queue where it
+expects to receive its messages</li>
+<li>read the message from Kestrel and decode it to a dictionary</li>
+<li>process the message and put some other messages on other queues if needed</li>
+</ul>
+<p>In pseudocode-Python, the skeleton would look something like this</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">kestrel_connection</span> <span class="o">=</span> <span class="n">connect_to_kestrel</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
 
 <span class="c1"># Basically a PDU runs forever. You can kill the process and restart it</span>
 <span class="c1"># if you want to update the code.</span>
-<span class="k">while</span> <span class="kc">True</span>
+<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
     <span class="c1"># The reading of a message from Kestrel is provided by the Kestrel lient</span>
     <span class="c1"># library. Depending on your chosen message, google for a Kestrel client</span>
     <span class="c1"># library. If no good library is available, feel free to choose a Memcache</span>
@@ -130,25 +260,25 @@ for several reasons:
 <p>For example, in our C++ Kinect acquisition code, we use the &#8220;libmemcached&#8221;
 library, in order to write the images pulled from the Kinect to the Router
 PDU which is written in Java.</p>
-<p>Sample code we use to write to the queue from C++:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1">#include &lt;libmemcached/memcached.h&gt;</span>
+<p>Sample code we use to write to the queue from C++</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;libmemcached/memcached.h&gt;</span><span class="cp"></span>
 <span class="n">memcached_st</span><span class="o">*</span> <span class="n">g_MemCache</span><span class="p">;</span>
 <span class="n">memcached_return</span> <span class="n">rc</span><span class="p">;</span>
 
-<span class="n">g_MemCache</span> <span class="o">=</span> <span class="n">memcached_create</span><span class="p">(</span><span class="n">NULL</span><span class="p">);</span>
-<span class="n">memcached_server_st</span><span class="o">*</span> <span class="n">servers</span> <span class="o">=</span> <span class="n">NULL</span><span class="p">;</span>
+<span class="n">g_MemCache</span> <span class="o">=</span> <span class="n">memcached_create</span><span class="p">(</span><span class="nb">NULL</span><span class="p">);</span>
+<span class="n">memcached_server_st</span><span class="o">*</span> <span class="n">servers</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
 <span class="n">memcached_return</span> <span class="n">rc</span><span class="p">;</span>
 
 <span class="n">servers</span> <span class="o">=</span> <span class="n">memcached_server_list_append</span><span class="p">(</span><span class="n">servers</span><span class="p">,</span> <span class="n">getKestrelServerIP</span><span class="p">(),</span> <span class="n">getKestrelServerPort</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">rc</span><span class="p">);</span>
 <span class="n">memcached_server_push</span><span class="p">(</span><span class="n">g_MemCache</span><span class="p">,</span> <span class="n">servers</span><span class="p">);</span>
 
-<span class="o">//</span> <span class="n">buffer</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">string</span> <span class="n">containing</span> <span class="n">a</span> <span class="n">serialized</span> <span class="n">JSON</span>
-<span class="o">//</span> <span class="n">In</span> <span class="n">this</span> <span class="n">case</span><span class="p">,</span> <span class="n">we</span> <span class="n">write</span> <span class="n">to</span> <span class="n">the</span> <span class="s2">&quot;measurements queue&quot;</span>
-<span class="n">size_t</span> <span class="nb">len</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="n">buffer</span><span class="p">);</span>
+<span class="c1">// buffer is a string containing a serialized JSON</span>
+<span class="c1">// In this case, we write to the &quot;measurements queue&quot;</span>
+<span class="kt">size_t</span> <span class="n">len</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="n">buffer</span><span class="p">);</span>
 <span class="n">rc</span> <span class="o">=</span> <span class="n">memcached_set</span><span class="p">(</span><span class="n">g_MemCache</span><span class="p">,</span>
-        <span class="s2">&quot;measurements&quot;</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="s2">&quot;measurements&quot;</span><span class="p">),</span>
-        <span class="n">buffer</span><span class="p">,</span> <span class="nb">len</span><span class="p">,</span>
-        <span class="p">(</span><span class="n">time_t</span><span class="p">)</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="n">uint32_t</span><span class="p">)</span><span class="mi">0</span><span class="p">);</span>
+        <span class="s">&quot;measurements&quot;</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="s">&quot;measurements&quot;</span><span class="p">),</span>
+        <span class="n">buffer</span><span class="p">,</span> <span class="n">len</span><span class="p">,</span>
+        <span class="p">(</span><span class="kt">time_t</span><span class="p">)</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="kt">uint32_t</span><span class="p">)</span><span class="mi">0</span><span class="p">);</span>
 </pre></div>
 </div>
 <p>The beauty of this approach is that we can have any process from any language
@@ -182,69 +312,71 @@ proper protocol.</p>
 </div>
 
 
+           </div>
           </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="projects_index.html" class="btn btn-neutral float-right" title="AmI-Lab Projects" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="platform_queues.html" class="btn btn-neutral" title="Sensor and Actuator Messages and Queues in AmI-Platform" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Alex Sorici.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">How to Create a PDU from Scratch</a><ul>
-<li><a class="reference internal" href="#purpose-of-this-document">Purpose of This Document</a></li>
-<li><a class="reference internal" href="#definition-of-a-pdu">Definition of a PDU</a></li>
-<li><a class="reference internal" href="#why-do-you-need-to-create-pdus">Why do you Need to Create PDUs?</a></li>
-<li><a class="reference internal" href="#format-of-the-messages-between-pdus">Format of the Messages Between PDUs</a></li>
-<li><a class="reference internal" href="#skeleton-of-a-pdu">Skeleton of a PDU</a></li>
-<li><a class="reference internal" href="#duality-of-kestrel-and-memcache">Duality of Kestrel and Memcache</a></li>
-<li><a class="reference internal" href="#properties-of-a-pdu">Properties of a PDU</a></li>
-<li><a class="reference internal" href="#conclusions">Conclusions</a></li>
-</ul>
-</li>
-</ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="platform_queues.html" title="previous chapter">Sensor and Actuator Messages and Queues in AmI-Platform</a></li>
-      <li>Next: <a href="projects_index.html" title="next chapter">AmI-Lab Projects</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="_sources/platform_pdus.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2016, Alex Sorici.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.5</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
-      
-      |
-      <a href="_sources/platform_pdus.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
+    </section>
 
-    
-  </body>
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
 </html>
