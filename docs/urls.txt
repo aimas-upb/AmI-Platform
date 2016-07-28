@@ -1,0 +1,13 @@
+
+== Envirnoment sensors (select sensors from dropdown) ==
+http://ami-crunch-01.local/environment/
+
+== Traces ==
+http://ami-crunch-01.local/#latest_subject_positions
+
+== RGB Images ==
+http://ami-crunch-01.local/
+
+== Merged sessions ==
+http://ami-crunch-01.local/#sessions
+

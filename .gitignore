@@ -31,3 +31,6 @@ acquisition/export-*.csv
 # Settings file
 core/settings_local.py
 dashboard/conf/general.user.js
+
+# Docs folder
+docs/sphinx_rtd_theme-master/
