@@ -61,7 +61,7 @@ extern xn::UserGenerator g_UserGenerator;
 extern xn::DepthGenerator g_DepthGenerator;
 extern map<XnUserID, string> g_session_ids;
 
-#define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 10 //ms
+#define MIN_DELAY_BETWEEN_SKELETON_MEASUREMENT 100 //ms
 #define MIN_DELAY_BETWEEN_RGB_MEASUREMENT 1000
 #define MIN_DELAY_BETWEEN_DEPTH_MEASUREMENT 1000
 #define MIN_CONFIDENCE_FOR_SKELETON 10
@@ -940,15 +940,15 @@ void DrawKinectInput(const xn::DepthMetaData& dmd,
 
     transformDepthImageIntoTexture(dmd, smd, pDepthTexBuf);
 
-    if (rgb_throttle.CanSend()) {
-      unsigned char* depthImage = transformDepthImageIntoGrayScale(dmd);
-      SaveImage((char*)depthImage, dmd.XRes(), dmd.YRes(), "player1", "image_depth", &rgb_throttle);
-      delete depthImage;
-      rgb_throttle.MarkSend();
-    }
     if (depth_throttle.CanSend()) {
-      SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &depth_throttle);
+      unsigned char* depthImage = transformDepthImageIntoGrayScale(dmd);
+      SaveImage((char*)depthImage, dmd.XRes(), dmd.YRes(), "player1", "image_depth", &depth_throttle);
+      delete depthImage;
       depth_throttle.MarkSend();
+    }
+    if (rgb_throttle.CanSend()) {
+      SaveImage((char*)imd.Data(), 1280, 1024, "player1", "image_rgb", &rgb_throttle);
+      rgb_throttle.MarkSend();
     }
 
     drawDepthMap(depthTexID, dmd, pDepthTexBuf);
