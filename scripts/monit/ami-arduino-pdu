@@ -1,0 +1,4 @@
+check process ami-arduino-pdu
+    with pidfile /var/run/ami-arduino-pdu.pid
+    start = "/usr/sbin/service ami-arduino-pdu start"
+    stop = "/usr/sbin/service ami-arduino-pdu stop"
