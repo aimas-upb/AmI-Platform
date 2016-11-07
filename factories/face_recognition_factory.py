@@ -1,7 +1,6 @@
 from random import choice
 import time
 
-from factory import Factory
 from core.constants import IMAGE_WIDTH, IMAGE_HEIGHT, SENSOR_IDS, SENSOR_TYPES
 from factories import utils
 

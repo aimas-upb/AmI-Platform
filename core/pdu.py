@@ -11,12 +11,12 @@ from utils import json_dumps
 from kestrel_connection import KestrelConnection
 import settings
 
-"""
-    Processing Data Unit for our AmI lab pipelines.
-"""
-class PDU(object):
 
-    PRINT_STATS_INTERVAL = 30 # Print flow stats every X seconds
+class PDU(object):
+    """ Processing Data Unit for our AmI lab pipelines. """
+
+    # Print flow stats every X seconds
+    PRINT_STATS_INTERVAL = 30
     MESSAGE_SAMPLING_RATIO = 10
 
     TIME_TO_SLEEP_ON_BUSY = 0.05
@@ -30,11 +30,12 @@ class PDU(object):
         self._last_stats = time.time()
         self._processed_messages = 0
         self._running = False
-        self._running_lock = threading.Lock()
+        self._cancelled = False
+        self._cancelled_lock = threading.Lock()
         self.debug_mode = kwargs.get('debug', False)
         self.logger = logging.getLogger(self.__module__)
 
-    def log(self, message, level = logging.INFO):
+    def log(self, message, level=logging.INFO):
         """ Log a message to stdout. Includes class name & current time. """
         self.logger.log(level, message)
 
@@ -50,30 +51,32 @@ class PDU(object):
 
     def send_to(self, queue, message):
         """ Send a message to another queue. """
-        self.log("Enqueueing message to %s" % queue, level = logging.INFO)
+        self.log("Enqueueing message to %s" % queue, level=logging.INFO)
         self.queue_system.add(queue, json.dumps(message))
 
     def _start_running(self):
         """ Mark the current PDU as running. """
-        self._running_lock.acquire()
         self._running = True
-        self._running_lock.release()
 
     def _stop_running(self):
         """ Mark the current PDU as NOT running. """
-        self._running_lock.acquire()
         self._running = False
-        self._running_lock.release()
 
     def _is_running(self):
         """ Query whether the current PDU is running or not. """
-        self._running_lock.acquire()
         result = self._running
-        self._running_lock.release()
         return result
 
     def stop(self):
-        self._stop_running()
+        self._cancelled_lock.acquire()
+        self._cancelled = True
+        self._cancelled_lock.release()
+
+    def _is_cancelled(self):
+        self._cancelled_lock.acquire()
+        _is_cancelled = self._cancelled
+        self._cancelled_lock.release()
+        return  _is_cancelled
 
     def busy(self):
         """ Make this return True and fetching of messages from the queue
@@ -91,7 +94,7 @@ class PDU(object):
         self._start_running()
         self.log("PDU %s is alive!" % self.__class__.__name__)
 
-        while self._is_running():
+        while not self._is_cancelled():
             try:
                 # While module reports that it's busy, stop feeding
                 # messages to it - especially useful for cases where
@@ -169,3 +172,4 @@ class PDU(object):
                                  (flow, time_since_last_stats))
                     self._processed_messages = 0
                     self._last_stats = time.time()
+        self._stop_running()

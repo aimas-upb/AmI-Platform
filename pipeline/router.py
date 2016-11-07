@@ -4,6 +4,7 @@ from mongoengine import connect
 
 from core import PDU, settings
 from lib.log import setup_logging
+from lib.s3 import save_image
 from models.experiment import Experiment
 
 

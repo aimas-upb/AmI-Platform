@@ -157,4 +157,4 @@ class ParallelPDU(PDU):
             # Run in debug mode (process message in the main thread)
             result = run_and_return(self.heavy_preprocess, message,
                                     'message_no', self.message_no)
-            self.light_postprocess(result['result'], message)
+            self._internal_light_postprocess(result)

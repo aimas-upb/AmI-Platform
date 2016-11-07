@@ -1,3 +1,4 @@
+import base64
 from math import pi as PI
 import os
 from random import uniform, randrange
@@ -5,8 +6,7 @@ from random import uniform, randrange
 
 def get_random_image(width, height):
     """Returns a random width x height image base64 encoded."""
-    return os.urandom(height * width * 4 / 3).encode('hex')
-
+    return base64.b64encode(os.urandom(height * width * 3))
 
 def get_random_hash(length):
     """Returns a random has of a given length."""
@@ -26,7 +26,7 @@ def get_random_3D_skeleton():
 
 
 def get_random_angle():
-    return uniform(-PI, PI),
+    return uniform(-PI, PI)
 
 
 def get_random_sensor_position():

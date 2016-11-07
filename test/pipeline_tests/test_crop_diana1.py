@@ -15,7 +15,7 @@ class TestCrop(PipelineTest):
     """#110 - Test that I am in front of the camera and it crops my head."""
 
     PDUs = [Router, HeadCrop]
-    DATA_FILE = '%s/dumps/diana.txt' % PROJECT_PATH
+    DATA_FILE = '%s/dumps/diana1.txt' % PROJECT_PATH
     NB_MIN_EXPECTED_FACES = 8
 
     @attr('pipeline', 'slow')

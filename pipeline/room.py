@@ -59,7 +59,6 @@ class Room(PDU):
                              % person_name)
             return False
 
-
     def process_message(self, message):
         """ Room module receives incoming events from the different pipelines
             like "person X has appeared in front of kinect Y and reacts to
@@ -80,11 +79,11 @@ class Room(PDU):
         self.last_person_action_took_at = int(time.time())
         self.last_person_name = person_name
 
-        if person_name == 'andrei@amilab.ro':
+        if person_name.startswith('andrei@'):
             self.play_message("Hello, Andrei. Let me switch on the air "
                               "conditioning for you.")
             self.switch_on_air_conditioning()
-        elif person_name == 'diana@amilab.ro':
+        elif person_name.startswith('diana@'):
             self.play_message("Hello, Diana. I know you like it quiet so "
                               "I won't bother you with air conditioning.")
             self.switch_off_air_conditioning()

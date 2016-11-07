@@ -15,8 +15,8 @@ class TestRecognition(PipelineTest):
     """#1110 - Test that I am in front of the camera and it detects me."""
 
     PDUs = [Router, HeadCrop, FaceRecognition]
-    DATA_FILE = '%s/dumps/diana.txt' % PROJECT_PATH
-    NB_MIN_EXPECTED_EVENTS = 100
+    DATA_FILE = '%s/dumps/andrei1.txt' % PROJECT_PATH
+    NB_MIN_EXPECTED_EVENTS = 1
 
     @attr('pipeline', 'slow')
     def test_that_pipeline_test_works_ok(self):

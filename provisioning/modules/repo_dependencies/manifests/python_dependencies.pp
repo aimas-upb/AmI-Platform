@@ -10,6 +10,16 @@ class repo_dependencies::python_dependencies {
          ensure => present,
     }
 
+    # Needed by PIL Python package (to include the jpeg decoder)
+    package { "libjpeg8-dev":
+        ensure => present,
+    }
+
+    file { '/usr/lib/x86_64-linux-gnu/libjpeg.so':
+       ensure => 'link',
+       target => '/usr/lib',
+    }
+
     # Needed by bjoern backend for bottle framework
     # (a highly async server written in C)
     package { "libev-dev":
@@ -26,5 +36,6 @@ class repo_dependencies::python_dependencies {
     Package["python-pip"] -> Exec["install-python-packages"]
     Package["python-dev"] -> Exec["install-python-packages"]
     Package["libev-dev"] -> Exec["install-python-packages"]
+    Package["libjpeg8-dev"] -> Exec["install-python-packages"]
 
 }

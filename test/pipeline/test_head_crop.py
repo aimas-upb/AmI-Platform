@@ -62,8 +62,9 @@ class TestHeadCrop(TestCase):
 
         skeleton_message = RouterFactory('skeleton')
         pdu.process_message(skeleton_message)
-        time.sleep(MAX_TIME)
+        time.sleep(MAX_TIME/1000)
         image_message = RouterFactory('image_rgb')
+        image_message['sensor_id'] = skeleton_message['sensor_id']
         pdu.process_message(image_message)
 
         face_detect.assert_called_once_with(image_message['image_rgb'])
@@ -80,6 +81,7 @@ class TestHeadCrop(TestCase):
         skeleton_message = RouterFactory('skeleton')
         pdu.process_message(skeleton_message)
         image_message = RouterFactory('image_rgb')
+        image_message['sensor_id'] = skeleton_message['sensor_id']
         pdu.process_message(image_message)
 
         eq_(face_detect.call_count, 0, "face_detect should only be called if "

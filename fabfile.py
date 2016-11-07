@@ -14,7 +14,7 @@ from core.ec2 import (get_tags_for_machine, get_instance_by_tags,
                       get_all_instances, get_crunch_running, tag_instance)
 
 env.connection_attempts = 5
-env.key_filename = env.key_filename or '/Users/aismail/.ssh/ami-keypair.pem'
+env.key_filename = env.key_filename or '~/.ssh/ami-keypair.pem'
 # By default, we will connect to the hosts with the ami user (the most
 # notable exception being the bootstrap process, when only the ubuntu user
 # in the EC2 ami image exists).
@@ -69,8 +69,9 @@ def render_template(template_file, context, target_file=None):
         else:
             return output
 
+
 @task
-def new_service(name, file = None, queue = None, class_name = None):
+def new_service(name, file=None, queue=None, class_name=None):
     """ Installs a new service with the given name. """
 
     if service_already_exists(name):
@@ -123,6 +124,37 @@ def new_service(name, file = None, queue = None, class_name = None):
 
 
 @task
+def run_tests(branch_name=None):
+    # Some tests need all machine types in order to test the pipeline
+    # end-to-end.
+    # TODOs: 1. move this profile to a separate file
+    #        2. append all manifests in a single file: test.pp
+    machine = {"Name": "tests",
+               "manifest": "test.pp",
+               "type": "test",
+               "modules": "ami-router,ami-head-crop,ami-face-recognition,"
+                          "ami-room,ami-ip-power,ami-text-to-speech"
+                }
+
+    # If a test instance is not already running, launch a new one.
+    test_instance = get_instance_by_tags(machine)
+    if not test_instance:
+        # TODO: Change the machine_type back to 'm1.medium'/'m1.large' when
+        # done launching/terminating test instances.
+        hostnames = execute('open_machines', machine_type='m1.small', count=1)['<local-only>']
+        test_hostname = hostnames[0]
+
+        tag_instance(test_hostname, machine)
+        execute('bootstrap_machines')
+        execute('configure_hiera_for_machines')
+        execute('reprovision_machines', branch_name=branch_name)
+    """
+    # TODO: create 'run_all_tests' task
+    execute('run_all_tests', name=name)
+    """
+
+
+@task
 def run_experiment(name='duminica.txt',
                    experiment_profile='default_experiment.json'):
 
@@ -158,7 +190,7 @@ def run_experiment(name='duminica.txt',
 
 @task
 def open_machines(machine_type='m1.small',
-                  manifest='crunch_01.pp',
+                  manifest='crunch.pp',
                   ami_id='ami-d0f89fb9',
                   count=1):
 
@@ -218,30 +250,47 @@ def provision_machines():
         execute('deploy_ami_services_on_crunch_node', hosts=crunching_hostnames)
 
 @task
-def refresh_code_on_machines():
+def refresh_code_on_machines(branch_name=None):
     """ Refresh the current version of the code on the machines. """
     hostnames = [instance.public_dns_name for instance in get_all_instances()]
 
     with settings(parallel=True):
-        execute('refresh_code', hosts=hostnames)
+        execute('refresh_code', hosts=hostnames, branch_name=branch_name)
 
 @task
-def refresh_code():
+def refresh_code(branch_name=None):
     with cd('/home/ami/AmI-Platform'):
-            branch = str(run('git rev-parse --abbrev-ref HEAD'))
-            run('git reset --hard HEAD')
-            run('git pull origin %s' % branch)
-            run('git reset --hard HEAD')
+        if not branch_name:
+            branch_name = str(run('git rev-parse --abbrev-ref HEAD'))
+        run('git fetch')
+        run('git checkout %s' % branch_name)
+        run('git reset --hard HEAD')
+        run('git pull origin %s' % branch_name)
+        run('git reset --hard HEAD')
 
 @task
-def reprovision_machines():
+def reprovision_machines(branch_name=None):
     # Pull latest version of the code on the machines
-    execute('refresh_code_on_machines')
+    execute('refresh_code_on_machines', branch_name=branch_name)
 
     # Execute per-node provisioning only (excluding bootstrap). Bootstrap
     # is assumed to always be successful in order to speed things up for
     # reprovisioning.
     execute('provision_machines')
+
+
+@task
+def run_all_tests():
+    """Runs quick and slow tests on an already launched test instance."""
+    test_instance = get_instance_by_tags({'type': 'test'})
+    if not test_instance:
+        print("Could not find a test instance to run the tests.")
+        return
+
+    with settings(host_string=test_instance.public_dns_name):
+        run('cd /home/ami/AmI-Platform/ && ./run-quick-tests.sh')
+        run('cd /home/ami/AmI-Platform/ && ./run-slow-tests.sh')
+
 
 @task
 def play_experiment(name='duminica'):
@@ -314,14 +363,15 @@ def deploy_ami_services_on_crunch_node():
     run('cd /home/ami/AmI-Platform; fab deploy:fresh=True')
 
 @task
-def deploy(fresh=False):
+def deploy(fresh=False, branch_name=None):
     with cd('/home/ami/AmI-Platform'):
         # Make sure we have the latest repo version if "fresh" parameter
         # is specified. This will pull the latest version of the code.
         if fresh:
-            branch = str(local('git rev-parse --abbrev-ref HEAD'))
+            branch_name = branch_name or str(local('git rev-parse --abbrev-ref HEAD'))
+            local('git checkout %s' % branch_name)
             local('git reset --hard HEAD')
-            local('git pull origin %s' % branch)
+            local('git pull origin %s' % branch_name)
             local('git reset --hard HEAD')
             local('git submodule init')
             local('git submodule update')
@@ -424,10 +474,14 @@ def generate_hiera_datasources():
     local('rm -rf /tmp/hiera')
     local('mkdir -p /tmp/hiera/node')
 
+    redis_hostname = get_instance_by_tags({'Name': 'tests'}) or get_instance_by_tags({'Name': 'sessions'})
+    mongo_hostname = get_instance_by_tags({'Name': 'tests'}) or get_instance_by_tags({'Name': 'measurements'})
+    kestrel_hostname = get_instance_by_tags({'Name': 'tests'}) or get_instance_by_tags({'Name': 'queues'})
+
     common_context = {
-        'mongo_hostname': get_instance_by_tags({'Name': 'measurements'}).public_dns_name,
-        'redis_hostname': get_instance_by_tags({'Name': 'sessions'}).public_dns_name,
-        'kestrel_hostname': get_instance_by_tags({'Name': 'queues'}).public_dns_name
+        'redis_hostname': redis_hostname.public_dns_name,
+        'mongo_hostname': mongo_hostname.public_dns_name,
+        'kestrel_hostname': kestrel_hostname.public_dns_name
     }
     render_template('admin/templates/common.json',
                     common_context,
@@ -492,7 +546,7 @@ def bootstrap_machine():
     run('sudo dpkg -i /tmp/puppetlabs-release-precise.deb')
     run('sudo apt-get -y update')
 
-    # we are running masterless puppet to simplifiy automatic setup and teardown
+    # we are running masterless puppet to simplify automatic setup and teardown
     run('sudo apt-get -y install puppet')
     run('sudo puppet module install -f puppetlabs/apt')
     run('sudo puppet module install -f puppetlabs/gcc')
@@ -513,7 +567,7 @@ def bootstrap_machine():
     run('sudo puppet apply /tmp/bootstrap.pp')
 
 @task
-def provision_machine(manifest='crunch_01.pp'):
+def provision_machine(manifest='crunch.pp'):
     # Retrieve EC2 tags for this machine, and see if there is a manifest tag
     # among them. If yes, that one has priority over what gets specified as
     # a parameter to this function.

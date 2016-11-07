@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 class TestPipelineTest(PipelineTest):
 
-    DELAY_UNTIL_MESSAGES_PROPAGATE = 1.0
     PDUs = [DummyPDU]
 
     def _measurements_player_instance(self, data_file, callback):
