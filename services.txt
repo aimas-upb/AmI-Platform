@@ -14,3 +14,4 @@ ami-recorder
 ami-room-position
 ami-dashboard
 ami-session_processor
+ami-arduino-acq
